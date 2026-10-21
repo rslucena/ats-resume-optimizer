@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="pt-BR" class="dark">
+<html lang="pt-BR" class="dark h-full">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ATS Resume Optimizer & Job Tracker</title>
+  <title>ATS Optimizer — Vercel / Linear High-Density Workbench</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -14,24 +14,22 @@
       theme: {
         extend: {
           fontFamily: {
-            sans: ['Inter', 'sans-serif'],
+            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
             mono: ['JetBrains Mono', 'monospace'],
           },
           colors: {
-            brand: {
-              50: '#eef2ff',
-              100: '#e0e7ff',
-              400: '#818cf8',
-              500: '#6366f1',
-              600: '#4f46e5',
-              700: '#4338ca',
-            },
-            dark: {
-              950: '#06080e',
-              900: '#0b0f19',
-              850: '#111726',
-              800: '#161e31',
-              700: '#232f4a',
+            zinc: {
+              950: '#09090b',
+              900: '#121215',
+              850: '#16161a',
+              800: '#27272a',
+              700: '#3f3f46',
+              600: '#52525b',
+              500: '#71717a',
+              400: '#a1a1aa',
+              300: '#d4d4d8',
+              100: '#f4f4f5',
+              50: '#fafafa',
             }
           }
         }
@@ -41,250 +39,537 @@
   <link rel="stylesheet" href="/styles.css">
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
-<body class="bg-dark-950 text-slate-100 min-h-screen flex flex-col font-sans antialiased selection:bg-brand-500 selection:text-white">
+<body class="bg-zinc-950 text-zinc-100 h-full flex flex-col font-sans overflow-hidden">
 
-  <!-- Top Navigation -->
-  <header class="border-b border-white/5 bg-dark-900/80 backdrop-blur-xl sticky top-0 z-40">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-brand-500/20 text-white font-bold text-lg">
-          <i data-lucide="cpu" class="w-5 h-5"></i>
-        </div>
-        <div>
-          <div class="flex items-center gap-2">
-            <span class="font-extrabold tracking-tight text-white text-lg">ATS Optimizer</span>
-            <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">7-Camadas</span>
-            <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-brand-500/10 text-brand-400 border border-brand-500/20">Bun Native</span>
-          </div>
-          <p class="text-xs text-slate-400">Controle de Candidaturas & Engenharia Reversa de ATS</p>
-        </div>
+  <!-- ZONA 1: TOP COMMAND BAR (h-14, border-b border-zinc-800) -->
+  <header class="h-14 border-b border-zinc-800 bg-[#0c0c0e]/95 backdrop-blur-md px-4 flex items-center justify-between shrink-0 z-30 select-none">
+    
+    <!-- Left: Brand, 7-Camadas Badge & Engine Status -->
+    <div class="flex items-center gap-3">
+      <div class="w-7 h-7 rounded border border-zinc-700 bg-zinc-900 flex items-center justify-center text-zinc-100 shadow-sm">
+        <i data-lucide="layers" class="w-4 h-4 text-emerald-400"></i>
       </div>
-
-      <!-- Navigation Tabs -->
-      <nav class="flex items-center gap-1 bg-dark-850 p-1 rounded-xl border border-white/5">
-        <button id="nav-jobs" class="tab-btn px-4 py-1.5 text-xs font-medium rounded-lg transition-all text-white bg-dark-700 shadow-sm flex items-center gap-2">
-          <i data-lucide="briefcase" class="w-3.5 h-3.5"></i>
-          <span>Vagas & Otimizador</span>
-          <span id="badge-jobs-count" class="ml-1 px-1.5 py-0.2 rounded-full bg-dark-800 text-[10px] text-slate-300">0</span>
-        </button>
-        <button id="nav-profile" class="tab-btn px-4 py-1.5 text-xs font-medium rounded-lg transition-all text-slate-400 hover:text-white flex items-center gap-2">
-          <i data-lucide="user-check" class="w-3.5 h-3.5"></i>
-          <span>Meu Currículo Base</span>
-          <span id="badge-profile-status" class="w-2 h-2 rounded-full bg-amber-400"></span>
-        </button>
-      </nav>
+      <div class="flex items-center gap-2">
+        <span class="font-semibold text-xs text-zinc-100 tracking-tight uppercase font-mono">ATS Optimizer</span>
+        <span class="px-1.5 py-0.5 text-[10px] font-mono font-medium rounded border border-zinc-800 bg-zinc-900 text-zinc-400">7-Camadas</span>
+        <span class="hidden sm:inline-flex items-center gap-1.5 px-2 py-0.5 rounded border border-emerald-500/20 bg-emerald-500/5 text-[10px] font-mono text-emerald-400">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          BUN:SQLITE ONLINE
+        </span>
+      </div>
     </div>
+
+    <!-- Center: Master Profile Quick State Pill -->
+    <div class="hidden md:flex items-center gap-2">
+      <div id="top-master-pill" class="flex items-center gap-2 px-2.5 py-1 rounded border border-zinc-800 bg-zinc-900 text-[11px] font-mono text-zinc-400">
+        <span id="top-master-dot" class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+        <span id="top-master-name">Master CV: Carregando...</span>
+      </div>
+    </div>
+
+    <!-- Right: Master CV Drawer Trigger & Add Job Button -->
+    <div class="flex items-center gap-2">
+      <button id="btn-open-profile-drawer" class="px-3 py-1.5 rounded border border-zinc-800 hover:border-zinc-700 bg-zinc-900 hover:bg-zinc-850 text-xs font-medium text-zinc-300 hover:text-white transition-all flex items-center gap-1.5">
+        <i data-lucide="user-check" class="w-3.5 h-3.5 text-zinc-400"></i>
+        <span>Meu Currículo Base</span>
+      </button>
+
+      <button id="btn-open-add-job" class="px-3 py-1.5 rounded bg-zinc-50 hover:bg-zinc-200 text-zinc-950 text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5">
+        <i data-lucide="plus" class="w-3.5 h-3.5 stroke-[2.5]"></i>
+        <span>Nova Vaga</span>
+      </button>
+    </div>
+
   </header>
 
-  <!-- Main Content Area -->
-  <main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+  <!-- WORKBENCH BODY (Zones 2 & 3) -->
+  <div class="flex-1 flex overflow-hidden">
     
-    <!-- SECTION 1: JOB TRACKER VIEW -->
-    <section id="view-jobs" class="space-y-6">
+    <!-- ZONA 2: PAINEL ESQUERDO — JOB PIPELINE & QUEUE (w-88, border-r border-zinc-800) -->
+    <aside class="w-80 lg:w-88 border-r border-zinc-800 bg-[#0c0c0e] flex flex-col shrink-0 overflow-hidden">
       
-      <!-- Top Actions Bar -->
-      <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between bg-dark-900/60 p-4 rounded-2xl border border-white/5 backdrop-blur-sm">
-        <div class="flex items-center gap-3">
-          <div class="relative">
-            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
-            <input type="text" id="search-jobs" placeholder="Buscar cargo ou empresa..." class="bg-dark-800 border border-white/10 rounded-xl pl-9 pr-4 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-brand-500 w-64 transition-all">
+      <!-- Search & Filters Header -->
+      <div class="p-3 border-b border-zinc-800 space-y-2 shrink-0 bg-[#0c0c0e]">
+        <div class="relative">
+          <i data-lucide="search" class="w-3.5 h-3.5 text-zinc-500 absolute left-2.5 top-1/2 -translate-y-1/2"></i>
+          <input type="text" id="search-jobs" placeholder="Buscar cargo ou empresa..." class="wb-input w-full pl-8 text-xs font-mono">
+        </div>
+
+        <!-- Filter tabs: Linear issue style -->
+        <div class="flex items-center gap-1 overflow-x-auto pb-0.5 text-[11px] font-mono no-scrollbar">
+          <button class="filter-status-btn active px-2 py-0.5 rounded text-zinc-200 bg-zinc-800 border border-zinc-700 font-medium" data-status="ALL">Todas (<span id="count-all">0</span>)</button>
+          <button class="filter-status-btn px-2 py-0.5 rounded text-zinc-400 hover:text-zinc-200" data-status="SAVED">Salvas</button>
+          <button class="filter-status-btn px-2 py-0.5 rounded text-zinc-400 hover:text-zinc-200" data-status="APPLIED">Aplicadas</button>
+          <button class="filter-status-btn px-2 py-0.5 rounded text-zinc-400 hover:text-zinc-200" data-status="INTERVIEW">Entrevista</button>
+          <button class="filter-status-btn px-2 py-0.5 rounded text-zinc-400 hover:text-zinc-200" data-status="OFFER">Oferta</button>
+          <button class="filter-status-btn px-2 py-0.5 rounded text-zinc-400 hover:text-zinc-200" data-status="REJECTED">Rejeitadas</button>
+        </div>
+      </div>
+
+      <!-- Job Cards Queue -->
+      <div id="jobs-list" class="flex-1 overflow-y-auto divide-y divide-zinc-900/60 p-1.5 space-y-1">
+        <!-- Injected via app.js -->
+        <div class="p-8 text-center text-zinc-500 text-xs font-mono">
+          <i data-lucide="loader" class="w-4 h-4 animate-spin mx-auto mb-2 text-zinc-400"></i>
+          Carregando pipeline...
+        </div>
+      </div>
+
+      <!-- Queue Footer Metrics -->
+      <div class="p-2.5 border-t border-zinc-800 bg-[#09090b] flex items-center justify-between text-[11px] font-mono text-zinc-500 shrink-0">
+        <span id="queue-summary">0 vagas no tracker</span>
+        <span class="flex items-center gap-1">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Local-first
+        </span>
+      </div>
+
+    </aside>
+
+    <!-- ZONA 3: PAINEL PRINCIPAL — ATS TELEMETRY & DIFF WORKBENCH -->
+    <main class="flex-1 flex flex-col bg-zinc-950 overflow-hidden">
+      
+      <!-- EMPTY STATE (When no job is selected) -->
+      <div id="workbench-empty" class="flex-1 flex flex-col items-center justify-center p-8 text-center">
+        <div class="w-12 h-12 rounded border border-zinc-800 bg-zinc-900/80 flex items-center justify-center text-zinc-400 mb-4">
+          <i data-lucide="terminal" class="w-6 h-6 stroke-[1.5]"></i>
+        </div>
+        <h3 class="text-sm font-semibold text-zinc-200">Nenhuma Vaga Selecionada</h3>
+        <p class="text-xs text-zinc-500 max-w-sm mt-1">
+          Selecione uma vaga no pipeline à esquerda para inspecionar métricas TF-IDF, comparar diffs e gerar documentos com injeção binária de metadados.
+        </p>
+        <button id="btn-empty-add-job" class="mt-4 px-3.5 py-1.5 rounded bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-semibold shadow-sm flex items-center gap-1.5">
+          <i data-lucide="plus" class="w-3.5 h-3.5 stroke-[2.5]"></i>
+          <span>Cadastrar Nova Vaga</span>
+        </button>
+      </div>
+
+      <!-- ACTIVE JOB WORKBENCH -->
+      <div id="workbench-active" class="flex-1 flex flex-col overflow-hidden hidden">
+        
+        <!-- Header da Vaga Selecionada -->
+        <div class="p-4 border-b border-zinc-800 bg-[#0c0c0e] shrink-0 flex flex-wrap items-center justify-between gap-4">
+          <div class="min-w-0">
+            <div class="flex items-center gap-2">
+              <span id="job-detail-company" class="text-xs font-mono uppercase text-zinc-400 tracking-wider">Nubank</span>
+              <span class="text-zinc-600 font-mono">•</span>
+              <span id="job-detail-lang" class="px-1.5 py-0.2 rounded border border-cyan-500/30 bg-cyan-500/10 text-[10px] font-mono text-cyan-400 uppercase">PT-BR</span>
+              <select id="job-detail-status-select" class="bg-zinc-900 border border-zinc-800 text-[11px] font-mono text-zinc-300 rounded px-2 py-0.5 focus:outline-none focus:border-zinc-700">
+                <option value="SAVED">Salva</option>
+                <option value="APPLIED">Aplicada</option>
+                <option value="INTERVIEW">Entrevista</option>
+                <option value="OFFER">Oferta</option>
+                <option value="REJECTED">Rejeitada</option>
+              </select>
+            </div>
+            <h2 id="job-detail-title" class="text-base font-semibold text-zinc-50 mt-1 truncate">Senior Backend Engineer</h2>
           </div>
+
+          <!-- Actions: 7-Layer Boost & Downloads -->
+          <div class="flex items-center gap-2">
+            <button id="btn-run-tailor" class="px-3 py-1.5 rounded border border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 text-xs font-medium flex items-center gap-1.5 transition-all shadow-sm">
+              <i data-lucide="zap" class="w-3.5 h-3.5 text-emerald-400 stroke-[2]"></i>
+              <span>⚡ Executar Otimização ATS (7 Camadas)</span>
+            </button>
+
+            <div class="h-4 w-[1px] bg-zinc-800 mx-1"></div>
+
+            <button id="btn-download-pdf" class="px-2.5 py-1.5 rounded border border-zinc-800 hover:border-zinc-700 bg-zinc-900 hover:bg-zinc-850 text-xs font-mono text-zinc-300 hover:text-white flex items-center gap-1.5 transition-all" title="Baixar PDF linear com XMP e Info Dict">
+              <i data-lucide="file-text" class="w-3.5 h-3.5 text-zinc-400"></i>
+              <span>.PDF (XMP)</span>
+            </button>
+
+            <button id="btn-download-docx" class="px-2.5 py-1.5 rounded border border-zinc-800 hover:border-zinc-700 bg-zinc-900 hover:bg-zinc-850 text-xs font-mono text-zinc-300 hover:text-white flex items-center gap-1.5 transition-all" title="Baixar DOCX com OpenXML coreProperties">
+              <i data-lucide="file-check" class="w-3.5 h-3.5 text-zinc-400"></i>
+              <span>.DOCX (OpenXML)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- BENTO GRID DE TELEMETRIA ATS (4 Cards Compactos no Topo) -->
+        <div class="p-4 border-b border-zinc-800 bg-zinc-950 shrink-0">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            
+            <!-- Card 1: ATS Score Gauge -->
+            <div class="p-3.5 rounded border border-zinc-800 bg-[#0c0c0e] flex flex-col justify-between">
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] font-mono uppercase text-zinc-500 tracking-wider">Score ATS</span>
+                <span id="telemetry-gain" class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">+0 pts</span>
+              </div>
+              <div class="flex items-baseline gap-2 my-2">
+                <span id="telemetry-score-after" class="text-3xl font-mono font-bold text-zinc-100 tabular-nums">--</span>
+                <span class="text-xs font-mono text-zinc-500">/ 100</span>
+                <span id="telemetry-score-before-sub" class="text-[11px] font-mono text-zinc-500 ml-auto">(Base: --)</span>
+              </div>
+              <!-- Segmented breakdown bars -->
+              <div class="space-y-1">
+                <div class="flex justify-between text-[10px] font-mono text-zinc-400">
+                  <span>Keywords & Densidade</span>
+                  <span id="telemetry-breakdown-kw">0/55</span>
+                </div>
+                <div class="w-full h-1 rounded bg-zinc-800 overflow-hidden flex">
+                  <div id="bar-formatting" class="bg-blue-500 h-full w-0 transition-all duration-500"></div>
+                  <div id="bar-keywords" class="bg-emerald-400 h-full w-0 transition-all duration-500"></div>
+                  <div id="bar-density" class="bg-cyan-400 h-full w-0 transition-all duration-500"></div>
+                  <div id="bar-entity" class="bg-indigo-400 h-full w-0 transition-all duration-500"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card 2: Matriz de Densidade TF-IDF (Top 15 Keywords) -->
+            <div class="p-3.5 rounded border border-zinc-800 bg-[#0c0c0e] flex flex-col">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-[10px] font-mono uppercase text-zinc-500 tracking-wider">Top 15 Keywords (TF-IDF)</span>
+                <span id="telemetry-kw-count" class="text-[10px] font-mono text-zinc-400">0 detectadas</span>
+              </div>
+              <div id="telemetry-keywords-grid" class="flex-1 overflow-y-auto max-h-24 flex flex-wrap gap-1 pr-1 font-mono text-[11px]">
+                <!-- Chips injected via app.js -->
+                <span class="text-zinc-600 italic text-[11px]">Nenhuma keyword extraída</span>
+              </div>
+            </div>
+
+            <!-- Card 3: Injeção Binária de Metadados (XMP & OpenXML) -->
+            <div class="p-3.5 rounded border border-zinc-800 bg-[#0c0c0e] flex flex-col justify-between font-mono">
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] uppercase text-zinc-500 tracking-wider">Injeção de Metadados</span>
+                <span class="text-[9px] px-1 rounded bg-zinc-800 text-zinc-400 border border-zinc-700">XMP / InfoDict</span>
+              </div>
+              <div class="text-[10px] bg-zinc-950 p-2 rounded border border-zinc-900 text-zinc-400 my-1.5 space-y-0.5 truncate">
+                <div class="truncate"><span class="text-zinc-500">dc:title:</span> <span id="meta-disp-title" class="text-zinc-300">--</span></div>
+                <div class="truncate"><span class="text-zinc-500">dc:creator:</span> <span id="meta-disp-author" class="text-zinc-300">--</span></div>
+                <div class="truncate"><span class="text-zinc-500">cp:keywords:</span> <span id="meta-disp-keywords" class="text-emerald-400">--</span></div>
+              </div>
+              <div class="text-[10px] text-zinc-500 flex items-center gap-1">
+                <i data-lucide="check" class="w-3 h-3 text-emerald-400"></i>
+                <span>OpenXML coreProperties sincronizado</span>
+              </div>
+            </div>
+
+            <!-- Card 4: Regras Estruturais Ativas -->
+            <div class="p-3.5 rounded border border-zinc-800 bg-[#0c0c0e] flex flex-col justify-between font-mono text-[11px]">
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] uppercase text-zinc-500 tracking-wider">Regras Estruturais ATS</span>
+                <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-400"></i>
+              </div>
+              <div class="space-y-1 my-1.5">
+                <div class="flex items-center gap-1.5 text-zinc-300">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                  <span class="text-[10px]">Regra da 1ª Linha (Peso 2)</span>
+                </div>
+                <div class="flex items-center gap-1.5 text-zinc-300">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                  <span class="text-[10px]">Boundary Bleed (Resumo -> Exp)</span>
+                </div>
+                <div class="flex items-center gap-1.5 text-zinc-300">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                  <span class="text-[10px]">Entity Variations (Anos/Meses)</span>
+                </div>
+              </div>
+              <div class="text-[10px] text-zinc-500">
+                Fluxo Linear 100% Selecionável
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- WORKSPACE INFERIOR: ABAS DE INSPEÇÃO E EDIÇÃO -->
+        <div class="flex-1 flex flex-col overflow-hidden">
           
-          <select id="filter-status" class="bg-dark-800 border border-white/10 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-brand-500">
-            <option value="ALL">Todos os status</option>
-            <option value="SAVED">Salva</option>
-            <option value="APPLIED">Aplicada</option>
-            <option value="INTERVIEW">Entrevista</option>
-            <option value="OFFER">Oferta</option>
-            <option value="REJECTED">Rejeitada</option>
-          </select>
+          <!-- Tab Navigation Bar -->
+          <div class="h-10 px-4 border-b border-zinc-800 bg-[#0c0c0e] flex items-center justify-between shrink-0">
+            <div class="flex items-center gap-1">
+              <button class="wb-tab-btn active px-3 py-1 text-xs font-medium rounded text-zinc-100 bg-zinc-850 border border-zinc-700/80" data-tab="tab-diff">
+                <span class="flex items-center gap-1.5">
+                  <i data-lucide="git-compare" class="w-3.5 h-3.5 text-emerald-400"></i>
+                  Side-by-Side Diff (Master vs. Otimizado)
+                </span>
+              </button>
+              <button class="wb-tab-btn px-3 py-1 text-xs font-medium rounded text-zinc-400 hover:text-zinc-200" data-tab="tab-jd">
+                <span class="flex items-center gap-1.5">
+                  <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+                  Descrição da Vaga & Scraper
+                </span>
+              </button>
+              <button class="wb-tab-btn px-3 py-1 text-xs font-medium rounded text-zinc-400 hover:text-zinc-200" data-tab="tab-preview">
+                <span class="flex items-center gap-1.5">
+                  <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                  Preview Folha A4 Linear
+                </span>
+              </button>
+            </div>
+
+            <!-- Tab Actions -->
+            <div id="tab-diff-actions" class="flex items-center gap-2">
+              <button id="btn-save-recalc" class="px-2.5 py-1 rounded border border-zinc-700 hover:border-zinc-600 bg-zinc-850 hover:bg-zinc-800 text-[11px] font-mono text-zinc-300 hover:text-white flex items-center gap-1.5 transition-all">
+                <i data-lucide="refresh-cw" class="w-3 h-3 text-emerald-400"></i>
+                <span>Recalcular Score</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Tab 1: Side-by-Side Diff -->
+          <div id="tab-diff" class="wb-tab-pane flex-1 grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-zinc-800 overflow-hidden">
+            
+            <!-- Left: Master CV (Original) -->
+            <div class="flex flex-col h-full bg-[#09090b] overflow-hidden">
+              <div class="px-4 py-2 border-b border-zinc-800 bg-[#0c0c0e]/60 flex items-center justify-between text-[11px] font-mono text-zinc-400 shrink-0">
+                <span>MASTER CV (BASE ORIGINAL)</span>
+                <span class="text-zinc-600">Somente Leitura</span>
+              </div>
+              <div id="master-cv-rendered" class="flex-1 p-4 overflow-y-auto space-y-4 text-xs leading-relaxed text-zinc-300 font-sans">
+                <!-- Master CV Content rendered via app.js -->
+              </div>
+            </div>
+
+            <!-- Right: Tailored CV (Live Editable with Syntax Highlighting) -->
+            <div class="flex flex-col h-full bg-[#0c0c0e]/40 overflow-hidden">
+              <div class="px-4 py-2 border-b border-zinc-800 bg-[#0c0c0e]/80 flex items-center justify-between text-[11px] font-mono text-emerald-400 shrink-0">
+                <span class="flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                  CURRÍCULO OTIMIZADO (7 CAMADAS)
+                </span>
+                <span class="text-[10px] text-zinc-500 font-mono">Edição Live Ativa</span>
+              </div>
+              
+              <div class="flex-1 p-4 overflow-y-auto space-y-4 font-sans text-xs" id="tailored-editor-fields">
+                <!-- Editable form controls -->
+                <div>
+                  <label class="block text-[10px] font-mono uppercase text-zinc-500 mb-1">Título do Cargo / Headline</label>
+                  <input type="text" id="edit-tailored-title" class="wb-input w-full font-mono text-xs text-zinc-100">
+                </div>
+
+                <div>
+                  <div class="flex items-center justify-between mb-1">
+                    <label class="text-[10px] font-mono uppercase text-zinc-500">Resumo Profissional (2x-3x Densidade & Linha Bleed)</label>
+                    <span class="text-[10px] font-mono text-emerald-400">Peso 3</span>
+                  </div>
+                  <textarea id="edit-tailored-summary" rows="5" class="wb-input w-full font-sans text-xs leading-relaxed text-zinc-200"></textarea>
+                  <!-- Keyword visualizer in summary -->
+                  <div class="mt-1.5 p-2 rounded bg-zinc-900 border border-zinc-800 text-[11px] leading-relaxed text-zinc-300" id="summary-highlight-preview"></div>
+                </div>
+
+                <div>
+                  <label class="block text-[10px] font-mono uppercase text-zinc-500 mb-1">Habilidades Otimizadas (Siglas + Extenso)</label>
+                  <input type="text" id="edit-tailored-skills" class="wb-input w-full font-mono text-xs text-zinc-100">
+                </div>
+
+                <div>
+                  <div class="flex items-center justify-between mb-1">
+                    <label class="text-[10px] font-mono uppercase text-zinc-500">Experiências (Regra da 1ª Linha)</label>
+                    <span class="text-[10px] font-mono text-emerald-400">Peso 2</span>
+                  </div>
+                  <div id="edit-tailored-experiences" class="space-y-3">
+                    <!-- Dynamic experiences -->
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Tab 2: Job Description & Scraper -->
+          <div id="tab-jd" class="wb-tab-pane flex-1 p-6 overflow-y-auto hidden space-y-4 max-w-4xl">
+            <div class="p-4 rounded border border-zinc-800 bg-[#0c0c0e] space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-mono uppercase text-zinc-400 font-semibold">Extração & Scraping da Vaga</span>
+                <span id="jd-stats" class="text-xs font-mono text-zinc-500">0 palavras • PT-BR</span>
+              </div>
+              <div class="flex gap-2">
+                <input type="url" id="jd-url-input" placeholder="https://gupy.io/... ou https://greenhouse.io/..." class="wb-input flex-1 font-mono text-xs">
+                <button type="button" id="btn-re-extract-url" class="px-3 py-1.5 rounded bg-zinc-800 hover:bg-zinc-700 text-xs font-mono text-zinc-200 flex items-center gap-1.5">
+                  <i data-lucide="refresh-cw" class="w-3 h-3 text-cyan-400"></i>
+                  <span>Re-extrair URL</span>
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-[11px] font-mono uppercase text-zinc-500 mb-1.5">Texto Bruto dos Requisitos</label>
+              <textarea id="jd-raw-text" rows="16" class="wb-input w-full font-mono text-xs leading-relaxed text-zinc-300"></textarea>
+            </div>
+
+            <div class="flex justify-end">
+              <button id="btn-save-jd" class="px-4 py-1.5 rounded bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-semibold">
+                Salvar Alterações da Vaga
+              </button>
+            </div>
+          </div>
+
+          <!-- Tab 3: Preview Folha A4 Linear -->
+          <div id="tab-preview" class="wb-tab-pane flex-1 p-6 overflow-y-auto hidden">
+            <div class="a4-sheet" id="a4-preview-content">
+              <!-- A4 preview rendered via app.js -->
+            </div>
+          </div>
+
         </div>
 
-        <div class="flex items-center gap-2 w-full sm:w-auto">
-          <button id="btn-open-add-job" class="flex-1 sm:flex-none px-4 py-2 bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-400 text-white rounded-xl text-xs font-semibold shadow-lg shadow-brand-500/20 flex items-center justify-center gap-2 transition-all">
-            <i data-lucide="plus-circle" class="w-4 h-4"></i>
-            <span>Nova Vaga</span>
-          </button>
-        </div>
       </div>
 
-      <!-- Jobs Grid / Table -->
-      <div class="bg-dark-900/40 rounded-2xl border border-white/5 overflow-hidden">
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-xs">
-            <thead class="bg-dark-850/80 text-slate-400 font-semibold border-b border-white/5 uppercase tracking-wider text-[11px]">
-              <tr>
-                <th class="py-3.5 px-4">Cargo / Empresa</th>
-                <th class="py-3.5 px-4">Status</th>
-                <th class="py-3.5 px-4">Idioma & Keywords TF-IDF</th>
-                <th class="py-3.5 px-4">Score ATS</th>
-                <th class="py-3.5 px-4 text-right">Ações</th>
-              </tr>
-            </thead>
-            <tbody id="jobs-table-body" class="divide-y divide-white/5 text-slate-300">
-              <!-- Rendered via Javascript -->
-              <tr>
-                <td colspan="5" class="py-12 text-center text-slate-500">
-                  <i data-lucide="loader" class="w-6 h-6 animate-spin mx-auto mb-2 text-brand-400"></i>
-                  Carregando vagas...
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+    </main>
 
-    </section>
+  </div>
 
-    <!-- SECTION 2: MASTER PROFILE VIEW -->
-    <section id="view-profile" class="hidden space-y-6">
+  <!-- MODAL / DRAWER: MASTER CV MANAGER (Drag-and-Drop & Structured Form) -->
+  <div id="drawer-profile" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex justify-end">
+    <div class="w-full max-w-2xl bg-[#0c0c0e] border-l border-zinc-800 h-full flex flex-col shadow-2xl overflow-hidden">
       
-      <!-- Upload Banner -->
-      <div class="bg-gradient-to-r from-dark-900 via-dark-850 to-dark-900 p-6 rounded-2xl border border-white/10 shadow-xl relative overflow-hidden">
-        <div class="max-w-2xl">
-          <span class="px-2.5 py-1 text-[11px] font-semibold rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 uppercase tracking-wide">
-            Master Profile Central
-          </span>
-          <h2 class="text-xl font-bold text-white mt-2">Currículo Base do Candidato</h2>
-          <p class="text-xs text-slate-400 mt-1">
-            Faça upload do seu PDF principal para estruturação automática de dados no SQLite, ou edite as seções diretamente abaixo. O otimizador cruza este perfil com cada vaga para gerar versões personalizadas com nota 90+.
-          </p>
-
-          <div class="mt-4 flex flex-wrap items-center gap-3">
-            <label class="cursor-pointer px-4 py-2.5 bg-dark-800 hover:bg-dark-700 border border-white/10 hover:border-white/20 rounded-xl text-xs font-semibold text-white flex items-center gap-2 transition-all">
-              <i data-lucide="upload-cloud" class="w-4 h-4 text-cyan-400"></i>
-              <span>Fazer Upload de PDF Base</span>
-              <input type="file" id="input-upload-pdf" accept=".pdf" class="hidden">
-            </label>
-            <span id="upload-status" class="text-xs text-slate-400"></span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Structured Profile Form -->
-      <form id="profile-form" class="space-y-6 bg-dark-900/60 p-6 rounded-2xl border border-white/5">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div>
-            <label class="block text-xs font-medium text-slate-400 mb-1">Nome Completo</label>
-            <input type="text" id="prof-fullName" class="w-full bg-dark-800 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-500" required>
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-slate-400 mb-1">Título Profissional / Headline</label>
-            <input type="text" id="prof-headline" class="w-full bg-dark-800 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-500" required>
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-slate-400 mb-1">E-mail</label>
-            <input type="email" id="prof-email" class="w-full bg-dark-800 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-500" required>
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-slate-400 mb-1">Telefone</label>
-            <input type="text" id="prof-phone" class="w-full bg-dark-800 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-500">
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-slate-400 mb-1">Localização (Cidade, UF)</label>
-            <input type="text" id="prof-location" class="w-full bg-dark-800 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-500">
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-slate-400 mb-1">LinkedIn (URL)</label>
-            <input type="text" id="prof-linkedin" class="w-full bg-dark-800 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-500">
-          </div>
-        </div>
-
+      <!-- Drawer Header -->
+      <div class="p-4 border-b border-zinc-800 flex items-center justify-between shrink-0 bg-[#09090b]">
         <div>
-          <label class="block text-xs font-medium text-slate-400 mb-1">Resumo Profissional (Master)</label>
-          <textarea id="prof-summary" rows="4" class="w-full bg-dark-800 border border-white/10 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-brand-500 font-sans"></textarea>
+          <h3 class="text-sm font-semibold text-zinc-100">Meu Currículo Base (Master Profile)</h3>
+          <p class="text-xs text-zinc-500 font-mono">Dados persistidos no SQLite local • Referência para todas as vagas</p>
         </div>
-
-        <div>
-          <label class="block text-xs font-medium text-slate-400 mb-1">Habilidades Técnicas (separadas por vírgula)</label>
-          <input type="text" id="prof-skills" class="w-full bg-dark-800 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-500" placeholder="TypeScript, Node.js, Docker, PostgreSQL, React">
-        </div>
-
-        <div>
-          <div class="flex items-center justify-between mb-2">
-            <label class="text-xs font-medium text-slate-400">Experiências Profissionais</label>
-            <button type="button" id="btn-add-exp" class="text-xs text-brand-400 hover:text-brand-300 font-medium flex items-center gap-1">
-              <i data-lucide="plus" class="w-3.5 h-3.5"></i> Adicionar Experiência
-            </button>
-          </div>
-          <div id="experiences-container" class="space-y-4">
-            <!-- Dynamic experiences list -->
-          </div>
-        </div>
-
-        <div>
-          <div class="flex items-center justify-between mb-2">
-            <label class="text-xs font-medium text-slate-400">Formação Acadêmica</label>
-            <button type="button" id="btn-add-edu" class="text-xs text-brand-400 hover:text-brand-300 font-medium flex items-center gap-1">
-              <i data-lucide="plus" class="w-3.5 h-3.5"></i> Adicionar Formação
-            </button>
-          </div>
-          <div id="education-container" class="space-y-4">
-            <!-- Dynamic education list -->
-          </div>
-        </div>
-
-        <div>
-          <label class="block text-xs font-medium text-slate-400 mb-1">Certificações (separadas por vírgula)</label>
-          <input type="text" id="prof-certifications" class="w-full bg-dark-800 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-500" placeholder="AWS Certified Solutions Architect, Kubernetes CKA">
-        </div>
-
-        <div class="pt-4 border-t border-white/5 flex items-center justify-end gap-3">
-          <button type="submit" class="px-6 py-2.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-brand-500/20 transition-all flex items-center gap-2">
-            <i data-lucide="save" class="w-4 h-4"></i>
-            <span>Salvar Currículo Base</span>
-          </button>
-        </div>
-      </form>
-
-    </section>
-
-  </main>
-
-  <!-- MODAL: ADD / EDIT JOB -->
-  <div id="modal-job" class="fixed inset-0 bg-black/70 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-dark-900 border border-white/10 rounded-2xl max-w-2xl w-full p-6 space-y-5 shadow-2xl overflow-y-auto max-h-[90vh]">
-      <div class="flex items-center justify-between border-b border-white/5 pb-3">
-        <h3 class="text-base font-bold text-white flex items-center gap-2">
-          <i data-lucide="file-plus" class="w-4 h-4 text-brand-400"></i>
-          <span id="modal-job-title">Cadastrar Vaga de Emprego</span>
-        </h3>
-        <button id="modal-job-close" class="text-slate-400 hover:text-white p-1 rounded-lg">
+        <button id="drawer-profile-close" class="p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-800">
           <i data-lucide="x" class="w-5 h-5"></i>
         </button>
       </div>
 
-      <!-- URL Auto Extraction Bar -->
-      <div class="bg-dark-850 p-4 rounded-xl border border-white/5 space-y-2">
-        <label class="block text-xs font-medium text-slate-300">URL da Vaga (Extração Automática)</label>
-        <div class="flex gap-2">
-          <input type="url" id="job-url-input" placeholder="https://gupy.io/... ou https://greenhouse.io/..." class="flex-1 bg-dark-800 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-500">
-          <button type="button" id="btn-extract-url" class="px-3.5 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all">
-            <i data-lucide="globe" class="w-3.5 h-3.5"></i>
-            <span>🔍 Extrair da URL</span>
-          </button>
+      <!-- Drawer Content -->
+      <div class="flex-1 overflow-y-auto p-6 space-y-6 font-sans text-xs">
+        
+        <!-- Drag-and-Drop Dropzone -->
+        <div id="pdf-dropzone" class="border-2 border-dashed border-zinc-800 hover:border-zinc-600 rounded-lg p-6 text-center transition-all cursor-pointer bg-zinc-950/60">
+          <i data-lucide="upload-cloud" class="w-8 h-8 mx-auto text-zinc-400 mb-2 stroke-[1.5]"></i>
+          <p class="text-xs font-medium text-zinc-200">Arraste seu arquivo PDF aqui ou clique para selecionar</p>
+          <p class="text-[11px] text-zinc-500 font-mono mt-1">Extração automática via pdf-parse e estruturação Zod</p>
+          <input type="file" id="drawer-pdf-input" accept=".pdf" class="hidden">
+          <div id="drawer-upload-status" class="mt-2 text-[11px] font-mono"></div>
         </div>
-        <p id="extract-feedback" class="text-[11px] text-slate-400"></p>
+
+        <!-- Master Profile Form -->
+        <form id="master-profile-form" class="space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[10px] font-mono uppercase text-zinc-500 mb-1">Nome Completo</label>
+              <input type="text" id="drawer-fullName" class="wb-input w-full font-sans" required>
+            </div>
+            <div>
+              <label class="block text-[10px] font-mono uppercase text-zinc-500 mb-1">Título Profissional / Headline</label>
+              <input type="text" id="drawer-headline" class="wb-input w-full font-sans" required>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label class="block text-[10px] font-mono uppercase text-zinc-500 mb-1">E-mail</label>
+              <input type="email" id="drawer-email" class="wb-input w-full font-mono text-xs" required>
+            </div>
+            <div>
+              <label class="block text-[10px] font-mono uppercase text-zinc-500 mb-1">Telefone</label>
+              <input type="text" id="drawer-phone" class="wb-input w-full font-mono text-xs">
+            </div>
+            <div>
+              <label class="block text-[10px] font-mono uppercase text-zinc-500 mb-1">Localização</label>
+              <input type="text" id="drawer-location" class="wb-input w-full">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[10px] font-mono uppercase text-zinc-500 mb-1">LinkedIn (URL)</label>
+              <input type="text" id="drawer-linkedin" class="wb-input w-full font-mono text-xs">
+            </div>
+            <div>
+              <label class="block text-[10px] font-mono uppercase text-zinc-500 mb-1">GitHub (URL)</label>
+              <input type="text" id="drawer-github" class="wb-input w-full font-mono text-xs">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-[10px] font-mono uppercase text-zinc-500 mb-1">Resumo Profissional Original</label>
+            <textarea id="drawer-summary" rows="4" class="wb-input w-full font-sans leading-relaxed"></textarea>
+          </div>
+
+          <div>
+            <label class="block text-[10px] font-mono uppercase text-zinc-500 mb-1">Habilidades Técnicas (separadas por vírgula)</label>
+            <input type="text" id="drawer-skills" class="wb-input w-full font-mono text-xs">
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="text-[10px] font-mono uppercase text-zinc-500">Experiências</label>
+              <button type="button" id="btn-drawer-add-exp" class="text-xs text-zinc-400 hover:text-white font-mono flex items-center gap-1">
+                <i data-lucide="plus" class="w-3 h-3"></i> Adicionar
+              </button>
+            </div>
+            <div id="drawer-experiences-list" class="space-y-3"></div>
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="text-[10px] font-mono uppercase text-zinc-500">Formação Acadêmica</label>
+              <button type="button" id="btn-drawer-add-edu" class="text-xs text-zinc-400 hover:text-white font-mono flex items-center gap-1">
+                <i data-lucide="plus" class="w-3 h-3"></i> Adicionar
+              </button>
+            </div>
+            <div id="drawer-education-list" class="space-y-3"></div>
+          </div>
+
+          <div>
+            <label class="block text-[10px] font-mono uppercase text-zinc-500 mb-1">Certificações (separadas por vírgula)</label>
+            <input type="text" id="drawer-certifications" class="wb-input w-full font-mono text-xs">
+          </div>
+
+          <div class="pt-4 border-t border-zinc-800 flex justify-end gap-2">
+            <button type="button" id="btn-drawer-cancel" class="px-3.5 py-1.5 rounded border border-zinc-800 hover:bg-zinc-800 text-xs text-zinc-300">
+              Cancelar
+            </button>
+            <button type="submit" class="px-4 py-1.5 rounded bg-zinc-50 hover:bg-zinc-200 text-zinc-950 text-xs font-semibold">
+              Salvar Currículo Base
+            </button>
+          </div>
+        </form>
+
       </div>
 
-      <!-- Job Form -->
-      <form id="job-form" class="space-y-4">
-        <input type="hidden" id="job-id">
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    </div>
+  </div>
+
+  <!-- MODAL: ADD JOB (High Density) -->
+  <div id="modal-add-job" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="w-full max-w-xl bg-[#0c0c0e] border border-zinc-800 rounded-lg shadow-2xl overflow-hidden space-y-4 p-5 font-sans">
+      
+      <div class="flex items-center justify-between border-b border-zinc-800 pb-3">
+        <h3 class="text-sm font-semibold text-zinc-100 flex items-center gap-2">
+          <i data-lucide="briefcase" class="w-4 h-4 text-zinc-400"></i>
+          <span>Cadastrar Nova Vaga</span>
+        </h3>
+        <button id="modal-add-job-close" class="p-1 rounded text-zinc-400 hover:text-white">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <!-- Quick URL Extraction Input -->
+      <div class="p-3 rounded border border-zinc-800 bg-zinc-950/80 space-y-2">
+        <label class="block text-[10px] font-mono uppercase text-zinc-400">Extrair Automaticamente via URL</label>
+        <div class="flex gap-2">
+          <input type="url" id="modal-job-url" placeholder="https://..." class="wb-input flex-1 font-mono text-xs">
+          <button type="button" id="btn-modal-extract" class="px-3 py-1.5 rounded bg-zinc-800 hover:bg-zinc-700 text-xs font-mono text-zinc-200 flex items-center gap-1">
+            <i data-lucide="globe" class="w-3 h-3 text-cyan-400"></i>
+            <span>Extrair</span>
+          </button>
+        </div>
+        <p id="modal-extract-feedback" class="text-[10px] font-mono text-zinc-500"></p>
+      </div>
+
+      <!-- Manual Fields -->
+      <form id="form-create-job" class="space-y-3 text-xs">
+        <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-medium text-slate-400 mb-1">Título do Cargo</label>
-            <input type="text" id="form-job-title" class="w-full bg-dark-800 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-500" required placeholder="ex: Senior Backend Engineer">
+            <label class="block text-[10px] font-mono uppercase text-zinc-500 mb-1">Título do Cargo</label>
+            <input type="text" id="modal-input-title" class="wb-input w-full" required placeholder="ex: Senior Backend Engineer">
           </div>
           <div>
-            <label class="block text-xs font-medium text-slate-400 mb-1">Empresa</label>
-            <input type="text" id="form-job-company" class="w-full bg-dark-800 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-500" required placeholder="ex: Nubank">
+            <label class="block text-[10px] font-mono uppercase text-zinc-500 mb-1">Empresa</label>
+            <input type="text" id="modal-input-company" class="wb-input w-full" required placeholder="ex: Nubank">
           </div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-medium text-slate-400 mb-1">Status da Candidatura</label>
-            <select id="form-job-status" class="w-full bg-dark-800 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-500">
+            <label class="block text-[10px] font-mono uppercase text-zinc-500 mb-1">Status Inicial</label>
+            <select id="modal-input-status" class="wb-input w-full font-mono">
               <option value="SAVED">Salva</option>
               <option value="APPLIED">Aplicada</option>
               <option value="INTERVIEW">Entrevista</option>
@@ -293,174 +578,75 @@
             </select>
           </div>
           <div>
-            <label class="block text-xs font-medium text-slate-400 mb-1">Notas / Anotações</label>
-            <input type="text" id="form-job-notes" class="w-full bg-dark-800 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-500" placeholder="ex: Indicação interna, faixa R$ 18k">
+            <label class="block text-[10px] font-mono uppercase text-zinc-500 mb-1">Anotações (opcional)</label>
+            <input type="text" id="modal-input-notes" class="wb-input w-full" placeholder="ex: Faixa R$ 20k">
           </div>
         </div>
 
         <div>
-          <label class="block text-xs font-medium text-slate-400 mb-1">Descrição Completa dos Requisitos da Vaga</label>
-          <textarea id="form-job-description" rows="8" class="w-full bg-dark-800 border border-white/10 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-brand-500 font-mono text-[11px]" required placeholder="Cole aqui os requisitos técnicos, diferenciais e atribuições da vaga..."></textarea>
+          <label class="block text-[10px] font-mono uppercase text-zinc-500 mb-1">Descrição / Requisitos da Vaga</label>
+          <textarea id="modal-input-description" rows="7" class="wb-input w-full font-mono text-[11px] leading-relaxed" required placeholder="Cole aqui os requisitos técnicos da vaga..."></textarea>
         </div>
 
-        <div class="flex items-center justify-end gap-2 pt-2">
-          <button type="button" id="modal-job-cancel" class="px-4 py-2 bg-dark-800 hover:bg-dark-700 text-slate-300 rounded-xl text-xs font-medium">Cancelar</button>
-          <button type="submit" class="px-5 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-brand-500/20">Salvar Vaga</button>
+        <div class="pt-3 border-t border-zinc-800 flex justify-end gap-2">
+          <button type="button" id="btn-modal-cancel" class="px-3 py-1.5 rounded border border-zinc-800 text-zinc-400 hover:text-white text-xs">Cancelar</button>
+          <button type="submit" class="px-4 py-1.5 rounded bg-zinc-50 hover:bg-zinc-200 text-zinc-950 font-semibold text-xs">Cadastrar Vaga</button>
         </div>
       </form>
-    </div>
-  </div>
-
-  <!-- MODAL: SIDE-BY-SIDE OPTIMIZER & AUDITOR -->
-  <div id="modal-optimizer" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-3 sm:p-6">
-    <div class="bg-dark-950 border border-white/10 rounded-2xl max-w-6xl w-full h-[92vh] flex flex-col shadow-2xl overflow-hidden">
-      
-      <!-- Optimizer Modal Header -->
-      <div class="p-4 bg-dark-900 border-b border-white/5 flex items-center justify-between shrink-0">
-        <div>
-          <div class="flex items-center gap-2">
-            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-            <h3 class="text-base font-bold text-white" id="opt-job-header">Personalização ATS Algorítmica</h3>
-            <span id="opt-lang-badge" class="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 uppercase">PT-BR</span>
-          </div>
-          <p class="text-xs text-slate-400 mt-0.5" id="opt-company-sub">Empresa • Cargo Alvo</p>
-        </div>
-
-        <!-- Download Buttons -->
-        <div class="flex items-center gap-2">
-          <button id="btn-download-pdf" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold flex items-center gap-2 shadow-lg shadow-emerald-500/20 transition-all">
-            <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
-            <span>Baixar PDF Linear</span>
-          </button>
-          <button id="btn-download-docx" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold flex items-center gap-2 shadow-lg shadow-blue-500/20 transition-all">
-            <i data-lucide="file-check" class="w-3.5 h-3.5"></i>
-            <span>Baixar DOCX OpenXML</span>
-          </button>
-          <button id="opt-modal-close" class="text-slate-400 hover:text-white p-1.5 ml-2 rounded-lg hover:bg-white/5">
-            <i data-lucide="x" class="w-5 h-5"></i>
-          </button>
-        </div>
-      </div>
-
-      <!-- Score Bar (Before vs After) & TF-IDF Keywords Visualizer -->
-      <div class="bg-dark-900/80 p-4 border-b border-white/5 shrink-0 space-y-3">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-          
-          <!-- Score Gauge Before vs After -->
-          <div class="bg-dark-850 p-3 rounded-xl border border-white/5 flex items-center justify-between">
-            <div>
-              <span class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Score ATS Antes</span>
-              <div class="text-xl font-extrabold text-amber-400" id="opt-score-before">55/100</div>
-            </div>
-            <div class="text-slate-600">
-              <i data-lucide="arrow-right" class="w-4 h-4"></i>
-            </div>
-            <div>
-              <span class="text-[10px] uppercase tracking-wider text-emerald-400 font-semibold">Score Otimizado</span>
-              <div class="text-2xl font-black text-emerald-400" id="opt-score-after">94/100</div>
-            </div>
-          </div>
-
-          <!-- Breakdown Metrics -->
-          <div class="md:col-span-3 grid grid-cols-4 gap-2 text-center">
-            <div class="bg-dark-850/60 p-2 rounded-xl border border-white/5">
-              <div class="text-[10px] text-slate-400">Formatação</div>
-              <div class="text-xs font-bold text-white mt-0.5" id="metric-formatting">30/30</div>
-            </div>
-            <div class="bg-dark-850/60 p-2 rounded-xl border border-white/5">
-              <div class="text-[10px] text-slate-400">Keywords (TF-IDF)</div>
-              <div class="text-xs font-bold text-emerald-400 mt-0.5" id="metric-keywords">33/35</div>
-            </div>
-            <div class="bg-dark-850/60 p-2 rounded-xl border border-white/5">
-              <div class="text-[10px] text-slate-400">Densidade & 1ª Linha</div>
-              <div class="text-xs font-bold text-emerald-400 mt-0.5" id="metric-density">18/20</div>
-            </div>
-            <div class="bg-dark-850/60 p-2 rounded-xl border border-white/5">
-              <div class="text-[10px] text-slate-400">Blindagem Regex</div>
-              <div class="text-xs font-bold text-emerald-400 mt-0.5" id="metric-entity">15/15</div>
-            </div>
-          </div>
-
-        </div>
-
-        <!-- Keyword Density Chips (Target Ratios) -->
-        <div>
-          <div class="flex items-center justify-between mb-1.5">
-            <span class="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5">
-              <i data-lucide="bar-chart-2" class="w-3.5 h-3.5 text-brand-400"></i>
-              Densidade das Top 15 Keywords da Vaga (natural.TfIdf)
-            </span>
-            <span class="text-[10px] text-slate-400">Verde: Meta atingida | Amarelo: Parcial | Vermelho: Ausente</span>
-          </div>
-          <div id="opt-keywords-chips" class="flex flex-wrap gap-1.5 max-h-20 overflow-y-auto">
-            <!-- Keyword chips dynamically injected -->
-          </div>
-        </div>
-      </div>
-
-      <!-- Side-by-Side Comparison Container -->
-      <div class="flex-1 grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-white/10 overflow-hidden">
-        
-        <!-- Left Column: Master CV (Original) -->
-        <div class="flex flex-col h-full bg-dark-950 overflow-hidden">
-          <div class="p-3 bg-dark-900/60 border-b border-white/5 flex items-center justify-between shrink-0">
-            <span class="text-xs font-bold text-slate-300 flex items-center gap-2">
-              <i data-lucide="file-text" class="w-3.5 h-3.5 text-slate-400"></i>
-              Currículo Base (Original)
-            </span>
-            <span class="text-[10px] text-slate-500">Somente Leitura</span>
-          </div>
-          <div class="flex-1 p-4 overflow-y-auto space-y-4 text-xs font-sans leading-relaxed text-slate-300 select-text" id="preview-master-cv">
-            <!-- Master CV rendered here -->
-          </div>
-        </div>
-
-        <!-- Right Column: Tailored CV (Optimized & Editable) -->
-        <div class="flex flex-col h-full bg-dark-900/40 overflow-hidden">
-          <div class="p-3 bg-dark-900/80 border-b border-white/5 flex items-center justify-between shrink-0">
-            <span class="text-xs font-bold text-emerald-400 flex items-center gap-2">
-              <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
-              Currículo Otimizado (7 Camadas de ATS)
-            </span>
-            <button id="btn-recalculate-score" class="text-[11px] font-semibold text-brand-400 hover:text-brand-300 flex items-center gap-1">
-              <i data-lucide="refresh-cw" class="w-3 h-3"></i> Recalcular Score
-            </button>
-          </div>
-          
-          <!-- Editable Preview Container -->
-          <div class="flex-1 p-4 overflow-y-auto space-y-4" id="editor-tailored-container">
-            <div>
-              <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Título do Cargo / Headline</label>
-              <input type="text" id="edit-tailored-headline" class="w-full bg-dark-800 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-500">
-            </div>
-
-            <div>
-              <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">
-                Resumo Profissional (Repetição 2x-3x & Linha Bleed)
-              </label>
-              <textarea id="edit-tailored-summary" rows="5" class="w-full bg-dark-800 border border-white/10 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-brand-500 leading-relaxed"></textarea>
-            </div>
-
-            <div>
-              <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Habilidades Otimizadas (Siglas + Extenso)</label>
-              <input type="text" id="edit-tailored-skills" class="w-full bg-dark-800 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-500">
-            </div>
-
-            <div>
-              <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">
-                Experiências (Regra da 1ª Linha com Resumo Executivo)
-              </label>
-              <div id="edit-tailored-experiences" class="space-y-3">
-                <!-- Editable experiences -->
-              </div>
-            </div>
-          </div>
-        </div>
-
-      </div>
 
     </div>
   </div>
+
+  <!-- LAYER STEPPER OVERLAY (Animated progress during 7-layer optimization) -->
+  <div id="layer-stepper-overlay" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+    <div class="w-full max-w-md bg-[#0c0c0e] border border-zinc-800 rounded-lg p-6 space-y-4 font-mono shadow-2xl">
+      <div class="flex items-center justify-between border-b border-zinc-800 pb-3">
+        <span class="text-xs uppercase text-zinc-400 font-semibold flex items-center gap-2">
+          <i data-lucide="cpu" class="w-4 h-4 text-emerald-400 animate-spin"></i>
+          Otimizador ATS em Execução
+        </span>
+        <span id="stepper-pct" class="text-xs text-emerald-400">0%</span>
+      </div>
+
+      <div class="space-y-2 text-xs" id="stepper-list">
+        <div class="step-item text-zinc-500 flex items-center gap-2" id="step-1">
+          <span class="w-1.5 h-1.5 rounded-full bg-zinc-700"></span>
+          <span>1/7 Alinhamento de Densidade (natural.TfIdf)</span>
+        </div>
+        <div class="step-item text-zinc-500 flex items-center gap-2" id="step-2">
+          <span class="w-1.5 h-1.5 rounded-full bg-zinc-700"></span>
+          <span>2/7 Pesos de Seção & Regra da 1ª Linha (Executiva)</span>
+        </div>
+        <div class="step-item text-zinc-500 flex items-center gap-2" id="step-3">
+          <span class="w-1.5 h-1.5 rounded-full bg-zinc-700"></span>
+          <span>3/7 Blindagem contra Corte Eliminatório (Regex Anos/Meses)</span>
+        </div>
+        <div class="step-item text-zinc-500 flex items-center gap-2" id="step-4">
+          <span class="w-1.5 h-1.5 rounded-full bg-zinc-700"></span>
+          <span>4/7 Otimização de Espaço Vetorial (Cluster Semântico)</span>
+        </div>
+        <div class="step-item text-zinc-500 flex items-center gap-2" id="step-5">
+          <span class="w-1.5 h-1.5 rounded-full bg-zinc-700"></span>
+          <span>5/7 Exploração de Bug de Janela (Boundary Bleed)</span>
+        </div>
+        <div class="step-item text-zinc-500 flex items-center gap-2" id="step-6">
+          <span class="w-1.5 h-1.5 rounded-full bg-zinc-700"></span>
+          <span>6/7 Preparação de Metadados Binários (XMP & OpenXML)</span>
+        </div>
+        <div class="step-item text-zinc-500 flex items-center gap-2" id="step-7">
+          <span class="w-1.5 h-1.5 rounded-full bg-zinc-700"></span>
+          <span>7/7 Auditoria Final de Score ATS (0 a 100)</span>
+        </div>
+      </div>
+
+      <div class="w-full h-1 bg-zinc-800 rounded overflow-hidden">
+        <div id="stepper-progress-bar" class="h-full bg-emerald-400 w-0 transition-all duration-300"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION CONTAINER (Fixed bottom right) -->
+  <div id="toast-container" class="fixed bottom-4 right-4 z-50 space-y-2 pointer-events-none"></div>
 
   <script src="/app.js"></script>
 </body>

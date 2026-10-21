@@ -1,15 +1,18 @@
-// Global State
+// State
 let currentMasterProfile = null;
 let currentJobs = [];
-let activeJobId = null;
-let currentTailoredData = null;
+let selectedJobId = null;
+let activeJobData = null;
+let currentFilterStatus = "ALL";
+let currentSearchQuery = "";
 
-// Initialize on DOM ready
+// DOM Elements & Event Bindings
 document.addEventListener("DOMContentLoaded", async () => {
-  setupNavigation();
-  setupProfileForm();
-  setupJobModal();
-  setupOptimizerModal();
+  setupWorkbenchNavigation();
+  setupProfileDrawer();
+  setupAddJobModal();
+  setupInspectorTabs();
+  setupInspectorActions();
 
   await loadMasterProfile();
   await loadJobs();
@@ -19,140 +22,82 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 });
 
-// 1. NAVIGATION
-function setupNavigation() {
-  const btnJobs = document.getElementById("nav-jobs");
-  const btnProfile = document.getElementById("nav-profile");
-  const viewJobs = document.getElementById("view-jobs");
-  const viewProfile = document.getElementById("view-profile");
-
-  btnJobs.addEventListener("click", () => {
-    btnJobs.className = "tab-btn px-4 py-1.5 text-xs font-medium rounded-lg transition-all text-white bg-dark-700 shadow-sm flex items-center gap-2";
-    btnProfile.className = "tab-btn px-4 py-1.5 text-xs font-medium rounded-lg transition-all text-slate-400 hover:text-white flex items-center gap-2";
-    viewJobs.classList.remove("hidden");
-    viewProfile.classList.add("hidden");
-  });
-
-  btnProfile.addEventListener("click", () => {
-    btnProfile.className = "tab-btn px-4 py-1.5 text-xs font-medium rounded-lg transition-all text-white bg-dark-700 shadow-sm flex items-center gap-2";
-    btnJobs.className = "tab-btn px-4 py-1.5 text-xs font-medium rounded-lg transition-all text-slate-400 hover:text-white flex items-center gap-2";
-    viewProfile.classList.remove("hidden");
-    viewJobs.classList.add("hidden");
-  });
-}
-
-// 2. MASTER PROFILE
+// ==========================================
+// 1. TOP BAR & MASTER PROFILE
+// ==========================================
 async function loadMasterProfile() {
   try {
     const res = await fetch("/api/profile");
     const data = await res.json();
     currentMasterProfile = data.profile;
 
-    const badgeStatus = document.getElementById("badge-profile-status");
+    const dot = document.getElementById("top-master-dot");
+    const nameEl = document.getElementById("top-master-name");
+
     if (currentMasterProfile && currentMasterProfile.fullName) {
-      badgeStatus.className = "w-2 h-2 rounded-full bg-emerald-400";
-      populateProfileForm(currentMasterProfile);
+      dot.className = "w-1.5 h-1.5 rounded-full bg-emerald-400";
+      nameEl.textContent = `Master CV: ${currentMasterProfile.fullName}`;
+      populateDrawerForm(currentMasterProfile);
     } else {
-      badgeStatus.className = "w-2 h-2 rounded-full bg-amber-400";
+      dot.className = "w-1.5 h-1.5 rounded-full bg-amber-400";
+      nameEl.textContent = "Master CV: Pendente";
     }
   } catch (err) {
-    console.error("Erro ao carregar perfil:", err);
+    console.error("Erro ao carregar master profile:", err);
   }
 }
 
-function populateProfileForm(p) {
-  document.getElementById("prof-fullName").value = p.fullName || "";
-  document.getElementById("prof-headline").value = p.headline || "";
-  document.getElementById("prof-email").value = p.email || "";
-  document.getElementById("prof-phone").value = p.phone || "";
-  document.getElementById("prof-location").value = p.location || "";
-  document.getElementById("prof-linkedin").value = p.linkedin || "";
-  document.getElementById("prof-summary").value = p.summary || "";
-  document.getElementById("prof-skills").value = (p.skills || []).join(", ");
-  document.getElementById("prof-certifications").value = (p.certifications || []).join(", ");
+function setupProfileDrawer() {
+  const drawer = document.getElementById("drawer-profile");
+  const btnOpen = document.getElementById("btn-open-profile-drawer");
+  const btnClose = document.getElementById("drawer-profile-close");
+  const btnCancel = document.getElementById("btn-drawer-cancel");
+  const form = document.getElementById("master-profile-form");
+  const dropzone = document.getElementById("pdf-dropzone");
+  const fileInput = document.getElementById("drawer-pdf-input");
+  const statusEl = document.getElementById("drawer-upload-status");
 
-  renderExperiencesInputs(p.experiences || []);
-  renderEducationInputs(p.education || []);
-}
-
-function renderExperiencesInputs(exps) {
-  const container = document.getElementById("experiences-container");
-  container.innerHTML = "";
-
-  exps.forEach((exp, idx) => {
-    const card = document.createElement("div");
-    card.className = "p-4 bg-dark-850 rounded-xl border border-white/5 space-y-3 relative";
-    card.innerHTML = `
-      <div class="flex items-center justify-between">
-        <span class="text-[11px] font-semibold text-slate-400">Experiência #${idx + 1}</span>
-        <button type="button" class="btn-remove-exp text-rose-400 hover:text-rose-300 text-xs" data-idx="${idx}">
-          Remover
-        </button>
-      </div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <input type="text" placeholder="Cargo" class="exp-role bg-dark-800 border border-white/10 rounded-lg p-2 text-xs text-white" value="${escapeHtml(exp.role || '')}" required>
-        <input type="text" placeholder="Empresa" class="exp-company bg-dark-800 border border-white/10 rounded-lg p-2 text-xs text-white" value="${escapeHtml(exp.company || '')}" required>
-        <input type="text" placeholder="Data Início (ex: 2021-01)" class="exp-start bg-dark-800 border border-white/10 rounded-lg p-2 text-xs text-white" value="${escapeHtml(exp.startDate || '')}">
-        <input type="text" placeholder="Data Fim (ex: Atual)" class="exp-end bg-dark-800 border border-white/10 rounded-lg p-2 text-xs text-white" value="${escapeHtml(exp.endDate || '')}">
-      </div>
-      <textarea rows="3" placeholder="Descrição / Bullets da experiência" class="exp-desc w-full bg-dark-800 border border-white/10 rounded-lg p-2 text-xs text-white font-mono text-[11px]">${escapeHtml(exp.description || '')}</textarea>
-    `;
-    container.appendChild(card);
+  btnOpen.addEventListener("click", () => {
+    if (currentMasterProfile) populateDrawerForm(currentMasterProfile);
+    drawer.classList.remove("hidden");
   });
 
-  container.querySelectorAll(".btn-remove-exp").forEach(btn => {
-    btn.addEventListener("click", (e) => {
-      const idx = parseInt(e.target.dataset.idx, 10);
-      currentMasterProfile.experiences.splice(idx, 1);
-      renderExperiencesInputs(currentMasterProfile.experiences);
-    });
-  });
-}
+  const closeDrawer = () => drawer.classList.add("hidden");
+  btnClose.addEventListener("click", closeDrawer);
+  btnCancel.addEventListener("click", closeDrawer);
 
-function renderEducationInputs(edus) {
-  const container = document.getElementById("education-container");
-  container.innerHTML = "";
+  // Drag and drop dropzone
+  dropzone.addEventListener("click", () => fileInput.click());
 
-  edus.forEach((edu, idx) => {
-    const card = document.createElement("div");
-    card.className = "p-3 bg-dark-850 rounded-xl border border-white/5 space-y-2 relative";
-    card.innerHTML = `
-      <div class="flex items-center justify-between">
-        <span class="text-[11px] font-semibold text-slate-400">Formação #${idx + 1}</span>
-        <button type="button" class="btn-remove-edu text-rose-400 hover:text-rose-300 text-xs" data-idx="${idx}">
-          Remover
-        </button>
-      </div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <input type="text" placeholder="Curso / Grau (ex: Bacharelado em Ciência da Computação)" class="edu-degree bg-dark-800 border border-white/10 rounded-lg p-2 text-xs text-white" value="${escapeHtml(edu.degree || '')}" required>
-        <input type="text" placeholder="Instituição (ex: USP)" class="edu-inst bg-dark-800 border border-white/10 rounded-lg p-2 text-xs text-white" value="${escapeHtml(edu.institution || '')}" required>
-        <input type="text" placeholder="Início" class="edu-start bg-dark-800 border border-white/10 rounded-lg p-2 text-xs text-white" value="${escapeHtml(edu.startDate || '')}">
-        <input type="text" placeholder="Fim" class="edu-end bg-dark-800 border border-white/10 rounded-lg p-2 text-xs text-white" value="${escapeHtml(edu.endDate || '')}">
-      </div>
-    `;
-    container.appendChild(card);
+  dropzone.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    dropzone.classList.add("border-emerald-500", "bg-emerald-500/5");
   });
 
-  container.querySelectorAll(".btn-remove-edu").forEach(btn => {
-    btn.addEventListener("click", (e) => {
-      const idx = parseInt(e.target.dataset.idx, 10);
-      currentMasterProfile.education.splice(idx, 1);
-      renderEducationInputs(currentMasterProfile.education);
-    });
+  dropzone.addEventListener("dragleave", () => {
+    dropzone.classList.remove("border-emerald-500", "bg-emerald-500/5");
   });
-}
 
-function setupProfileForm() {
-  const form = document.getElementById("profile-form");
-  const inputPdf = document.getElementById("input-upload-pdf");
-  const uploadStatus = document.getElementById("upload-status");
+  dropzone.addEventListener("drop", async (e) => {
+    e.preventDefault();
+    dropzone.classList.remove("border-emerald-500", "bg-emerald-500/5");
+    const file = e.dataTransfer.files[0];
+    if (file && file.type === "application/pdf") {
+      await handlePdfUpload(file);
+    } else {
+      showToast("Por favor, selecione um arquivo .PDF", "error");
+    }
+  });
 
-  // PDF Upload handler
-  inputPdf.addEventListener("change", async (e) => {
+  fileInput.addEventListener("change", async (e) => {
     const file = e.target.files[0];
-    if (!file) return;
+    if (file) await handlePdfUpload(file);
+  });
 
-    uploadStatus.innerHTML = `<span class="text-brand-400">Extraindo texto e estruturando dados...</span>`;
+  async function handlePdfUpload(file) {
+    statusEl.innerHTML = `<span class="text-cyan-400 flex items-center justify-center gap-1.5"><i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i> Extraindo texto e estruturando seções...</span>`;
+    if (window.lucide) window.lucide.createIcons();
+
     const fd = new FormData();
     fd.append("file", file);
 
@@ -163,83 +108,73 @@ function setupProfileForm() {
       });
       const data = await res.json();
       if (res.ok) {
-        uploadStatus.innerHTML = `<span class="text-emerald-400">✓ PDF base extraído e salvo com sucesso!</span>`;
+        statusEl.innerHTML = `<span class="text-emerald-400">✓ PDF extraído e salvo no SQLite com sucesso!</span>`;
+        showToast("Master CV atualizado via PDF", "success");
         await loadMasterProfile();
       } else {
-        uploadStatus.innerHTML = `<span class="text-rose-400">${data.error || 'Erro no upload'}</span>`;
+        statusEl.innerHTML = `<span class="text-rose-400">${data.error || "Erro ao processar PDF"}</span>`;
+        showToast("Falha na extração do PDF", "error");
       }
-    } catch (err) {
-      uploadStatus.innerHTML = `<span class="text-rose-400">Erro de rede ao enviar PDF.</span>`;
+    } catch {
+      statusEl.innerHTML = `<span class="text-rose-400">Erro de rede ao enviar arquivo.</span>`;
     }
-  });
+  }
 
-  // Add Exp / Add Edu buttons
-  document.getElementById("btn-add-exp").addEventListener("click", () => {
+  // Add Exp / Edu in drawer
+  document.getElementById("btn-drawer-add-exp").addEventListener("click", () => {
     if (!currentMasterProfile) currentMasterProfile = { experiences: [] };
     if (!currentMasterProfile.experiences) currentMasterProfile.experiences = [];
-    currentMasterProfile.experiences.push({
-      role: "",
-      company: "",
-      startDate: "",
-      endDate: "",
-      description: ""
-    });
-    renderExperiencesInputs(currentMasterProfile.experiences);
+    currentMasterProfile.experiences.push({ role: "", company: "", startDate: "", endDate: "", description: "" });
+    renderDrawerExperiences(currentMasterProfile.experiences);
   });
 
-  document.getElementById("btn-add-edu").addEventListener("click", () => {
+  document.getElementById("btn-drawer-add-edu").addEventListener("click", () => {
     if (!currentMasterProfile) currentMasterProfile = { education: [] };
     if (!currentMasterProfile.education) currentMasterProfile.education = [];
-    currentMasterProfile.education.push({
-      degree: "",
-      institution: "",
-      startDate: "",
-      endDate: ""
-    });
-    renderEducationInputs(currentMasterProfile.education);
+    currentMasterProfile.education.push({ degree: "", institution: "", startDate: "", endDate: "" });
+    renderDrawerEducation(currentMasterProfile.education);
   });
 
-  // Save profile submit
+  // Save drawer form
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    // Collect experiences
-    const expCards = document.querySelectorAll("#experiences-container > div");
+    const expCards = document.querySelectorAll("#drawer-experiences-list > div");
     const experiences = [];
     expCards.forEach(card => {
       experiences.push({
-        role: card.querySelector(".exp-role").value,
-        company: card.querySelector(".exp-company").value,
-        startDate: card.querySelector(".exp-start").value,
-        endDate: card.querySelector(".exp-end").value,
-        description: card.querySelector(".exp-desc").value
+        role: card.querySelector(".d-exp-role").value,
+        company: card.querySelector(".d-exp-company").value,
+        startDate: card.querySelector(".d-exp-start").value,
+        endDate: card.querySelector(".d-exp-end").value,
+        description: card.querySelector(".d-exp-desc").value
       });
     });
 
-    // Collect education
-    const eduCards = document.querySelectorAll("#education-container > div");
+    const eduCards = document.querySelectorAll("#drawer-education-list > div");
     const education = [];
     eduCards.forEach(card => {
       education.push({
-        degree: card.querySelector(".edu-degree").value,
-        institution: card.querySelector(".edu-inst").value,
-        startDate: card.querySelector(".edu-start").value,
-        endDate: card.querySelector(".edu-end").value
+        degree: card.querySelector(".d-edu-degree").value,
+        institution: card.querySelector(".d-edu-inst").value,
+        startDate: card.querySelector(".d-edu-start").value,
+        endDate: card.querySelector(".d-edu-end").value
       });
     });
 
     const payload = {
-      fullName: document.getElementById("prof-fullName").value,
-      headline: document.getElementById("prof-headline").value,
-      email: document.getElementById("prof-email").value,
-      phone: document.getElementById("prof-phone").value,
-      location: document.getElementById("prof-location").value,
-      linkedin: document.getElementById("prof-linkedin").value,
-      summary: document.getElementById("prof-summary").value,
-      skills: document.getElementById("prof-skills").value.split(",").map(s => s.trim()).filter(Boolean),
+      fullName: document.getElementById("drawer-fullName").value,
+      headline: document.getElementById("drawer-headline").value,
+      email: document.getElementById("drawer-email").value,
+      phone: document.getElementById("drawer-phone").value,
+      location: document.getElementById("drawer-location").value,
+      linkedin: document.getElementById("drawer-linkedin").value,
+      github: document.getElementById("drawer-github").value,
+      summary: document.getElementById("drawer-summary").value,
+      skills: document.getElementById("drawer-skills").value.split(",").map(s => s.trim()).filter(Boolean),
       experiences,
       education,
-      certifications: document.getElementById("prof-certifications").value.split(",").map(s => s.trim()).filter(Boolean)
+      certifications: document.getElementById("drawer-certifications").value.split(",").map(s => s.trim()).filter(Boolean)
     };
 
     try {
@@ -249,62 +184,155 @@ function setupProfileForm() {
         body: JSON.stringify(payload)
       });
       if (res.ok) {
-        alert("Currículo Base salvo com sucesso!");
+        showToast("Master CV gravado no SQLite", "success");
+        closeDrawer();
         await loadMasterProfile();
+        if (selectedJobId) selectJob(selectedJobId);
       }
-    } catch (err) {
-      alert("Erro ao salvar currículo base.");
+    } catch {
+      showToast("Erro ao gravar dados do perfil", "error");
     }
   });
 }
 
-// 3. JOBS LIST & CRUD
+function populateDrawerForm(p) {
+  document.getElementById("drawer-fullName").value = p.fullName || "";
+  document.getElementById("drawer-headline").value = p.headline || "";
+  document.getElementById("drawer-email").value = p.email || "";
+  document.getElementById("drawer-phone").value = p.phone || "";
+  document.getElementById("drawer-location").value = p.location || "";
+  document.getElementById("drawer-linkedin").value = p.linkedin || "";
+  document.getElementById("drawer-github").value = p.github || "";
+  document.getElementById("drawer-summary").value = p.summary || "";
+  document.getElementById("drawer-skills").value = (p.skills || []).join(", ");
+  document.getElementById("drawer-certifications").value = (p.certifications || []).join(", ");
+
+  renderDrawerExperiences(p.experiences || []);
+  renderDrawerEducation(p.education || []);
+}
+
+function renderDrawerExperiences(exps) {
+  const container = document.getElementById("drawer-experiences-list");
+  container.innerHTML = "";
+
+  exps.forEach((exp, idx) => {
+    const card = document.createElement("div");
+    card.className = "p-3 bg-zinc-950 rounded border border-zinc-800 space-y-2";
+    card.innerHTML = `
+      <div class="flex items-center justify-between text-[11px] font-mono text-zinc-400">
+        <span>EXP #${idx + 1}</span>
+        <button type="button" class="btn-del-exp text-zinc-500 hover:text-rose-400" data-idx="${idx}">Remover</button>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <input type="text" placeholder="Cargo" class="wb-input d-exp-role" value="${escapeHtml(exp.role || '')}" required>
+        <input type="text" placeholder="Empresa" class="wb-input d-exp-company" value="${escapeHtml(exp.company || '')}" required>
+        <input type="text" placeholder="Início" class="wb-input d-exp-start font-mono text-xs" value="${escapeHtml(exp.startDate || '')}">
+        <input type="text" placeholder="Fim" class="wb-input d-exp-end font-mono text-xs" value="${escapeHtml(exp.endDate || '')}">
+      </div>
+      <textarea rows="2" placeholder="Bullets / Resultados" class="wb-input w-full d-exp-desc font-mono text-[11px]">${escapeHtml(exp.description || '')}</textarea>
+    `;
+    container.appendChild(card);
+  });
+
+  container.querySelectorAll(".btn-del-exp").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      const idx = parseInt(e.target.dataset.idx, 10);
+      currentMasterProfile.experiences.splice(idx, 1);
+      renderDrawerExperiences(currentMasterProfile.experiences);
+    });
+  });
+}
+
+function renderDrawerEducation(edus) {
+  const container = document.getElementById("drawer-education-list");
+  container.innerHTML = "";
+
+  edus.forEach((edu, idx) => {
+    const card = document.createElement("div");
+    card.className = "p-3 bg-zinc-950 rounded border border-zinc-800 space-y-2";
+    card.innerHTML = `
+      <div class="flex items-center justify-between text-[11px] font-mono text-zinc-400">
+        <span>EDU #${idx + 1}</span>
+        <button type="button" class="btn-del-edu text-zinc-500 hover:text-rose-400" data-idx="${idx}">Remover</button>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <input type="text" placeholder="Grau / Curso" class="wb-input d-edu-degree" value="${escapeHtml(edu.degree || '')}" required>
+        <input type="text" placeholder="Instituição" class="wb-input d-edu-inst" value="${escapeHtml(edu.institution || '')}" required>
+        <input type="text" placeholder="Início" class="wb-input d-edu-start font-mono text-xs" value="${escapeHtml(edu.startDate || '')}">
+        <input type="text" placeholder="Fim" class="wb-input d-edu-end font-mono text-xs" value="${escapeHtml(edu.endDate || '')}">
+      </div>
+    `;
+    container.appendChild(card);
+  });
+
+  container.querySelectorAll(".btn-del-edu").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      const idx = parseInt(e.target.dataset.idx, 10);
+      currentMasterProfile.education.splice(idx, 1);
+      renderDrawerEducation(currentMasterProfile.education);
+    });
+  });
+}
+
+// ==========================================
+// 2. ZONE 2: JOBS PIPELINE & QUEUE
+// ==========================================
 async function loadJobs() {
   try {
     const res = await fetch("/api/jobs");
     const data = await res.json();
     currentJobs = data.jobs || [];
 
-    document.getElementById("badge-jobs-count").textContent = currentJobs.length;
-    renderJobsTable(currentJobs);
+    document.getElementById("count-all").textContent = currentJobs.length;
+    document.getElementById("queue-summary").textContent = `${currentJobs.length} vaga(s) no tracker`;
+
+    renderJobsQueue();
+
+    // Auto-select first job if none selected or if previous selected disappeared
+    if (currentJobs.length > 0) {
+      if (!selectedJobId || !currentJobs.some(j => j.id === selectedJobId)) {
+        selectJob(currentJobs[0].id);
+      }
+    } else {
+      selectedJobId = null;
+      document.getElementById("workbench-empty").classList.remove("hidden");
+      document.getElementById("workbench-active").classList.add("hidden");
+    }
   } catch (err) {
     console.error("Erro ao carregar vagas:", err);
   }
 }
 
-function renderJobsTable(jobs) {
-  const tbody = document.getElementById("jobs-table-body");
-  const search = document.getElementById("search-jobs").value.toLowerCase();
-  const filter = document.getElementById("filter-status").value;
-
-  const filtered = jobs.filter(j => {
-    const matchesSearch = j.title.toLowerCase().includes(search) || j.company.toLowerCase().includes(search);
-    const matchesStatus = filter === "ALL" || j.status === filter;
+function renderJobsQueue() {
+  const container = document.getElementById("jobs-list");
+  const filtered = currentJobs.filter(job => {
+    const matchesSearch = job.title.toLowerCase().includes(currentSearchQuery) || job.company.toLowerCase().includes(currentSearchQuery);
+    const matchesStatus = currentFilterStatus === "ALL" || job.status === currentFilterStatus;
     return matchesSearch && matchesStatus;
   });
 
   if (filtered.length === 0) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="5" class="py-12 text-center text-slate-500">
-          Nenhuma vaga cadastrada. Clique em "Nova Vaga" para começar!
-        </td>
-      </tr>
+    container.innerHTML = `
+      <div class="p-6 text-center text-zinc-500 font-mono text-xs">
+        Nenhuma vaga correspondente.
+      </div>
     `;
     return;
   }
 
-  tbody.innerHTML = "";
+  container.innerHTML = "";
   filtered.forEach(job => {
-    const tr = document.createElement("tr");
-    tr.className = "hover:bg-white/[0.02] transition-colors";
+    const isSelected = job.id === selectedJobId;
+    const card = document.createElement("div");
+    card.className = `p-3 rounded border border-zinc-800/80 hover:border-zinc-700 transition-all cursor-pointer bg-[#0c0c0e] ${isSelected ? 'job-card-active' : ''}`;
+    card.dataset.id = job.id;
 
-    const statusBadges = {
-      SAVED: "bg-slate-500/10 text-slate-400 border-slate-500/20",
-      APPLIED: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-      INTERVIEW: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-      OFFER: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-      REJECTED: "bg-rose-500/10 text-rose-400 border-rose-500/20"
+    const statusColors = {
+      SAVED: "text-zinc-400 bg-zinc-800/60 border-zinc-700",
+      APPLIED: "text-blue-400 bg-blue-500/10 border-blue-500/20",
+      INTERVIEW: "text-amber-400 bg-amber-500/10 border-amber-500/20",
+      OFFER: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+      REJECTED: "text-rose-400 bg-rose-500/10 border-rose-500/20"
     };
 
     const statusLabels = {
@@ -315,113 +343,562 @@ function renderJobsTable(jobs) {
       REJECTED: "Rejeitada"
     };
 
-    const topKeywordsHtml = (job.topKeywords || []).slice(0, 5).map(k => `
-      <span class="px-1.5 py-0.5 rounded bg-dark-800 text-[10px] text-slate-300 border border-white/5 font-mono">
-        ${escapeHtml(k.term)}
-      </span>
-    `).join(" ");
-
     const scoreHtml = job.tailored ? `
-      <div class="flex items-center gap-1.5">
-        <span class="text-xs font-bold ${job.tailored.scoreAfter >= 80 ? 'text-emerald-400' : 'text-amber-400'}">
-          ${job.tailored.scoreAfter}/100
-        </span>
-        <span class="text-[10px] text-slate-500">(era ${job.tailored.scoreBefore})</span>
+      <div class="flex items-center gap-1 font-mono text-[11px]">
+        <span class="text-zinc-500">${job.tailored.scoreBefore}</span>
+        <span class="text-zinc-600">→</span>
+        <span class="font-bold ${job.tailored.scoreAfter >= 80 ? 'text-emerald-400' : 'text-amber-400'}">${job.tailored.scoreAfter}</span>
+        <span class="text-[10px] text-emerald-400/80">(+${Math.max(0, Math.round(job.tailored.scoreAfter - job.tailored.scoreBefore))})</span>
       </div>
     ` : `
-      <span class="text-[11px] text-slate-500 italic">Não personalizada</span>
+      <span class="text-[10px] font-mono text-zinc-500 italic">Score pendente</span>
     `;
 
-    tr.innerHTML = `
-      <td class="py-3.5 px-4">
-        <div class="font-bold text-white text-xs">${escapeHtml(job.title)}</div>
-        <div class="text-slate-400 text-[11px] flex items-center gap-1.5 mt-0.5">
-          <span>${escapeHtml(job.company)}</span>
-          ${job.jobUrl ? `<a href="${job.jobUrl}" target="_blank" class="text-cyan-400 hover:underline"><i data-lucide="external-link" class="w-3 h-3 inline"></i></a>` : ''}
+    card.innerHTML = `
+      <div class="flex items-center justify-between text-[11px] font-mono text-zinc-400 mb-1">
+        <span class="truncate uppercase tracking-wider font-semibold">${escapeHtml(job.company)}</span>
+        <div class="flex items-center gap-1 shrink-0">
+          <span class="px-1 rounded text-[9px] font-mono uppercase border border-cyan-500/30 text-cyan-400 bg-cyan-500/5">${job.language || 'PT'}</span>
+          <span class="px-1.5 py-0.2 rounded text-[10px] font-mono border ${statusColors[job.status] || ''}">${statusLabels[job.status]}</span>
         </div>
-      </td>
-      <td class="py-3.5 px-4">
-        <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold border ${statusBadges[job.status]}">
-          ${statusLabels[job.status]}
-        </span>
-      </td>
-      <td class="py-3.5 px-4">
-        <div class="flex items-center gap-1.5 mb-1">
-          <span class="px-1.5 py-0.2 rounded bg-cyan-500/10 text-cyan-400 text-[9px] font-bold border border-cyan-500/20 uppercase">
-            ${job.language.toUpperCase()}
-          </span>
-          <span class="text-[10px] text-slate-400">${(job.topKeywords || []).length} keywords</span>
-        </div>
-        <div class="flex flex-wrap gap-1">
-          ${topKeywordsHtml}
-        </div>
-      </td>
-      <td class="py-3.5 px-4">
+      </div>
+      <div class="text-xs font-medium text-zinc-100 truncate mb-1.5">${escapeHtml(job.title)}</div>
+      <div class="flex items-center justify-between pt-1 border-t border-zinc-900">
         ${scoreHtml}
-      </td>
-      <td class="py-3.5 px-4 text-right">
-        <div class="flex items-center justify-end gap-1.5">
-          <button class="btn-tailor px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white rounded-lg text-xs font-semibold shadow flex items-center gap-1 transition-all" data-id="${job.id}">
-            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
-            <span>⚡ Personalizar</span>
-          </button>
-          <button class="btn-delete-job p-1.5 text-slate-500 hover:text-rose-400 rounded-lg hover:bg-white/5 transition-colors" data-id="${job.id}">
-            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-          </button>
-        </div>
-      </td>
+        <span class="text-[10px] font-mono text-zinc-500">${(job.topKeywords || []).length} keywords</span>
+      </div>
     `;
-    tbody.appendChild(tr);
+
+    card.addEventListener("click", () => selectJob(job.id));
+    container.appendChild(card);
+  });
+}
+
+function setupWorkbenchNavigation() {
+  // Search input
+  document.getElementById("search-jobs").addEventListener("input", (e) => {
+    currentSearchQuery = e.target.value.toLowerCase();
+    renderJobsQueue();
   });
 
-  // Action listeners
-  tbody.querySelectorAll(".btn-tailor").forEach(btn => {
-    btn.addEventListener("click", () => openOptimizerModal(btn.dataset.id));
-  });
-
-  tbody.querySelectorAll(".btn-delete-job").forEach(btn => {
-    btn.addEventListener("click", async () => {
-      if (confirm("Deseja realmente remover esta vaga?")) {
-        await fetch(`/api/jobs/${btn.dataset.id}`, { method: "DELETE" });
-        await loadJobs();
-      }
+  // Filter status pills
+  document.querySelectorAll(".filter-status-btn").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      document.querySelectorAll(".filter-status-btn").forEach(b => {
+        b.className = "filter-status-btn px-2 py-0.5 rounded text-zinc-400 hover:text-zinc-200";
+      });
+      e.target.className = "filter-status-btn active px-2 py-0.5 rounded text-zinc-200 bg-zinc-800 border border-zinc-700 font-medium";
+      currentFilterStatus = e.target.dataset.status;
+      renderJobsQueue();
     });
   });
+
+  document.getElementById("btn-empty-add-job").addEventListener("click", () => {
+    document.getElementById("btn-open-add-job").click();
+  });
+}
+
+// ==========================================
+// 3. ZONE 3: JOB DETAILS & TELEMETRY
+// ==========================================
+async function selectJob(jobId) {
+  selectedJobId = jobId;
+  renderJobsQueue();
+
+  const job = currentJobs.find(j => j.id === jobId);
+  if (!job) return;
+
+  activeJobData = job;
+
+  document.getElementById("workbench-empty").classList.add("hidden");
+  document.getElementById("workbench-active").classList.remove("hidden");
+
+  // Populate Header
+  document.getElementById("job-detail-title").textContent = job.title;
+  document.getElementById("job-detail-company").textContent = job.company;
+  document.getElementById("job-detail-lang").textContent = (job.language || "pt").toUpperCase();
+  document.getElementById("job-detail-status-select").value = job.status;
+
+  // Status select change
+  document.getElementById("job-detail-status-select").onchange = async (e) => {
+    const newStatus = e.target.value;
+    await fetch(`/api/jobs/${job.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: newStatus })
+    });
+    job.status = newStatus;
+    showToast(`Status atualizado para ${newStatus}`, "info");
+    renderJobsQueue();
+  };
+
+  // Populate Telemetry Bento Grid
+  renderTelemetryGrid(job);
+
+  // Populate Tabs
+  renderMasterCvDiff();
+  renderJobDescriptionTab(job);
+
+  // If already tailored, populate editor & A4
+  if (job.tailored) {
+    await fetchAndPopulateTailoredData(job.id);
+  } else {
+    clearTailoredEditor();
+  }
 
   if (window.lucide) window.lucide.createIcons();
 }
 
-// 4. ADD / EDIT JOB MODAL
-function setupJobModal() {
-  const modal = document.getElementById("modal-job");
-  const btnOpen = document.getElementById("btn-open-add-job");
-  const btnClose = document.getElementById("modal-job-close");
-  const btnCancel = document.getElementById("modal-job-cancel");
-  const form = document.getElementById("job-form");
-  const btnExtract = document.getElementById("btn-extract-url");
-  const urlInput = document.getElementById("job-url-input");
-  const extractFeedback = document.getElementById("extract-feedback");
+function renderTelemetryGrid(job) {
+  const keywords = job.topKeywords || [];
+  const tailored = job.tailored;
 
-  btnOpen.addEventListener("click", () => {
-    form.reset();
-    document.getElementById("job-id").value = "";
-    document.getElementById("modal-job-title").textContent = "Cadastrar Vaga de Emprego";
-    extractFeedback.textContent = "";
-    modal.classList.remove("hidden");
+  // Card 1: Score Gauge
+  if (tailored) {
+    const gain = Math.max(0, Math.round(tailored.scoreAfter - tailored.scoreBefore));
+    document.getElementById("telemetry-score-after").textContent = tailored.scoreAfter;
+    document.getElementById("telemetry-score-before-sub").textContent = `(Base: ${tailored.scoreBefore})`;
+    document.getElementById("telemetry-gain").textContent = `+${gain} pts`;
+    document.getElementById("telemetry-gain").className = "text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+  } else {
+    document.getElementById("telemetry-score-after").textContent = "--";
+    document.getElementById("telemetry-score-before-sub").textContent = "(Base: --)";
+    document.getElementById("telemetry-gain").textContent = "Pendente";
+    document.getElementById("telemetry-gain").className = "text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-500 border border-zinc-700";
+  }
+
+  // Card 2: Keywords Grid
+  const kwGrid = document.getElementById("telemetry-keywords-grid");
+  document.getElementById("telemetry-kw-count").textContent = `${keywords.length} extraídas`;
+
+  if (keywords.length === 0) {
+    kwGrid.innerHTML = `<span class="text-zinc-600 italic text-[11px]">Nenhuma keyword extraída</span>`;
+  } else {
+    kwGrid.innerHTML = keywords.map(kw => {
+      return `
+        <span class="px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-300 flex items-center gap-1">
+          <span>${escapeHtml(kw.term)}</span>
+          <span class="text-[9px] text-zinc-500 font-mono">(${kw.count}x)</span>
+        </span>
+      `;
+    }).join("");
+  }
+
+  // Card 3: Metadata
+  document.getElementById("meta-disp-title").textContent = job.title;
+  document.getElementById("meta-disp-author").textContent = currentMasterProfile?.fullName || "Carlos Silva";
+  document.getElementById("meta-disp-keywords").textContent = keywords.slice(0, 4).map(k => k.term).join(", ") || "--";
+}
+
+// Render Master CV in Diff Left Column
+function renderMasterCvDiff() {
+  const container = document.getElementById("master-cv-rendered");
+  if (!currentMasterProfile || !currentMasterProfile.fullName) {
+    container.innerHTML = `
+      <div class="p-6 text-center text-zinc-500 font-mono text-xs">
+        Nenhum Master CV cadastrado. Clique em "Meu Currículo Base" no topo para importar seu PDF.
+      </div>
+    `;
+    return;
+  }
+
+  const p = currentMasterProfile;
+  container.innerHTML = `
+    <div class="border-b border-zinc-800 pb-3">
+      <h4 class="font-bold text-zinc-100 text-sm">${escapeHtml(p.fullName)}</h4>
+      <div class="text-xs text-zinc-400 font-mono mt-0.5">${escapeHtml(p.headline)}</div>
+      <div class="text-[11px] text-zinc-500 font-mono mt-1">${escapeHtml(p.email)} | ${escapeHtml(p.phone || '')} | ${escapeHtml(p.location || '')}</div>
+    </div>
+
+    <div>
+      <span class="text-[10px] font-mono uppercase text-zinc-500 tracking-wider">Resumo Profissional</span>
+      <p class="mt-1 text-zinc-300 text-xs leading-relaxed">${escapeHtml(p.summary)}</p>
+    </div>
+
+    <div>
+      <span class="text-[10px] font-mono uppercase text-zinc-500 tracking-wider">Experiências Originais</span>
+      <div class="space-y-3 mt-1.5">
+        ${(p.experiences || []).map(exp => `
+          <div class="p-2.5 rounded bg-zinc-950 border border-zinc-900">
+            <div class="font-medium text-zinc-200 text-xs">${escapeHtml(exp.role)} — <span class="text-zinc-400">${escapeHtml(exp.company)}</span></div>
+            <div class="text-[10px] font-mono text-zinc-500 mt-0.5">${escapeHtml(exp.startDate)} - ${escapeHtml(exp.endDate)}</div>
+            <div class="mt-1.5 text-zinc-400 text-xs whitespace-pre-line">${escapeHtml(exp.description)}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+    <div>
+      <span class="text-[10px] font-mono uppercase text-zinc-500 tracking-wider">Habilidades Base</span>
+      <div class="mt-1 text-zinc-400 font-mono text-[11px]">${(p.skills || []).join(' • ')}</div>
+    </div>
+  `;
+}
+
+// Fetch and load tailored data
+async function fetchAndPopulateTailoredData(jobId) {
+  try {
+    const res = await fetch(`/api/jobs/${jobId}/tailor`, { method: "POST" });
+    const data = await res.json();
+    if (res.ok) {
+      populateTailoredEditor(data);
+      renderA4Preview(data.tailoredResume);
+      updateTelemetryBreakdown(data.auditAfter);
+    }
+  } catch (err) {
+    console.error("Erro ao carregar tailoring:", err);
+  }
+}
+
+function populateTailoredEditor(data) {
+  const { tailoredResume, auditAfter } = data;
+  document.getElementById("edit-tailored-title").value = tailoredResume.headline || "";
+  document.getElementById("edit-tailored-summary").value = tailoredResume.summary || "";
+  document.getElementById("edit-tailored-skills").value = (tailoredResume.skills || []).join(", ");
+
+  // Highlight summary with injected keywords
+  updateSummaryHighlight(tailoredResume.summary || "", activeJobData?.topKeywords || []);
+
+  document.getElementById("edit-tailored-summary").oninput = (e) => {
+    updateSummaryHighlight(e.target.value, activeJobData?.topKeywords || []);
+  };
+
+  const expContainer = document.getElementById("edit-tailored-experiences");
+  expContainer.innerHTML = "";
+
+  (tailoredResume.experiences || []).forEach((exp, idx) => {
+    const card = document.createElement("div");
+    card.className = "p-3 rounded bg-zinc-950 border border-zinc-800 space-y-2";
+    card.innerHTML = `
+      <div class="flex items-center justify-between text-xs font-mono">
+        <span class="font-medium text-zinc-200">${escapeHtml(exp.role)} — ${escapeHtml(exp.company)}</span>
+        <span class="text-[10px] text-zinc-500">${escapeHtml(exp.startDate)} - ${escapeHtml(exp.endDate)}</span>
+      </div>
+      <textarea rows="4" class="wb-input w-full font-mono text-[11px] leading-relaxed tailored-exp-input">${escapeHtml(exp.description)}</textarea>
+    `;
+    expContainer.appendChild(card);
   });
+}
 
-  btnClose.addEventListener("click", () => modal.classList.add("hidden"));
-  btnCancel.addEventListener("click", () => modal.classList.add("hidden"));
+function updateSummaryHighlight(text, keywords) {
+  const preview = document.getElementById("summary-highlight-preview");
+  if (!text) {
+    preview.innerHTML = `<span class="text-zinc-600 italic">Sem resumo otimizado</span>`;
+    return;
+  }
 
-  // Extract from URL button
-  btnExtract.addEventListener("click", async () => {
-    const url = urlInput.value.trim();
-    if (!url) {
-      extractFeedback.textContent = "Insira uma URL válida.";
+  let html = escapeHtml(text);
+  const terms = keywords.slice(0, 10).map(k => k.term);
+
+  for (const term of terms) {
+    const escaped = escapeHtml(term).replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&");
+    const regex = new RegExp(`(${escaped})`, "gi");
+    html = html.replace(regex, `<span class="keyword-highlight">$1</span>`);
+  }
+
+  preview.innerHTML = html.replace(/\n/g, "<br>");
+}
+
+function clearTailoredEditor() {
+  document.getElementById("edit-tailored-title").value = "";
+  document.getElementById("edit-tailored-summary").value = "";
+  document.getElementById("edit-tailored-skills").value = "";
+  document.getElementById("edit-tailored-experiences").innerHTML = `
+    <div class="p-6 text-center text-zinc-500 font-mono text-xs">
+      Clique no botão "⚡ Executar Otimização ATS (7 Camadas)" acima para gerar o currículo otimizado.
+    </div>
+  `;
+  document.getElementById("summary-highlight-preview").innerHTML = `<span class="text-zinc-600 italic">Aguardando execução da otimização...</span>`;
+  document.getElementById("a4-preview-content").innerHTML = `
+    <div class="p-12 text-center text-zinc-600 font-mono text-xs">
+      Otimize o currículo para visualizar o layout da folha A4 Linear.
+    </div>
+  `;
+}
+
+function updateTelemetryBreakdown(audit) {
+  if (!audit) return;
+  const b = audit.breakdown;
+  document.getElementById("telemetry-breakdown-kw").textContent = `${Math.round(b.keywords + b.density)}/55`;
+
+  // Bars width
+  document.getElementById("bar-formatting").style.width = `${(b.formatting / 30) * 25}%`;
+  document.getElementById("bar-keywords").style.width = `${(b.keywords / 35) * 35}%`;
+  document.getElementById("bar-density").style.width = `${(b.density / 20) * 20}%`;
+  document.getElementById("bar-entity").style.width = `${(b.entityCompliance / 15) * 20}%`;
+}
+
+function renderJobDescriptionTab(job) {
+  document.getElementById("jd-url-input").value = job.jobUrl || "";
+  document.getElementById("jd-raw-text").value = job.rawDescription || "";
+  const words = (job.rawDescription || "").split(/\s+/).filter(Boolean).length;
+  document.getElementById("jd-stats").textContent = `${words} palavras • ${(job.language || 'pt').toUpperCase()}`;
+}
+
+function renderA4Preview(resume) {
+  const container = document.getElementById("a4-preview-content");
+  container.innerHTML = `
+    <div class="border-b border-zinc-700 pb-4 mb-4">
+      <h1 class="text-lg font-bold text-white tracking-tight uppercase">${escapeHtml(resume.fullName)}</h1>
+      <div class="text-xs font-semibold text-zinc-300 mt-0.5">${escapeHtml(resume.headline)}</div>
+      <div class="text-[11px] text-zinc-400 mt-1">${escapeHtml(resume.email)}  |  ${escapeHtml(resume.phone || '')}  |  ${escapeHtml(resume.location || '')}</div>
+    </div>
+
+    <div class="mb-4">
+      <div class="text-[11px] font-bold uppercase text-white border-b border-zinc-800 pb-1 mb-1.5 tracking-wider font-mono">Resumo Profissional</div>
+      <p class="text-xs text-zinc-300 leading-relaxed">${escapeHtml(resume.summary)}</p>
+    </div>
+
+    <div class="mb-4">
+      <div class="text-[11px] font-bold uppercase text-white border-b border-zinc-800 pb-1 mb-1.5 tracking-wider font-mono">Experiência Profissional</div>
+      <div class="space-y-3">
+        ${(resume.experiences || []).map(exp => `
+          <div>
+            <div class="font-bold text-white text-xs">${escapeHtml(exp.role)} — <span class="font-normal text-zinc-300">${escapeHtml(exp.company)}</span> <span class="text-[10px] text-zinc-500 float-right">(${escapeHtml(exp.startDate)} - ${escapeHtml(exp.endDate)})</span></div>
+            <div class="text-xs text-zinc-400 mt-1 whitespace-pre-line leading-relaxed">${escapeHtml(exp.description)}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+    <div class="mb-4">
+      <div class="text-[11px] font-bold uppercase text-white border-b border-zinc-800 pb-1 mb-1.5 tracking-wider font-mono">Formação Acadêmica</div>
+      <div class="space-y-1">
+        ${(resume.education || []).map(edu => `
+          <div class="text-xs text-zinc-300 font-medium">${escapeHtml(edu.degree)} — <span class="text-zinc-400">${escapeHtml(edu.institution)}</span> <span class="text-[10px] text-zinc-500">(${escapeHtml(edu.startDate)} - ${escapeHtml(edu.endDate)})</span></div>
+        `).join('')}
+      </div>
+    </div>
+
+    <div>
+      <div class="text-[11px] font-bold uppercase text-white border-b border-zinc-800 pb-1 mb-1.5 tracking-wider font-mono">Habilidades Técnicas</div>
+      <div class="text-xs text-zinc-300">${(resume.skills || []).join('   •   ')}</div>
+    </div>
+  `;
+}
+
+// ==========================================
+// 4. WORKBENCH TABS & ACTIONS
+// ==========================================
+function setupInspectorTabs() {
+  document.querySelectorAll(".wb-tab-btn").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      const target = btn.dataset.tab;
+      document.querySelectorAll(".wb-tab-btn").forEach(b => {
+        b.className = "wb-tab-btn px-3 py-1 text-xs font-medium rounded text-zinc-400 hover:text-zinc-200";
+      });
+      btn.className = "wb-tab-btn active px-3 py-1 text-xs font-medium rounded text-zinc-100 bg-zinc-850 border border-zinc-700/80";
+
+      document.querySelectorAll(".wb-tab-pane").forEach(pane => {
+        pane.classList.add("hidden");
+      });
+      document.getElementById(target).classList.remove("hidden");
+
+      // Hide or show tab actions
+      const tabDiffActions = document.getElementById("tab-diff-actions");
+      if (target === "tab-diff") {
+        tabDiffActions.classList.remove("hidden");
+      } else {
+        tabDiffActions.classList.add("hidden");
+      }
+    });
+  });
+}
+
+function setupInspectorActions() {
+  // ⚡ Run 7-Layer Optimization
+  const btnRun = document.getElementById("btn-run-tailor");
+  btnRun.addEventListener("click", async () => {
+    if (!selectedJobId) return;
+    if (!currentMasterProfile || !currentMasterProfile.fullName) {
+      showToast("Cadastre seu Master CV primeiro!", "error");
+      document.getElementById("btn-open-profile-drawer").click();
       return;
     }
 
-    extractFeedback.innerHTML = `<span class="text-cyan-400">Buscando página, detectando idioma e calculando pesos TF-IDF...</span>`;
+    // Trigger Layer Stepper Animation
+    const overlay = document.getElementById("layer-stepper-overlay");
+    overlay.classList.remove("hidden");
+
+    const steps = [
+      { id: "step-1", pct: "15%" },
+      { id: "step-2", pct: "30%" },
+      { id: "step-3", pct: "50%" },
+      { id: "step-4", pct: "65%" },
+      { id: "step-5", pct: "80%" },
+      { id: "step-6", pct: "92%" },
+      { id: "step-7", pct: "100%" }
+    ];
+
+    for (let i = 0; i < steps.length; i++) {
+      const s = steps[i];
+      const el = document.getElementById(s.id);
+      el.className = "step-item text-emerald-400 flex items-center gap-2 anim-step-pulse";
+      el.querySelector("span").className = "w-1.5 h-1.5 rounded-full bg-emerald-400";
+      document.getElementById("stepper-pct").textContent = s.pct;
+      document.getElementById("stepper-progress-bar").style.width = s.pct;
+      await new Promise(r => setTimeout(r, 120));
+      el.classList.remove("anim-step-pulse");
+    }
+
+    try {
+      const res = await fetch(`/api/jobs/${selectedJobId}/tailor`, { method: "POST" });
+      const data = await res.json();
+
+      overlay.classList.add("hidden");
+
+      if (res.ok) {
+        showToast(`Otimização ATS concluída: Score ${data.scoreAfter}/100 (+${Math.round(data.scoreAfter - data.scoreBefore)} pts)`, "success");
+        await loadJobs();
+        selectJob(selectedJobId);
+      } else {
+        showToast(data.error || "Erro na otimização", "error");
+      }
+    } catch {
+      overlay.classList.add("hidden");
+      showToast("Erro na requisição de otimização", "error");
+    }
+  });
+
+  // Recalculate score after inline edit
+  document.getElementById("btn-save-recalc").addEventListener("click", async () => {
+    if (!selectedJobId) return;
+
+    const btn = document.getElementById("btn-save-recalc");
+    btn.innerHTML = `<i data-lucide="loader" class="w-3 h-3 animate-spin text-emerald-400"></i><span>Recalculando...</span>`;
+
+    const headline = document.getElementById("edit-tailored-title").value;
+    const summary = document.getElementById("edit-tailored-summary").value;
+    const skills = document.getElementById("edit-tailored-skills").value.split(",").map(s => s.trim()).filter(Boolean);
+
+    const expTextareas = document.querySelectorAll("#edit-tailored-experiences textarea");
+    const experiences = (currentMasterProfile?.experiences || []).map((exp, idx) => ({
+      ...exp,
+      description: expTextareas[idx] ? expTextareas[idx].value : exp.description
+    }));
+
+    const updatedResume = {
+      ...currentMasterProfile,
+      headline,
+      summary,
+      skills,
+      experiences
+    };
+
+    try {
+      const res = await fetch(`/api/jobs/${selectedJobId}/tailor`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tailoredResume: updatedResume })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(`Score recalculado: ${data.scoreAfter}/100`, "success");
+        document.getElementById("telemetry-score-after").textContent = data.scoreAfter;
+        updateTelemetryBreakdown(data.auditAfter);
+        renderA4Preview(updatedResume);
+        await loadJobs();
+      }
+    } catch {
+      showToast("Erro ao recalcular score", "error");
+    } finally {
+      btn.innerHTML = `<i data-lucide="refresh-cw" class="w-3 h-3 text-emerald-400"></i><span>Recalcular Score</span>`;
+      if (window.lucide) window.lucide.createIcons();
+    }
+  });
+
+  // Download PDF
+  document.getElementById("btn-download-pdf").addEventListener("click", () => {
+    if (selectedJobId) {
+      window.location.href = `/api/jobs/${selectedJobId}/download/pdf`;
+      showToast("Download do PDF Linear ATS iniciado", "info");
+    }
+  });
+
+  // Download DOCX
+  document.getElementById("btn-download-docx").addEventListener("click", () => {
+    if (selectedJobId) {
+      window.location.href = `/api/jobs/${selectedJobId}/download/docx`;
+      showToast("Download do DOCX OpenXML iniciado", "info");
+    }
+  });
+
+  // Save Job Description changes
+  document.getElementById("btn-save-jd").addEventListener("click", async () => {
+    if (!selectedJobId) return;
+    const rawDescription = document.getElementById("jd-raw-text").value;
+    const jobUrl = document.getElementById("jd-url-input").value;
+
+    await fetch(`/api/jobs/${selectedJobId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rawDescription, jobUrl })
+    });
+    showToast("Descrição da vaga salva e reindexada", "success");
+    await loadJobs();
+    selectJob(selectedJobId);
+  });
+
+  // Re-extract URL
+  document.getElementById("btn-re-extract-url").addEventListener("click", async () => {
+    const url = document.getElementById("jd-url-input").value.trim();
+    if (!url) {
+      showToast("URL da vaga não preenchida", "error");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/jobs/extract-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        document.getElementById("jd-raw-text").value = data.description;
+        showToast("Dados re-extraídos da URL com sucesso", "success");
+      } else {
+        showToast(data.error || "Erro ao extrair", "error");
+      }
+    } catch {
+      showToast("Erro de rede ao extrair", "error");
+    }
+  });
+}
+
+// ==========================================
+// 5. ADD JOB MODAL
+// ==========================================
+function setupAddJobModal() {
+  const modal = document.getElementById("modal-add-job");
+  const btnOpen = document.getElementById("btn-open-add-job");
+  const btnClose = document.getElementById("modal-add-job-close");
+  const btnCancel = document.getElementById("btn-modal-cancel");
+  const form = document.getElementById("form-create-job");
+  const btnExtract = document.getElementById("btn-modal-extract");
+  const urlInput = document.getElementById("modal-job-url");
+  const feedback = document.getElementById("modal-extract-feedback");
+
+  btnOpen.addEventListener("click", () => {
+    form.reset();
+    urlInput.value = "";
+    feedback.textContent = "";
+    modal.classList.remove("hidden");
+  });
+
+  const closeModal = () => modal.classList.add("hidden");
+  btnClose.addEventListener("click", closeModal);
+  btnCancel.addEventListener("click", closeModal);
+
+  // Extract from URL
+  btnExtract.addEventListener("click", async () => {
+    const url = urlInput.value.trim();
+    if (!url) {
+      feedback.textContent = "Insira uma URL válida.";
+      return;
+    }
+
+    feedback.innerHTML = `<span class="text-cyan-400">Extraindo conteúdo, detectando idioma e calculando TF-IDF...</span>`;
 
     try {
       const res = await fetch("/api/jobs/extract-url", {
@@ -432,28 +909,29 @@ function setupJobModal() {
       const data = await res.json();
 
       if (res.ok) {
-        document.getElementById("form-job-title").value = data.title || "";
-        document.getElementById("form-job-company").value = data.company || "";
-        document.getElementById("form-job-description").value = data.description || "";
-        extractFeedback.innerHTML = `<span class="text-emerald-400">✓ Extraído com sucesso! Idioma: ${data.language.toUpperCase()} • ${data.keywords.length} keywords identificadas.</span>`;
+        document.getElementById("modal-input-title").value = data.title || "";
+        document.getElementById("modal-input-company").value = data.company || "";
+        document.getElementById("modal-input-description").value = data.description || "";
+        feedback.innerHTML = `<span class="text-emerald-400">✓ Extraído: ${data.company} • ${data.keywords.length} keywords detectadas</span>`;
       } else {
-        extractFeedback.innerHTML = `<span class="text-amber-400">${data.error} Cole a descrição manualmente abaixo.</span>`;
+        feedback.innerHTML = `<span class="text-amber-400">${data.error}</span>`;
       }
-    } catch (err) {
-      extractFeedback.innerHTML = `<span class="text-rose-400">Erro na conexão. Cole a descrição manualmente.</span>`;
+    } catch {
+      feedback.innerHTML = `<span class="text-rose-400">Erro na extração. Cole a descrição manualmente.</span>`;
     }
   });
 
-  // Submit job
+  // Submit form
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
+
     const payload = {
-      title: document.getElementById("form-job-title").value,
-      company: document.getElementById("form-job-company").value,
+      title: document.getElementById("modal-input-title").value,
+      company: document.getElementById("modal-input-company").value,
       jobUrl: urlInput.value.trim() || undefined,
-      status: document.getElementById("form-job-status").value,
-      notes: document.getElementById("form-job-notes").value,
-      rawDescription: document.getElementById("form-job-description").value
+      status: document.getElementById("modal-input-status").value,
+      notes: document.getElementById("modal-input-notes").value,
+      rawDescription: document.getElementById("modal-input-description").value
     };
 
     try {
@@ -462,231 +940,57 @@ function setupJobModal() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
-      if (res.ok) {
-        modal.classList.add("hidden");
-        await loadJobs();
-      } else {
-        alert("Erro ao cadastrar vaga.");
-      }
-    } catch (err) {
-      alert("Erro na conexão com o servidor.");
-    }
-  });
-
-  // Filter events
-  document.getElementById("search-jobs").addEventListener("input", () => renderJobsTable(currentJobs));
-  document.getElementById("filter-status").addEventListener("change", () => renderJobsTable(currentJobs));
-}
-
-// 5. SIDE-BY-SIDE OPTIMIZER MODAL
-function setupOptimizerModal() {
-  const modal = document.getElementById("modal-optimizer");
-  const btnClose = document.getElementById("opt-modal-close");
-  const btnRecalc = document.getElementById("btn-recalculate-score");
-  const btnPdf = document.getElementById("btn-download-pdf");
-  const btnDocx = document.getElementById("btn-download-docx");
-
-  btnClose.addEventListener("click", () => modal.classList.add("hidden"));
-
-  btnRecalc.addEventListener("click", async () => {
-    if (!activeJobId || !currentTailoredData) return;
-
-    btnRecalc.innerHTML = `<i data-lucide="loader" class="w-3 h-3 animate-spin"></i> Recalculando...`;
-
-    // Gather edited tailored resume
-    const editedHeadline = document.getElementById("edit-tailored-headline").value;
-    const editedSummary = document.getElementById("edit-tailored-summary").value;
-    const editedSkills = document.getElementById("edit-tailored-skills").value.split(",").map(s => s.trim()).filter(Boolean);
-
-    const expTextareas = document.querySelectorAll("#edit-tailored-experiences textarea");
-    const editedExperiences = currentTailoredData.tailoredResume.experiences.map((exp, idx) => ({
-      ...exp,
-      description: expTextareas[idx] ? expTextareas[idx].value : exp.description
-    }));
-
-    const updatedResume = {
-      ...currentTailoredData.tailoredResume,
-      headline: editedHeadline,
-      summary: editedSummary,
-      skills: editedSkills,
-      experiences: editedExperiences
-    };
-
-    try {
-      const res = await fetch(`/api/jobs/${activeJobId}/tailor`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tailoredResume: updatedResume })
-      });
       const data = await res.json();
       if (res.ok) {
-        currentTailoredData.tailoredResume = updatedResume;
-        currentTailoredData.scoreAfter = data.scoreAfter;
-        currentTailoredData.auditAfter = data.auditAfter;
-        renderOptimizerData(currentTailoredData);
+        closeModal();
+        showToast("Vaga adicionada ao tracker", "success");
+        await loadJobs();
+        selectJob(data.job.id);
+      } else {
+        showToast("Erro ao cadastrar vaga", "error");
       }
-    } catch (err) {
-      alert("Erro ao recalcular score.");
-    } finally {
-      btnRecalc.innerHTML = `<i data-lucide="refresh-cw" class="w-3 h-3"></i> Recalcular Score`;
-      if (window.lucide) window.lucide.createIcons();
-    }
-  });
-
-  btnPdf.addEventListener("click", () => {
-    if (activeJobId) {
-      window.location.href = `/api/jobs/${activeJobId}/download/pdf`;
-    }
-  });
-
-  btnDocx.addEventListener("click", () => {
-    if (activeJobId) {
-      window.location.href = `/api/jobs/${activeJobId}/download/docx`;
+    } catch {
+      showToast("Erro de rede ao salvar vaga", "error");
     }
   });
 }
 
-async function openOptimizerModal(jobId) {
-  if (!currentMasterProfile || !currentMasterProfile.fullName) {
-    alert("Cadastre seu Currículo Base antes de personalizar para uma vaga.");
-    document.getElementById("nav-profile").click();
-    return;
-  }
+// ==========================================
+// 6. MINIMALIST TOAST NOTIFICATIONS
+// ==========================================
+function showToast(message, type = "info") {
+  const container = document.getElementById("toast-container");
+  const toast = document.createElement("div");
 
-  activeJobId = jobId;
-  const modal = document.getElementById("modal-optimizer");
-  modal.classList.remove("hidden");
+  const borderColors = {
+    success: "border-emerald-500/40 text-emerald-300",
+    error: "border-rose-500/40 text-rose-300",
+    info: "border-zinc-700 text-zinc-200"
+  };
 
-  // Show loading in modal
-  document.getElementById("preview-master-cv").innerHTML = `
-    <div class="py-12 text-center text-slate-500">
-      <i data-lucide="loader" class="w-6 h-6 animate-spin mx-auto mb-2 text-brand-400"></i>
-      Processando as 7 camadas algorítmicas de ATS...
-    </div>
-  `;
-  if (window.lucide) window.lucide.createIcons();
+  const icons = {
+    success: '<i data-lucide="check-circle" class="w-3.5 h-3.5 text-emerald-400"></i>',
+    error: '<i data-lucide="alert-circle" class="w-3.5 h-3.5 text-rose-400"></i>',
+    info: '<i data-lucide="info" class="w-3.5 h-3.5 text-cyan-400"></i>'
+  };
 
-  try {
-    const res = await fetch(`/api/jobs/${jobId}/tailor`, { method: "POST" });
-    const data = await res.json();
-    if (!res.ok) {
-      alert(data.error || "Erro ao personalizar currículo.");
-      modal.classList.add("hidden");
-      return;
-    }
-
-    currentTailoredData = data;
-    renderOptimizerData(data);
-    await loadJobs(); // Refresh table score
-  } catch (err) {
-    alert("Erro na conexão ao personalizar currículo.");
-    modal.classList.add("hidden");
-  }
-}
-
-function renderOptimizerData(data) {
-  const { tailoredResume, scoreBefore, scoreAfter, auditAfter, metadata } = data;
-
-  // Header info
-  document.getElementById("opt-job-header").textContent = `Otimização: ${metadata.title}`;
-  document.getElementById("opt-company-sub").textContent = `${metadata.author} • Preparado para ${metadata.title}`;
-
-  // Scores
-  document.getElementById("opt-score-before").textContent = `${scoreBefore}/100`;
-  document.getElementById("opt-score-after").textContent = `${scoreAfter}/100`;
-
-  // Breakdown
-  document.getElementById("metric-formatting").textContent = `${auditAfter.breakdown.formatting}/30`;
-  document.getElementById("metric-keywords").textContent = `${auditAfter.breakdown.keywords}/35`;
-  document.getElementById("metric-density").textContent = `${auditAfter.breakdown.density}/20`;
-  document.getElementById("metric-entity").textContent = `${auditAfter.breakdown.entityCompliance}/15`;
-
-  // Keyword Chips
-  const chipsContainer = document.getElementById("opt-keywords-chips");
-  chipsContainer.innerHTML = "";
-
-  const density = auditAfter.keywordDensity || {};
-  const matched = new Set(auditAfter.matchedKeywords.map(k => k.toLowerCase()));
-
-  metadata.keywords.forEach(kw => {
-    const lower = kw.toLowerCase();
-    const count = density[lower] || 0;
-    const isMatched = matched.has(lower) || count > 0;
-
-    let badgeClass = "bg-rose-500/10 text-rose-400 border-rose-500/20";
-    if (count >= 2) {
-      badgeClass = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
-    } else if (isMatched || count === 1) {
-      badgeClass = "bg-amber-500/10 text-amber-400 border-amber-500/20";
-    }
-
-    const chip = document.createElement("span");
-    chip.className = `px-2 py-0.5 rounded-full text-[10px] font-semibold border flex items-center gap-1 ${badgeClass}`;
-    chip.innerHTML = `
-      <span>${escapeHtml(kw)}</span>
-      <span class="text-[9px] opacity-75 font-mono">(${count}x)</span>
-    `;
-    chipsContainer.appendChild(chip);
-  });
-
-  // Render Master CV Preview (Left column)
-  const masterPreview = document.getElementById("preview-master-cv");
-  masterPreview.innerHTML = `
-    <div>
-      <h4 class="text-sm font-bold text-white">${escapeHtml(currentMasterProfile.fullName)}</h4>
-      <div class="text-slate-400 text-[11px]">${escapeHtml(currentMasterProfile.headline)}</div>
-      <div class="text-[10px] text-slate-500 mt-0.5">${escapeHtml(currentMasterProfile.email)} | ${escapeHtml(currentMasterProfile.phone || '')}</div>
-    </div>
-
-    <div>
-      <h5 class="text-[10px] font-bold uppercase text-slate-400 border-b border-white/5 pb-1">Resumo Original</h5>
-      <p class="mt-1 text-slate-300 leading-relaxed">${escapeHtml(currentMasterProfile.summary)}</p>
-    </div>
-
-    <div>
-      <h5 class="text-[10px] font-bold uppercase text-slate-400 border-b border-white/5 pb-1">Experiências Originais</h5>
-      <div class="space-y-3 mt-1.5">
-        ${currentMasterProfile.experiences.map(exp => `
-          <div>
-            <div class="font-bold text-white text-[11px]">${escapeHtml(exp.role)} — ${escapeHtml(exp.company)}</div>
-            <div class="text-[10px] text-slate-500">${escapeHtml(exp.startDate)} - ${escapeHtml(exp.endDate)}</div>
-            <div class="mt-1 text-[11px] text-slate-300 whitespace-pre-line">${escapeHtml(exp.description)}</div>
-          </div>
-        `).join('')}
-      </div>
-    </div>
-
-    <div>
-      <h5 class="text-[10px] font-bold uppercase text-slate-400 border-b border-white/5 pb-1">Habilidades</h5>
-      <div class="mt-1 text-slate-300">${(currentMasterProfile.skills || []).join(' • ')}</div>
-    </div>
+  toast.className = `toast-enter pointer-events-auto flex items-center gap-2 px-3 py-2 rounded bg-[#0c0c0e] border ${borderColors[type]} shadow-xl text-xs font-mono`;
+  toast.innerHTML = `
+    ${icons[type] || ''}
+    <span>${escapeHtml(message)}</span>
   `;
 
-  // Render Tailored CV Editor (Right column)
-  document.getElementById("edit-tailored-headline").value = tailoredResume.headline;
-  document.getElementById("edit-tailored-summary").value = tailoredResume.summary;
-  document.getElementById("edit-tailored-skills").value = (tailoredResume.skills || []).join(", ");
-
-  const expContainer = document.getElementById("edit-tailored-experiences");
-  expContainer.innerHTML = "";
-
-  tailoredResume.experiences.forEach((exp, idx) => {
-    const card = document.createElement("div");
-    card.className = "p-3 bg-dark-850 rounded-xl border border-white/5 space-y-1.5";
-    card.innerHTML = `
-      <div class="flex items-center justify-between text-[11px] font-bold text-white">
-        <span>${escapeHtml(exp.role)} — ${escapeHtml(exp.company)}</span>
-        <span class="text-[10px] text-slate-400">${escapeHtml(exp.startDate)} - ${escapeHtml(exp.endDate)}</span>
-      </div>
-      <textarea rows="4" class="w-full bg-dark-800 border border-white/10 rounded-lg p-2 text-[11px] text-slate-200 font-mono leading-relaxed focus:outline-none focus:border-brand-500">${escapeHtml(exp.description)}</textarea>
-    `;
-    expContainer.appendChild(card);
-  });
-
+  container.appendChild(toast);
   if (window.lucide) window.lucide.createIcons();
+
+  setTimeout(() => {
+    toast.style.opacity = "0";
+    toast.style.transition = "opacity 0.2s ease";
+    setTimeout(() => toast.remove(), 200);
+  }, 3500);
 }
 
-// Security helper
+// Security Helper
 function escapeHtml(str) {
   if (!str) return "";
   return String(str)

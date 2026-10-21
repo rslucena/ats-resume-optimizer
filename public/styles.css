@@ -1,40 +1,161 @@
-/* Custom Scrollbars */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+:root {
+  --bg-canvas: #09090b;
+  --bg-surface: #0c0c0e;
+  --bg-surface-elevated: #121215;
+  --bg-surface-subtle: #18181b;
+  --border-hairline: #27272a;
+  --border-hairline-hover: #3f3f46;
+  --text-primary: #fafafa;
+  --text-secondary: #a1a1aa;
+  --text-muted: #71717a;
+  --emerald-accent: #10b981;
+  --emerald-glow: rgba(16, 185, 129, 0.15);
 }
 
-::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.4);
+/* Global Reset & Industrial Canvas Background */
+* {
+  box-sizing: border-box;
 }
 
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 9999px;
+body {
+  background-color: var(--bg-canvas);
+  background-image: radial-gradient(rgba(39, 39, 42, 0.75) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--text-primary);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  letter-spacing: -0.011em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
+/* JetBrains Mono Typography for Telemetry */
+.font-mono {
+  font-family: 'JetBrains Mono', monospace;
+  font-feature-settings: 'zero' 1, 'ss01' 1;
 }
 
-/* Glassmorphism Accents */
-.glass-panel {
-  background: rgba(15, 23, 42, 0.75);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-/* Tabular numbers for clean ATS score alignment */
 .tabular-nums {
   font-variant-numeric: tabular-nums;
 }
 
-/* Animation utilities */
-@keyframes pulse-subtle {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
+/* Hairline Technical Borders */
+.border-hairline {
+  border: 1px solid var(--border-hairline);
 }
 
-.animate-pulse-subtle {
-  animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+.border-hairline-b {
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+.border-hairline-r {
+  border-right: 1px solid var(--border-hairline);
+}
+
+.border-hairline-t {
+  border-top: 1px solid var(--border-hairline);
+}
+
+.border-hairline-l {
+  border-left: 1px solid var(--border-hairline);
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #27272a;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3f3f46;
+}
+
+/* Workbench Inputs */
+.wb-input {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-hairline);
+  color: var(--text-primary);
+  font-size: 12px;
+  border-radius: 6px;
+  padding: 6px 10px;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.wb-input:hover {
+  border-color: #3f3f46;
+}
+
+.wb-input:focus {
+  outline: none;
+  border-color: #71717a;
+  background: #101014;
+}
+
+/* High-Density Diff Keyword Highlighting */
+.keyword-highlight {
+  background: rgba(16, 185, 129, 0.12);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 0.5px 4px;
+  border-radius: 3px;
+  font-weight: 500;
+  display: inline-block;
+}
+
+/* Active List Card Indicator */
+.job-card-active {
+  background: rgba(24, 24, 27, 0.8) !important;
+  border-color: #3f3f46 !important;
+  border-left: 3px solid #10b981 !important;
+}
+
+/* A4 Sheet Simulation */
+.a4-sheet {
+  background: #0f0f13;
+  color: #e4e4e7;
+  width: 100%;
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 40px 48px;
+  border: 1px solid var(--border-hairline);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* Stepper Animation */
+@keyframes step-pulse {
+  0% { transform: scale(0.98); opacity: 0.7; }
+  50% { transform: scale(1.02); opacity: 1; }
+  100% { transform: scale(0.98); opacity: 0.7; }
+}
+
+.anim-step-pulse {
+  animation: step-pulse 1.5s infinite ease-in-out;
+}
+
+/* Toast Animation */
+@keyframes toast-slide-in {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.toast-enter {
+  animation: toast-slide-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
