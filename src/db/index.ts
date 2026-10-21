@@ -1,0 +1,86 @@
+import { Database } from "bun:sqlite";
+import { drizzle } from "drizzle-orm/bun-sqlite";
+import * as schema from "./schema.ts";
+
+let sqliteDb: Database | null = null;
+let drizzleDb: ReturnType<typeof drizzle<typeof schema>> | null = null;
+
+export function getDb(dbPath = "ats_tracker.sqlite") {
+  if (!sqliteDb || !drizzleDb) {
+    sqliteDb = new Database(dbPath);
+    sqliteDb.exec("PRAGMA journal_mode = WAL;");
+    sqliteDb.exec("PRAGMA foreign_keys = ON;");
+    drizzleDb = drizzle(sqliteDb, { schema });
+  }
+  return drizzleDb;
+}
+
+export function initDb(dbPath = "ats_tracker.sqlite") {
+  const db = getDb(dbPath);
+  if (!sqliteDb) return db;
+
+  // Auto-create tables if they don't exist
+  sqliteDb.exec(`
+    CREATE TABLE IF NOT EXISTS master_profiles (
+      id TEXT PRIMARY KEY,
+      full_name TEXT NOT NULL,
+      headline TEXT NOT NULL,
+      email TEXT NOT NULL,
+      phone TEXT,
+      location TEXT,
+      linkedin TEXT,
+      github TEXT,
+      portfolio TEXT,
+      summary TEXT NOT NULL,
+      skills TEXT NOT NULL,
+      experiences TEXT NOT NULL,
+      education TEXT NOT NULL,
+      certifications TEXT NOT NULL,
+      raw_text TEXT,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS jobs (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      company TEXT NOT NULL,
+      job_url TEXT,
+      status TEXT NOT NULL,
+      language TEXT NOT NULL DEFAULT 'pt',
+      raw_description TEXT NOT NULL,
+      top_keywords TEXT NOT NULL,
+      notes TEXT,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS tailored_resumes (
+      id TEXT PRIMARY KEY,
+      job_id TEXT NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
+      tailored_title TEXT NOT NULL,
+      tailored_summary TEXT NOT NULL,
+      tailored_skills TEXT NOT NULL,
+      tailored_experiences TEXT NOT NULL,
+      tailored_education TEXT NOT NULL,
+      score_before REAL NOT NULL,
+      score_after REAL NOT NULL,
+      keywords_achieved TEXT NOT NULL,
+      keywords_missing TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+  `);
+
+  return db;
+}
+
+export function resetDbForTesting() {
+  if (sqliteDb) {
+    sqliteDb.close();
+  }
+  sqliteDb = new Database(":memory:");
+  sqliteDb.exec("PRAGMA foreign_keys = ON;");
+  drizzleDb = drizzle(sqliteDb, { schema });
+  initDb();
+}
