@@ -1,36 +1,38 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 :root {
   --bg-canvas: #09090b;
-  --bg-surface: #0c0c0e;
-  --bg-surface-elevated: #121215;
-  --bg-surface-subtle: #18181b;
-  --border-hairline: #27272a;
-  --border-hairline-hover: #3f3f46;
+  --bg-sidebar: #09090b;
+  --bg-workbench: #0e0e10;
+  --bg-inspector: #09090b;
+  --border-line: #1f1f22;
+  --border-subtle: #27272a;
   --text-primary: #fafafa;
   --text-secondary: #a1a1aa;
   --text-muted: #71717a;
-  --emerald-accent: #10b981;
-  --emerald-glow: rgba(16, 185, 129, 0.15);
 }
 
-/* Global Reset & Industrial Canvas Background */
 * {
   box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
-body {
+html, body {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
   background-color: var(--bg-canvas);
-  background-image: radial-gradient(rgba(39, 39, 42, 0.75) 1px, transparent 1px);
-  background-size: 24px 24px;
   color: var(--text-primary);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
   letter-spacing: -0.011em;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* JetBrains Mono Typography for Telemetry */
+/* JetBrains Mono Typography for Data, Tables & Scores */
 .font-mono {
   font-family: 'JetBrains Mono', monospace;
   font-feature-settings: 'zero' 1, 'ss01' 1;
@@ -40,31 +42,10 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* Hairline Technical Borders */
-.border-hairline {
-  border: 1px solid var(--border-hairline);
-}
-
-.border-hairline-b {
-  border-bottom: 1px solid var(--border-hairline);
-}
-
-.border-hairline-r {
-  border-right: 1px solid var(--border-hairline);
-}
-
-.border-hairline-t {
-  border-top: 1px solid var(--border-hairline);
-}
-
-.border-hairline-l {
-  border-left: 1px solid var(--border-hairline);
-}
-
 /* Custom Scrollbars */
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 4px;
+  height: 4px;
 }
 
 ::-webkit-scrollbar-track {
@@ -73,89 +54,77 @@ body {
 
 ::-webkit-scrollbar-thumb {
   background: #27272a;
-  border-radius: 4px;
+  border-radius: 2px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: #3f3f46;
 }
 
-/* Workbench Inputs */
-.wb-input {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-hairline);
+/* Linear / Figma Style Inputs */
+.ui-input {
+  background: #121215;
+  border: 1px solid var(--border-line);
   color: var(--text-primary);
   font-size: 12px;
   border-radius: 6px;
   padding: 6px 10px;
-  transition: border-color 0.15s ease, background-color 0.15s ease;
+  transition: border-color 0.12s ease;
 }
 
-.wb-input:hover {
-  border-color: #3f3f46;
+.ui-input:hover {
+  border-color: var(--border-subtle);
 }
 
-.wb-input:focus {
+.ui-input:focus {
   outline: none;
-  border-color: #71717a;
-  background: #101014;
+  border-color: #52525b;
+  background: #141418;
 }
 
-/* High-Density Diff Keyword Highlighting */
-.keyword-highlight {
-  background: rgba(16, 185, 129, 0.12);
-  color: #34d399;
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  padding: 0.5px 4px;
-  border-radius: 3px;
+/* Subtitle Dotted Underline for TF-IDF Keywords */
+.kw-highlight {
+  text-decoration: underline dotted rgba(16, 185, 129, 0.65);
+  text-underline-offset: 3px;
+  color: #fafafa;
   font-weight: 500;
-  display: inline-block;
 }
 
-/* Active List Card Indicator */
-.job-card-active {
-  background: rgba(24, 24, 27, 0.8) !important;
-  border-color: #3f3f46 !important;
-  border-left: 3px solid #10b981 !important;
+/* Active Row in Sidebar */
+.sidebar-job-active {
+  background: #16161a !important;
+  border-color: #27272a !important;
+}
+
+/* Active Tab Underline */
+.nav-tab-active {
+  color: #fafafa !important;
+  border-bottom: 2px solid #fafafa !important;
 }
 
 /* A4 Sheet Simulation */
-.a4-sheet {
-  background: #0f0f13;
-  color: #e4e4e7;
-  width: 100%;
+.a4-document {
+  background: #111114;
+  color: #d4d4d8;
   max-width: 680px;
   margin: 0 auto;
-  padding: 40px 48px;
-  border: 1px solid var(--border-hairline);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  padding: 48px 52px;
+  border: 1px solid var(--border-line);
   font-size: 12px;
   line-height: 1.6;
 }
 
-/* Stepper Animation */
-@keyframes step-pulse {
-  0% { transform: scale(0.98); opacity: 0.7; }
-  50% { transform: scale(1.02); opacity: 1; }
-  100% { transform: scale(0.98); opacity: 0.7; }
+/* Top 2px Progress Bar */
+#top-progress-bar {
+  transition: width 0.25s ease-out, opacity 0.2s ease-out;
 }
 
-.anim-step-pulse {
-  animation: step-pulse 1.5s infinite ease-in-out;
+/* Toasts */
+.toast-item {
+  animation: toast-in 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Toast Animation */
-@keyframes toast-slide-in {
-  from {
-    transform: translateY(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-.toast-enter {
-  animation: toast-slide-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+@keyframes toast-in {
+  from { transform: translateY(8px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
