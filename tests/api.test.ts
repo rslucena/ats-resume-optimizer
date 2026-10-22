@@ -11,11 +11,17 @@ describe("Hono REST API Routes", () => {
     app = createApp();
   });
 
-  it("should return healthy status", async () => {
+  it("should return healthy status and system config", async () => {
     const res = await app.request("/api/health");
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json.status).toBe("ok");
+    expect(typeof json.hasGeminiKey).toBe("boolean");
+
+    const configRes = await app.request("/api/config");
+    expect(configRes.status).toBe(200);
+    const configJson = await configRes.json();
+    expect(typeof configJson.hasGeminiKey).toBe("boolean");
   });
 
   it("should handle master profile CRUD", async () => {

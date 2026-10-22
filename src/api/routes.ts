@@ -17,6 +17,7 @@ import { extractTextFromPdf, parseMasterProfileText } from "../services/cvExtrac
 import { scrapeJobUrl } from "../services/jobScraper.ts";
 import { generateKnockoutAnswer, generateKnockoutAnswerWithMeta } from "../services/knockoutAnswerService.ts";
 import { sanitizeUtf8, sanitizeResumeUtf8, stripJobBoilerplate } from "../utils/encoding.ts";
+import { getEnvKey } from "../utils/env.ts";
 import type { ResumeData } from "../types/resume.ts";
 
 export function createApp() {
@@ -24,8 +25,16 @@ export function createApp() {
 
   app.use("*", cors());
 
-  // Healthcheck
-  app.get("/api/health", (c) => c.json({ status: "ok", timestamp: Date.now() }));
+  // Healthcheck & System Config
+  app.get("/api/health", (c) => c.json({
+    status: "ok",
+    hasGeminiKey: !!getEnvKey("GEMINI_API_KEY"),
+    timestamp: Date.now()
+  }));
+
+  app.get("/api/config", (c) => c.json({
+    hasGeminiKey: !!getEnvKey("GEMINI_API_KEY")
+  }));
 
   // 1. Master Profile GET
   app.get("/api/profile", async (c) => {
