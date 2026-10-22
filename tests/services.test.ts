@@ -87,11 +87,11 @@ describe("CV Extraction & Job HTML Parser", () => {
   it("should sanitize LinkedIn PDF exports, stripping Page markers, grouping education, and preventing fake companies", () => {
     const rawLinkedinExport = `
       Page 1 of 6
-      Rodrigo Silva de Lucena
+      Carlos Eduardo Pereira
       Senior Backend Engineer | IA | PHP | TypeScript | Cloud
-      rodrigo@rslucena.com.br | 11963907600 | São Paulo, Brasil
-      www.linkedin.com/in/rodrigolucena (LinkedIn)
-      github.com/rslucena (GitHub)
+      carlos.pereira@example.com | 11988887777 | São Paulo, Brasil
+      www.linkedin.com/in/carlospereira (LinkedIn)
+      github.com/carlospereira (GitHub)
 
       Contact
       Top Skills
@@ -139,7 +139,7 @@ describe("CV Extraction & Job HTML Parser", () => {
     const profile = parseMasterProfileText(rawLinkedinExport);
 
     // 1. Verify basic identity
-    expect(profile.fullName).toBe("Rodrigo Silva de Lucena");
+    expect(profile.fullName).toBe("Carlos Eduardo Pereira");
     expect(profile.headline).toContain("Senior Backend Engineer");
 
     // 2. Verify Page markers are 100% removed
@@ -192,9 +192,9 @@ describe("CV Extraction & Job HTML Parser", () => {
 
   it("should cleanly split unseparated date strings without punctuation (e.g. setembro de 2019 outubro de 2024)", () => {
     const rawCvWithUnseparatedDates = `
-      Rodrigo Silva de Lucena
+      Carlos Eduardo Pereira
       Senior Backend Engineer
-      rodrigo@example.com | 11999999999 | São Paulo, Brasil
+      carlos@example.com | 11999999999 | São Paulo, Brasil
 
       Experiência
       Chamleo
