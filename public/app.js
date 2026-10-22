@@ -14,7 +14,8 @@ let currentScoreDisplay = 0;
 let currentScannabilityDisplay = 0;
 let currentTechnicalDisplay = 0;
 let currentKnockoutQuestions = [];
-let currentTailorEngine = localStorage.getItem("ats_use_gemini_tailoring") === "false" ? "local" : "gemini";
+let hasGeminiKey = false;
+let currentTailorEngine = "local";
 
 // On DOM Loaded
 document.addEventListener("DOMContentLoaded", async () => {
@@ -25,6 +26,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupProfileDrawer();
   setupAddJobModal();
   setupWorkbenchTabs();
+  await checkSystemConfig();
   setupWorkbenchActions();
   setupEmptyStateActions();
   setupKnockoutQuestionsEvents();
@@ -1450,7 +1452,78 @@ function setupWorkbenchTabs() {
   });
 }
 
+async function checkSystemConfig() {
+  try {
+    const res = await fetch("/api/config");
+    if (res.ok) {
+      const data = await res.json();
+      hasGeminiKey = !!data.hasGeminiKey;
+    } else {
+      hasGeminiKey = false;
+    }
+  } catch {
+    hasGeminiKey = false;
+  }
+
+  // Restore saved choice only if key is available
+  const savedEngine = localStorage.getItem("ats_use_gemini_tailoring");
+  if (hasGeminiKey && savedEngine === "true") {
+    currentTailorEngine = "gemini";
+  } else {
+    currentTailorEngine = "local";
+  }
+
+  applyGeminiAvailability();
+}
+
+function applyGeminiAvailability() {
+  const btnEngineGemini = document.getElementById("btn-engine-gemini");
+  const badgeGemini = document.getElementById("badge-engine-gemini");
+  const descGemini = document.getElementById("engine-gemini-desc");
+
+  if (!hasGeminiKey) {
+    if (btnEngineGemini) {
+      btnEngineGemini.disabled = true;
+      btnEngineGemini.setAttribute("disabled", "true");
+      btnEngineGemini.classList.add("opacity-40", "cursor-not-allowed");
+      btnEngineGemini.classList.remove("cursor-pointer", "hover:bg-zinc-500/10");
+      btnEngineGemini.title = "GEMINI_API_KEY não configurada no arquivo .env";
+    }
+    if (badgeGemini) {
+      badgeGemini.classList.remove("hidden");
+    }
+    if (descGemini) {
+      descGemini.textContent = "GEMINI_API_KEY ausente";
+      descGemini.classList.add("text-rose-400");
+      descGemini.classList.remove("text-zinc-400");
+    }
+    if (currentTailorEngine === "gemini") {
+      updateTailorEngineUI("local");
+    }
+  } else {
+    if (btnEngineGemini) {
+      btnEngineGemini.disabled = false;
+      btnEngineGemini.removeAttribute("disabled");
+      btnEngineGemini.classList.remove("opacity-40", "cursor-not-allowed");
+      btnEngineGemini.classList.add("cursor-pointer", "hover:bg-zinc-500/10");
+      btnEngineGemini.title = "Reescrita contextual com Gemini 1.5 Flash";
+    }
+    if (badgeGemini) {
+      badgeGemini.classList.add("hidden");
+    }
+    if (descGemini) {
+      descGemini.textContent = "Reescrita contextual, linguagem fluida e natural";
+      descGemini.classList.remove("text-rose-400");
+      descGemini.classList.add("text-zinc-400");
+    }
+  }
+}
+
 function updateTailorEngineUI(engine) {
+  if (engine === "gemini" && !hasGeminiKey) {
+    engine = "local";
+  }
+
   currentTailorEngine = engine;
   localStorage.setItem("ats_use_gemini_tailoring", engine === "gemini" ? "true" : "false");
 
@@ -1490,8 +1563,9 @@ function setupWorkbenchActions() {
   const modeChevron = document.getElementById("tailor-mode-chevron-icon");
 
   if (btnModeMenu && modeDropdown) {
-    btnModeMenu.addEventListener("click", (e) => {
+    btnModeMenu.addEventListener("click", async (e) => {
       e.stopPropagation();
+      await checkSystemConfig();
       const isHidden = modeDropdown.classList.contains("hidden");
       // Close other dropdowns
       document.getElementById("download-dropdown-menu")?.classList.add("hidden");
@@ -1511,6 +1585,10 @@ function setupWorkbenchActions() {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
         const selectedEngine = btn.dataset.engine;
+        if (selectedEngine === "gemini" && !hasGeminiKey) {
+          showToast("GEMINI_API_KEY não configurada no arquivo .env. Configure a chave para habilitar a IA.", "warning");
+          return;
+        }
         if (selectedEngine) {
           updateTailorEngineUI(selectedEngine);
           showToast(`Motor selecionado: ${selectedEngine === "gemini" ? "Gemini 1.5 Flash (IA)" : "Motor ATS Local"}`, "info");
@@ -1540,7 +1618,7 @@ function setupWorkbenchActions() {
         return;
       }
 
-      const useAi = (currentTailorEngine === "gemini");
+      const useAi = (currentTailorEngine === "gemini" && hasGeminiKey);
       const label = document.getElementById("tailor-btn-label");
       const icon = document.getElementById("tailor-btn-icon");
 
@@ -1756,12 +1834,12 @@ function setupWorkbenchActions() {
 
           // Restaura estado após 2.5s
           setTimeout(() => {
-            if (copyLabel) copyLabel.textContent = "📋 Copiar Texto Puro (Clipboard)";
+            if (copyLabel) copyLabel.textContent = "📋 Copiar (Clipboard)";
             if (copyBadge) {
               copyBadge.textContent = "Rápido";
               copyBadge.className = "text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-medium border border-emerald-500/30";
             }
-            if (copyDesc) copyDesc.textContent = "Texto limpo para colar em formulários e Gupy";
+            if (copyDesc) copyDesc.textContent = "Texto limpo para colar em formulários";
             if (copyBox) copyBox.className = "p-1.5 rounded-md bg-emerald-500/20 text-emerald-400 mt-0.5 border border-emerald-500/30 shrink-0 transition-colors";
           }, 2500);
 
@@ -1774,7 +1852,7 @@ function setupWorkbenchActions() {
         } catch (err) {
           console.error("Erro ao copiar texto:", err);
           showToast("Erro ao copiar texto para a área de transferência", "error");
-          if (copyLabel) copyLabel.textContent = "📋 Copiar Texto Puro (Clipboard)";
+          if (copyLabel) copyLabel.textContent = "Copiar (Clipboard)";
           if (copyBadge) copyBadge.textContent = "Rápido";
         }
       });

@@ -188,21 +188,24 @@
               </div>
 
               <!-- 1. Gemini 1.5 Flash (IA) -->
-              <button class="tailor-engine-option-btn w-full text-left p-2 rounded-lg flex items-start gap-2.5 transition-colors group cursor-pointer" data-engine="gemini">
-                <div class="p-1.5 rounded-md bg-amber-500/10 text-amber-400 mt-0.5 border border-amber-500/25 shrink-0">
+              <button id="btn-engine-gemini" class="tailor-engine-option-btn w-full text-left p-2 rounded-lg flex items-start gap-2.5 transition-colors group cursor-pointer" data-engine="gemini">
+                <div class="p-1.5 rounded-md bg-amber-500/10 text-amber-400 mt-0.5 border border-amber-500/25 shrink-0" id="icon-container-engine-gemini">
                   <i data-lucide="sparkles" class="w-4 h-4 fill-amber-400 text-amber-400"></i>
                 </div>
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center justify-between">
-                    <span class="text-xs font-semibold" style="color: var(--text-primary);">Gemini 1.5 Flash (IA)</span>
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                      <span class="text-xs font-semibold" style="color: var(--text-primary);">Gemini 1.5 Flash (IA)</span>
+                      <span id="badge-engine-gemini" class="hidden text-[9px] px-1 py-0.2 rounded bg-zinc-800 text-rose-300 border border-rose-500/30 font-medium">Sem chave .env</span>
+                    </div>
                     <i data-lucide="check" id="check-engine-gemini" class="w-3.5 h-3.5 text-emerald-500 font-bold"></i>
                   </div>
-                  <p class="text-[11px] text-zinc-400 leading-tight mt-0.5">Reescrita contextual, linguagem fluida e natural</p>
+                  <p class="text-[11px] text-zinc-400 leading-tight mt-0.5" id="engine-gemini-desc">Reescrita contextual, linguagem fluida e natural</p>
                 </div>
               </button>
 
               <!-- 2. Motor ATS Local (Determinístico 7 camadas) -->
-              <button class="tailor-engine-option-btn w-full text-left p-2 rounded-lg flex items-start gap-2.5 transition-colors group cursor-pointer" data-engine="local">
+              <button id="btn-engine-local" class="tailor-engine-option-btn w-full text-left p-2 rounded-lg flex items-start gap-2.5 transition-colors group cursor-pointer" data-engine="local">
                 <div class="p-1.5 rounded-md bg-blue-500/10 text-blue-400 mt-0.5 border border-blue-500/25 shrink-0">
                   <i data-lucide="cpu" class="w-4 h-4 text-blue-400"></i>
                 </div>
@@ -239,12 +242,12 @@
                 </div>
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center justify-between">
-                    <span id="copy-quick-label" class="text-xs font-semibold text-emerald-400">📋 Copiar Texto Puro (Clipboard)</span>
+                    <span id="copy-quick-label" class="text-xs font-semibold text-emerald-400">Copiar (Clipboard)</span>
                     <span id="copy-quick-badge" class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-medium border border-emerald-500/30">
                       Rápido
                     </span>
                   </div>
-                  <p id="copy-quick-desc" class="text-[11px] text-zinc-400 leading-tight mt-0.5">Texto limpo para colar em formulários e Gupy</p>
+                  <p id="copy-quick-desc" class="text-[11px] text-zinc-400 leading-tight mt-0.5">Texto limpo para colar em formulários</p>
                 </div>
               </button>
 
