@@ -1,3 +1,8 @@
+// ============================================================================
+// ATS Optimizer Studio — App Frontend Logic
+// Ergonomic, Fluid, Collapsible Sidebars & Theme Engine
+// ============================================================================
+
 // Global State
 let currentMasterProfile = null;
 let currentJobs = [];
@@ -5,14 +10,24 @@ let selectedJobId = null;
 let activeJobData = null;
 let currentFilterStatus = "ALL";
 let currentSearchQuery = "";
+let currentScoreDisplay = 0;
+let currentScannabilityDisplay = 0;
+let currentTechnicalDisplay = 0;
+let currentKnockoutQuestions = [];
+let currentTailorEngine = localStorage.getItem("ats_use_gemini_tailoring") === "false" ? "local" : "gemini";
 
 // On DOM Loaded
 document.addEventListener("DOMContentLoaded", async () => {
+  setupThemeSwitcher();
+  setupCollapsibleSidebars();
+  setupResizableDividers();
   setupSidebarNavigation();
   setupProfileDrawer();
   setupAddJobModal();
   setupWorkbenchTabs();
   setupWorkbenchActions();
+  setupEmptyStateActions();
+  setupKnockoutQuestionsEvents();
 
   await loadMasterProfile();
   await loadJobs();
@@ -22,32 +37,493 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 });
 
-// ==========================================
-// 1. MASTER PROFILE
-// ==========================================
+// ============================================================================
+// 1. THEME SWITCHER (Light, Dark, System via Semantic CSS Variables)
+// ============================================================================
+function setupThemeSwitcher() {
+  const themeToggleBtn = document.getElementById("theme-toggle-btn");
+  const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+
+  function updateThemeUI(resolvedTheme) {
+    if (!themeToggleBtn) return;
+    const isDark = resolvedTheme === "dark";
+    themeToggleBtn.title = isDark ? "Alternar para modo claro" : "Alternar para modo escuro";
+    themeToggleBtn.innerHTML = isDark
+      ? `<i data-lucide="sun" id="theme-toggle-icon" class="w-4 h-4 text-amber-400"></i>`
+      : `<i data-lucide="moon" id="theme-toggle-icon" class="w-4 h-4 text-zinc-600"></i>`;
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  function applyTheme(themeMode) {
+    let resolvedTheme = themeMode;
+    if (themeMode === "system") {
+      resolvedTheme = mediaQuery.matches ? "dark" : "light";
+    }
+
+    document.documentElement.setAttribute("data-theme", resolvedTheme);
+    localStorage.setItem("ats_theme", resolvedTheme);
+    updateThemeUI(resolvedTheme);
+  }
+
+  // Toggle on single button click
+  if (themeToggleBtn) {
+    themeToggleBtn.addEventListener("click", () => {
+      const current = document.documentElement.getAttribute("data-theme") || "dark";
+      const nextTheme = current === "dark" ? "light" : "dark";
+      applyTheme(nextTheme);
+    });
+  }
+
+  // Listen for OS color scheme changes
+  mediaQuery.addEventListener("change", (e) => {
+    const saved = localStorage.getItem("ats_theme");
+    if (!saved) {
+      applyTheme(e.matches ? "dark" : "light");
+    }
+  });
+
+  // Initial theme on boot
+  const initialTheme = localStorage.getItem("ats_theme") || (mediaQuery.matches ? "dark" : "light");
+  applyTheme(initialTheme);
+}
+
+// ============================================================================
+// 2. COLLAPSIBLE SIDEBARS & SHORTCUTS (Ctrl+B, Ctrl+J / Ctrl+I)
+// ============================================================================
+function setupCollapsibleSidebars() {
+  const sidebarLeft = document.getElementById("sidebar-left");
+  const sidebarLeftCollapsed = document.getElementById("sidebar-left-collapsed");
+  const resizerLeft = document.getElementById("resizer-left");
+  const btnToggleLeft = document.getElementById("btn-toggle-sidebar-left");
+  const btnReopenLeft = document.getElementById("btn-reopen-sidebar-left");
+
+  const sidebarRight = document.getElementById("sidebar-right");
+  const sidebarRightCollapsed = document.getElementById("sidebar-right-collapsed");
+  const resizerRight = document.getElementById("resizer-right");
+  const btnToggleRight = document.getElementById("btn-toggle-sidebar-right");
+  const btnCloseRight = document.getElementById("btn-close-sidebar-right");
+  const btnReopenRight = document.getElementById("btn-reopen-sidebar-right");
+
+  function setSidebarLeft(collapsed, save = true) {
+    if (!sidebarLeft) return;
+    if (collapsed) {
+      sidebarLeft.classList.add("collapsed");
+      sidebarLeft.classList.add("hidden");
+      if (sidebarLeftCollapsed) sidebarLeftCollapsed.classList.remove("hidden");
+      if (resizerLeft) resizerLeft.classList.add("hidden");
+    } else {
+      sidebarLeft.classList.remove("collapsed");
+      sidebarLeft.classList.remove("hidden");
+      if (sidebarLeftCollapsed) sidebarLeftCollapsed.classList.add("hidden");
+      if (resizerLeft) resizerLeft.classList.remove("hidden");
+      const savedWidth = parseInt(localStorage.getItem("ats_sidebar_left_width"), 10) || 360;
+      sidebarLeft.style.width = `${savedWidth}px`;
+    }
+    if (save) {
+      localStorage.setItem("ats_sidebar_left", collapsed ? "collapsed" : "open");
+    }
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  function setSidebarRight(collapsed, save = true) {
+    if (!sidebarRight) return;
+    if (collapsed) {
+      sidebarRight.classList.add("collapsed");
+      sidebarRight.classList.add("hidden");
+      if (sidebarRightCollapsed) sidebarRightCollapsed.classList.remove("hidden");
+      if (resizerRight) resizerRight.classList.add("hidden");
+      if (btnToggleRight) {
+        btnToggleRight.innerHTML = `<i data-lucide="panel-right-open" class="w-4 h-4"></i>`;
+        btnToggleRight.title = "Expandir Painel Inspetor (Ctrl+J ou Ctrl+I)";
+      }
+    } else {
+      sidebarRight.classList.remove("collapsed");
+      sidebarRight.classList.remove("hidden");
+      if (sidebarRightCollapsed) sidebarRightCollapsed.classList.add("hidden");
+      if (resizerRight) resizerRight.classList.remove("hidden");
+      if (btnToggleRight) {
+        btnToggleRight.innerHTML = `<i data-lucide="panel-right-close" class="w-4 h-4"></i>`;
+        btnToggleRight.title = "Recolher Painel Inspetor (Ctrl+J ou Ctrl+I)";
+      }
+      const savedWidth = parseInt(localStorage.getItem("ats_sidebar_right_width"), 10) || 400;
+      sidebarRight.style.width = `${savedWidth}px`;
+    }
+    if (save) {
+      localStorage.setItem("ats_sidebar_right", collapsed ? "collapsed" : "open");
+    }
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  function toggleSidebarLeft() {
+    const isCollapsed = sidebarLeft?.classList.contains("collapsed") || sidebarLeft?.classList.contains("hidden");
+    setSidebarLeft(!isCollapsed);
+  }
+
+  function toggleSidebarRight() {
+    const isCollapsed = sidebarRight?.classList.contains("collapsed") || sidebarRight?.classList.contains("hidden");
+    setSidebarRight(!isCollapsed);
+  }
+
+  // Left Sidebar listeners
+  if (btnToggleLeft) btnToggleLeft.addEventListener("click", () => setSidebarLeft(true));
+  if (btnReopenLeft) btnReopenLeft.addEventListener("click", (e) => {
+    e.stopPropagation();
+    setSidebarLeft(false);
+  });
+  if (sidebarLeftCollapsed) sidebarLeftCollapsed.addEventListener("click", () => setSidebarLeft(false));
+
+  // Right Sidebar listeners
+  if (btnCloseRight) btnCloseRight.addEventListener("click", () => setSidebarRight(true));
+  if (btnToggleRight) btnToggleRight.addEventListener("click", toggleSidebarRight);
+  if (btnReopenRight) btnReopenRight.addEventListener("click", (e) => {
+    e.stopPropagation();
+    setSidebarRight(false);
+  });
+  if (sidebarRightCollapsed) sidebarRightCollapsed.addEventListener("click", () => setSidebarRight(false));
+
+  // Keyboard Shortcuts: Ctrl+B (Left), Ctrl+J or Ctrl+I (Right)
+  window.addEventListener("keydown", (e) => {
+    const activeTag = document.activeElement?.tagName;
+    const isEditing = ["INPUT", "TEXTAREA"].includes(activeTag) && !e.ctrlKey && !e.metaKey;
+    if (isEditing) return;
+
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "b") {
+      e.preventDefault();
+      toggleSidebarLeft();
+    }
+    if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === "j" || e.key.toLowerCase() === "i")) {
+      e.preventDefault();
+      toggleSidebarRight();
+    }
+  });
+
+  // Restore saved states from localStorage (responsive default on tablet/phone <= 1024px)
+  const isCompactScreen = window.innerWidth <= 1024;
+  const savedLeft = localStorage.getItem("ats_sidebar_left");
+  if (savedLeft === "collapsed" || (isCompactScreen && savedLeft !== "open")) {
+    setSidebarLeft(true, false);
+  }
+
+  const savedRight = localStorage.getItem("ats_sidebar_right");
+  if (savedRight === "collapsed" || (isCompactScreen && savedRight !== "open")) {
+    setSidebarRight(true, false);
+  }
+}
+
+// ============================================================================
+// 2.1 FLEXIBLE RESIZABLE DIVIDERS (Splitters & Gutters)
+// ============================================================================
+function setupResizableDividers() {
+  const sidebarLeft = document.getElementById("sidebar-left");
+  const resizerLeft = document.getElementById("resizer-left");
+
+  const sidebarRight = document.getElementById("sidebar-right");
+  const resizerRight = document.getElementById("resizer-right");
+
+  const diffPaneLeft = document.getElementById("diff-pane-left");
+  const diffPaneRight = document.getElementById("diff-pane-right");
+  const resizerDiff = document.getElementById("resizer-diff");
+
+  // Load saved widths
+  const savedLeftWidth = parseInt(localStorage.getItem("ats_sidebar_left_width"), 10) || 360;
+  const savedRightWidth = parseInt(localStorage.getItem("ats_sidebar_right_width"), 10) || 400;
+
+  if (sidebarLeft && !sidebarLeft.classList.contains("collapsed")) {
+    sidebarLeft.style.width = `${savedLeftWidth}px`;
+  }
+  if (sidebarRight && !sidebarRight.classList.contains("collapsed")) {
+    sidebarRight.style.width = `${savedRightWidth}px`;
+  }
+
+  // Generic helper for drag resizing
+  function createDragHandler({ resizer, onMove, onEnd, onDoubleClick }) {
+    if (!resizer) return;
+
+    resizer.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      document.body.classList.add("is-resizing");
+      resizer.classList.add("is-dragging");
+
+      const startX = e.clientX;
+
+      function onMouseMove(moveEvent) {
+        onMove(moveEvent, startX);
+      }
+
+      function onMouseUp(upEvent) {
+        document.body.classList.remove("is-resizing");
+        resizer.classList.remove("is-dragging");
+        window.removeEventListener("mousemove", onMouseMove);
+        window.removeEventListener("mouseup", onMouseUp);
+        if (onEnd) onEnd(upEvent);
+      }
+
+      window.addEventListener("mousemove", onMouseMove);
+      window.addEventListener("mouseup", onMouseUp);
+    });
+
+    if (onDoubleClick) {
+      resizer.addEventListener("dblclick", onDoubleClick);
+    }
+  }
+
+  // 1. Resizer Left (Sidebar Left / Center)
+  createDragHandler({
+    resizer: resizerLeft,
+    onMove: (e) => {
+      if (!sidebarLeft) return;
+      const newWidth = Math.max(260, Math.min(e.clientX, 650));
+      sidebarLeft.style.width = `${newWidth}px`;
+    },
+    onEnd: () => {
+      if (!sidebarLeft) return;
+      const width = parseInt(sidebarLeft.style.width, 10);
+      localStorage.setItem("ats_sidebar_left_width", width);
+    },
+    onDoubleClick: () => {
+      if (!sidebarLeft) return;
+      sidebarLeft.style.width = "360px";
+      localStorage.setItem("ats_sidebar_left_width", "360");
+    }
+  });
+
+  // 2. Resizer Right (Center / Inspetor ATS)
+  createDragHandler({
+    resizer: resizerRight,
+    onMove: (e) => {
+      if (!sidebarRight) return;
+      const windowWidth = window.innerWidth;
+      const newWidth = Math.max(300, Math.min(windowWidth - e.clientX, 750));
+      sidebarRight.style.width = `${newWidth}px`;
+    },
+    onEnd: () => {
+      if (!sidebarRight) return;
+      const width = parseInt(sidebarRight.style.width, 10);
+      localStorage.setItem("ats_sidebar_right_width", width);
+    },
+    onDoubleClick: () => {
+      if (!sidebarRight) return;
+      sidebarRight.style.width = "400px";
+      localStorage.setItem("ats_sidebar_right_width", "400");
+    }
+  });
+
+  // 3. Resizer Diff (Master CV vs Tailored CV inside Editor)
+  if (resizerDiff && diffPaneLeft && diffPaneRight) {
+    const savedDiffRatio = parseFloat(localStorage.getItem("ats_diff_split_ratio")) || 0.5;
+    diffPaneLeft.style.flex = `${savedDiffRatio} 1 0%`;
+    diffPaneRight.style.flex = `${1 - savedDiffRatio} 1 0%`;
+
+    createDragHandler({
+      resizer: resizerDiff,
+      onMove: (e) => {
+        const parent = resizerDiff.parentElement;
+        if (!parent) return;
+        const rect = parent.getBoundingClientRect();
+        const offsetX = e.clientX - rect.left;
+        const totalWidth = rect.width;
+        let ratio = offsetX / totalWidth;
+        ratio = Math.max(0.25, Math.min(ratio, 0.75));
+
+        diffPaneLeft.style.flex = `${ratio} 1 0%`;
+        diffPaneRight.style.flex = `${1 - ratio} 1 0%`;
+      },
+      onEnd: () => {
+        const flexStr = diffPaneLeft.style.flex;
+        const match = flexStr.match(/^([\d.]+)/);
+        if (match) {
+          localStorage.setItem("ats_diff_split_ratio", match[1]);
+        }
+      },
+      onDoubleClick: () => {
+        diffPaneLeft.style.flex = "1 1 50%";
+        diffPaneRight.style.flex = "1 1 50%";
+        localStorage.setItem("ats_diff_split_ratio", "0.5");
+      }
+    });
+  }
+}
+
+
+// ============================================================================
+// 3. EMPTY STATE & QUICK START ACTIONS
+// ============================================================================
+function setupEmptyStateActions() {
+  const btnEmptyAddJob = document.getElementById("btn-empty-add-job");
+  if (btnEmptyAddJob) {
+    btnEmptyAddJob.addEventListener("click", () => {
+      document.getElementById("btn-open-add-job")?.click();
+    });
+  }
+
+  const btnEmptyConfigMaster = document.getElementById("btn-empty-config-master");
+  if (btnEmptyConfigMaster) {
+    btnEmptyConfigMaster.addEventListener("click", () => {
+      openProfileDrawer();
+    });
+  }
+
+  const btnSidebarEditMaster = document.getElementById("btn-sidebar-edit-master");
+  if (btnSidebarEditMaster) {
+    btnSidebarEditMaster.addEventListener("click", () => {
+      openProfileDrawer();
+    });
+  }
+}
+
+function showWorkbenchEmpty() {
+  const emptyEl = document.getElementById("workbench-empty");
+  const activeEl = document.getElementById("workbench-active");
+  const breadcrumbEmpty = document.getElementById("header-breadcrumb-empty");
+  const breadcrumbActive = document.getElementById("header-breadcrumb-active");
+  const headerActions = document.getElementById("header-job-actions");
+
+  if (emptyEl) emptyEl.classList.remove("hidden");
+  if (activeEl) activeEl.classList.add("hidden");
+  if (breadcrumbEmpty) breadcrumbEmpty.classList.remove("hidden");
+  if (breadcrumbActive) {
+    breadcrumbActive.classList.add("hidden");
+    breadcrumbActive.classList.remove("flex");
+  }
+  if (headerActions) {
+    headerActions.classList.add("hidden");
+    headerActions.classList.remove("flex");
+  }
+}
+
+function showWorkbenchActive() {
+  const emptyEl = document.getElementById("workbench-empty");
+  const activeEl = document.getElementById("workbench-active");
+  const breadcrumbEmpty = document.getElementById("header-breadcrumb-empty");
+  const breadcrumbActive = document.getElementById("header-breadcrumb-active");
+  const headerActions = document.getElementById("header-job-actions");
+
+  if (emptyEl) emptyEl.classList.add("hidden");
+  if (activeEl) {
+    activeEl.classList.remove("hidden");
+    activeEl.classList.remove("fade-slide-up");
+    void activeEl.offsetWidth; // trigger reflow for animation
+    activeEl.classList.add("fade-slide-up");
+  }
+  if (breadcrumbEmpty) breadcrumbEmpty.classList.add("hidden");
+  if (breadcrumbActive) {
+    breadcrumbActive.classList.remove("hidden");
+    breadcrumbActive.classList.add("flex");
+  }
+  if (headerActions) {
+    headerActions.classList.remove("hidden");
+    headerActions.classList.add("flex");
+  }
+}
+
+// ============================================================================
+// 4. ANIMATED SCORE COUNT UP (Física de Movimento & Dual-Score)
+// ============================================================================
+function animateDualScores(scannabilityTarget, technicalTarget) {
+  const scanEl = document.getElementById("inspect-scannability-val");
+  const techEl = document.getElementById("inspect-technical-val");
+  const legacyEl = document.getElementById("inspect-score-val");
+
+  if (scannabilityTarget === null || scannabilityTarget === undefined || isNaN(scannabilityTarget)) {
+    if (scanEl) scanEl.textContent = "--";
+    if (techEl) techEl.textContent = "--";
+    if (legacyEl) legacyEl.textContent = "--";
+    currentScannabilityDisplay = 0;
+    currentTechnicalDisplay = 0;
+    currentScoreDisplay = 0;
+    return;
+  }
+
+  const startScan = currentScannabilityDisplay;
+  const targetScan = Math.min(100, Math.max(0, Math.round(scannabilityTarget)));
+
+  const startTech = currentTechnicalDisplay;
+  const targetTech = Math.min(100, Math.max(0, Math.round(technicalTarget)));
+
+  const duration = 500;
+  const startTime = performance.now();
+
+  function update(now) {
+    const elapsed = now - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const easeProgress = 1 - (1 - progress) * (1 - progress);
+
+    const valScan = Math.round(startScan + (targetScan - startScan) * easeProgress);
+    const valTech = Math.round(startTech + (targetTech - startTech) * easeProgress);
+
+    if (scanEl) scanEl.textContent = valScan;
+    if (techEl) techEl.textContent = valTech;
+    if (legacyEl) legacyEl.textContent = valTech;
+
+    if (progress < 1) {
+      requestAnimationFrame(update);
+    } else {
+      if (scanEl) scanEl.textContent = targetScan;
+      if (techEl) techEl.textContent = targetTech;
+      if (legacyEl) legacyEl.textContent = targetTech;
+      currentScannabilityDisplay = targetScan;
+      currentTechnicalDisplay = targetTech;
+      currentScoreDisplay = targetTech;
+    }
+  }
+
+  requestAnimationFrame(update);
+}
+
+function animateScoreCountUp(targetVal) {
+  animateDualScores(targetVal, targetVal);
+}
+
+// ============================================================================
+// 5. MASTER PROFILE (loadMasterProfile preserved for static tests)
+// ============================================================================
 async function loadMasterProfile() {
   try {
     const res = await fetch("/api/profile");
     const data = await res.json();
     currentMasterProfile = data.profile;
 
-    const statusEl = document.getElementById("sidebar-master-status");
+    const nameEl = document.getElementById("sidebar-master-name");
+    const statusTextEl = document.getElementById("sidebar-master-status-text");
+    const dotEl = document.getElementById("sidebar-master-dot");
+    const legacyStatusEl = document.getElementById("sidebar-master-status");
+
     if (currentMasterProfile && currentMasterProfile.fullName) {
-      statusEl.textContent = `Master: ${currentMasterProfile.fullName}`;
-      statusEl.className = "truncate max-w-[140px] text-zinc-300";
+      if (nameEl) nameEl.textContent = currentMasterProfile.fullName;
+      if (statusTextEl) statusTextEl.textContent = "Pronto para matching";
+      if (dotEl) {
+        dotEl.className = "w-2 h-2 rounded-full bg-emerald-500";
+      }
+      if (legacyStatusEl) {
+        legacyStatusEl.textContent = `Master: ${currentMasterProfile.fullName}`;
+        legacyStatusEl.className = "truncate text-zinc-300";
+      }
       populateDrawerForm(currentMasterProfile);
     } else {
-      statusEl.textContent = "Master: Pendente";
-      statusEl.className = "truncate max-w-[140px] text-amber-500";
+      if (nameEl) nameEl.textContent = "Pendente de Configuração";
+      if (statusTextEl) statusTextEl.textContent = "Clique em Editar para importar PDF";
+      if (dotEl) {
+        dotEl.className = "w-2 h-2 rounded-full bg-amber-500";
+      }
+      if (legacyStatusEl) {
+        legacyStatusEl.textContent = "Master: Pendente";
+        legacyStatusEl.className = "truncate text-amber-500";
+      }
     }
   } catch (err) {
     console.error("Erro ao carregar master profile:", err);
   }
 }
 
+function openProfileDrawer() {
+  const drawer = document.getElementById("drawer-profile");
+  if (currentMasterProfile) populateDrawerForm(currentMasterProfile);
+  if (drawer) drawer.classList.remove("hidden");
+  if (window.lucide) window.lucide.createIcons();
+}
+
 function setupProfileDrawer() {
   const drawer = document.getElementById("drawer-profile");
-  const btnOpen = document.getElementById("btn-open-profile-drawer");
   const btnClose = document.getElementById("drawer-profile-close");
   const btnCancel = document.getElementById("btn-drawer-cancel");
   const form = document.getElementById("master-profile-form");
@@ -55,41 +531,61 @@ function setupProfileDrawer() {
   const fileInput = document.getElementById("drawer-pdf-input");
   const uploadStatus = document.getElementById("drawer-upload-status");
 
-  btnOpen.addEventListener("click", () => {
-    if (currentMasterProfile) populateDrawerForm(currentMasterProfile);
-    drawer.classList.remove("hidden");
-  });
+  const closeDrawer = () => {
+    if (drawer) drawer.classList.add("hidden");
+  };
+  if (btnClose) btnClose.addEventListener("click", closeDrawer);
+  if (btnCancel) btnCancel.addEventListener("click", closeDrawer);
 
-  const closeDrawer = () => drawer.classList.add("hidden");
-  btnClose.addEventListener("click", closeDrawer);
-  btnCancel.addEventListener("click", closeDrawer);
+  // Fechar ao clicar no background externo (backdrop)
+  if (drawer) {
+    let startedOnBackdrop = false;
+    drawer.addEventListener("mousedown", (e) => {
+      startedOnBackdrop = (e.target === drawer);
+    });
+    drawer.addEventListener("click", (e) => {
+      if (e.target === drawer && startedOnBackdrop) {
+        closeDrawer();
+      }
+      startedOnBackdrop = false;
+    });
+  }
 
-  dropzone.addEventListener("click", () => fileInput.click());
-  dropzone.addEventListener("dragover", (e) => {
-    e.preventDefault();
-    dropzone.classList.add("border-zinc-500", "bg-zinc-850");
-  });
-  dropzone.addEventListener("dragleave", () => {
-    dropzone.classList.remove("border-zinc-500", "bg-zinc-850");
-  });
-  dropzone.addEventListener("drop", async (e) => {
-    e.preventDefault();
-    dropzone.classList.remove("border-zinc-500", "bg-zinc-850");
-    const file = e.dataTransfer.files[0];
-    if (file && file.type === "application/pdf") {
-      await uploadPdfFile(file);
-    } else {
-      showToast("Selecione um arquivo .PDF", "error");
+  // Fechar ao pressionar tecla Escape
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && drawer && !drawer.classList.contains("hidden")) {
+      closeDrawer();
     }
   });
 
-  fileInput.addEventListener("change", async (e) => {
-    const file = e.target.files[0];
-    if (file) await uploadPdfFile(file);
-  });
+  if (dropzone && fileInput) {
+    dropzone.addEventListener("click", () => fileInput.click());
+    dropzone.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      dropzone.classList.add("border-emerald-500");
+    });
+    dropzone.addEventListener("dragleave", () => {
+      dropzone.classList.remove("border-emerald-500");
+    });
+    dropzone.addEventListener("drop", async (e) => {
+      e.preventDefault();
+      dropzone.classList.remove("border-emerald-500");
+      const file = e.dataTransfer.files[0];
+      if (file && file.type === "application/pdf") {
+        await uploadPdfFile(file);
+      } else {
+        showToast("Selecione um arquivo .PDF", "error");
+      }
+    });
+
+    fileInput.addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      if (file) await uploadPdfFile(file);
+    });
+  }
 
   async function uploadPdfFile(file) {
-    uploadStatus.innerHTML = `<span class="text-zinc-400">Processando PDF...</span>`;
+    if (uploadStatus) uploadStatus.innerHTML = `<span class="text-zinc-400">Processando PDF...</span>`;
     const fd = new FormData();
     fd.append("file", file);
 
@@ -97,105 +593,157 @@ function setupProfileDrawer() {
       const res = await fetch("/api/profile/upload", { method: "POST", body: fd });
       const data = await res.json();
       if (res.ok) {
-        uploadStatus.innerHTML = `<span class="text-emerald-400">✓ PDF extraído com sucesso</span>`;
+        if (uploadStatus) uploadStatus.innerHTML = `<span class="text-emerald-400 font-medium">PDF extraído com sucesso</span>`;
         showToast("Master CV atualizado via PDF", "success");
         await loadMasterProfile();
         if (selectedJobId) selectJob(selectedJobId);
       } else {
-        uploadStatus.innerHTML = `<span class="text-rose-400">${data.error || "Erro no upload"}</span>`;
+        if (uploadStatus) uploadStatus.innerHTML = `<span class="text-rose-400">${data.error || "Erro no upload"}</span>`;
         showToast("Falha na extração do PDF", "error");
       }
     } catch {
-      uploadStatus.innerHTML = `<span class="text-rose-400">Erro de rede</span>`;
+      if (uploadStatus) uploadStatus.innerHTML = `<span class="text-rose-400">Erro de rede</span>`;
     }
   }
 
   // Add Exp & Edu in drawer
-  document.getElementById("btn-drawer-add-exp").addEventListener("click", () => {
-    if (!currentMasterProfile) currentMasterProfile = { experiences: [] };
-    if (!currentMasterProfile.experiences) currentMasterProfile.experiences = [];
-    currentMasterProfile.experiences.push({ role: "", company: "", startDate: "", endDate: "", description: "" });
-    renderDrawerExperiences(currentMasterProfile.experiences);
-  });
+  const btnAddExp = document.getElementById("btn-drawer-add-exp");
+  if (btnAddExp) {
+    btnAddExp.addEventListener("click", () => {
+      const exps = collectDrawerExperiences();
+      exps.push({ role: "", company: "", startDate: "", endDate: "", description: "" });
+      if (!currentMasterProfile) currentMasterProfile = {};
+      currentMasterProfile.experiences = exps;
+      renderDrawerExperiences(exps);
+    });
+  }
 
-  document.getElementById("btn-drawer-add-edu").addEventListener("click", () => {
-    if (!currentMasterProfile) currentMasterProfile = { education: [] };
-    if (!currentMasterProfile.education) currentMasterProfile.education = [];
-    currentMasterProfile.education.push({ degree: "", institution: "", startDate: "", endDate: "" });
-    renderDrawerEducation(currentMasterProfile.education);
-  });
+  const btnAddEdu = document.getElementById("btn-drawer-add-edu");
+  if (btnAddEdu) {
+    btnAddEdu.addEventListener("click", () => {
+      const edus = collectDrawerEducation();
+      edus.push({ degree: "", institution: "", startDate: "", endDate: "" });
+      if (!currentMasterProfile) currentMasterProfile = {};
+      currentMasterProfile.education = edus;
+      renderDrawerEducation(edus);
+    });
+  }
+
+  // Reprocess button: Re-extracts stored rawText with smart parser v2
+  const btnReprocess = document.getElementById("btn-reprocess-master");
+  if (btnReprocess) {
+    btnReprocess.addEventListener("click", async () => {
+      const origHtml = btnReprocess.innerHTML;
+      btnReprocess.disabled = true;
+      btnReprocess.innerHTML = `<span class="inline-block animate-spin mr-1">⏳</span> Limpando...`;
+      try {
+        const res = await fetch("/api/profile/reprocess", { method: "POST" });
+        const data = await res.json();
+        if (res.ok && data.profile) {
+          currentMasterProfile = data.profile;
+          populateDrawerForm(data.profile);
+          showToast("Master CV reprocessado e limpo com sucesso!", "success");
+          await loadMasterProfile();
+          if (selectedJobId) selectJob(selectedJobId);
+        } else {
+          showToast(data.error || "Erro ao reprocessar Master CV", "error");
+        }
+      } catch (err) {
+        showToast("Erro ao conectar com a API", "error");
+      } finally {
+        btnReprocess.disabled = false;
+        btnReprocess.innerHTML = origHtml;
+      }
+    });
+  }
 
   // Save drawer form
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
+  if (form) {
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
 
-    const expCards = document.querySelectorAll("#drawer-experiences-list > div");
-    const experiences = [];
-    expCards.forEach(card => {
-      experiences.push({
-        role: card.querySelector(".d-exp-role").value,
-        company: card.querySelector(".d-exp-company").value,
-        startDate: card.querySelector(".d-exp-start").value,
-        endDate: card.querySelector(".d-exp-end").value,
-        description: card.querySelector(".d-exp-desc").value
-      });
-    });
+      const experiences = collectDrawerExperiences();
+      const education = collectDrawerEducation();
 
-    const eduCards = document.querySelectorAll("#drawer-education-list > div");
-    const education = [];
-    eduCards.forEach(card => {
-      education.push({
-        degree: card.querySelector(".d-edu-degree").value,
-        institution: card.querySelector(".d-edu-inst").value,
-        startDate: card.querySelector(".d-edu-start").value,
-        endDate: card.querySelector(".d-edu-end").value
-      });
-    });
+      const payload = {
+        fullName: document.getElementById("drawer-fullName").value,
+        headline: document.getElementById("drawer-headline").value,
+        email: document.getElementById("drawer-email").value,
+        phone: document.getElementById("drawer-phone").value,
+        location: document.getElementById("drawer-location").value,
+        linkedin: document.getElementById("drawer-linkedin").value,
+        github: document.getElementById("drawer-github").value,
+        summary: document.getElementById("drawer-summary").value,
+        skills: document.getElementById("drawer-skills").value.split(",").map(s => s.trim()).filter(Boolean),
+        experiences,
+        education
+      };
 
-    const payload = {
-      fullName: document.getElementById("drawer-fullName").value,
-      headline: document.getElementById("drawer-headline").value,
-      email: document.getElementById("drawer-email").value,
-      phone: document.getElementById("drawer-phone").value,
-      location: document.getElementById("drawer-location").value,
-      linkedin: document.getElementById("drawer-linkedin").value,
-      github: document.getElementById("drawer-github").value,
-      summary: document.getElementById("drawer-summary").value,
-      skills: document.getElementById("drawer-skills").value.split(",").map(s => s.trim()).filter(Boolean),
-      experiences,
-      education,
-      certifications: document.getElementById("drawer-certifications").value.split(",").map(s => s.trim()).filter(Boolean)
-    };
-
-    try {
-      const res = await fetch("/api/profile", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-      if (res.ok) {
-        showToast("Master CV gravado", "success");
-        closeDrawer();
-        await loadMasterProfile();
-        if (selectedJobId) selectJob(selectedJobId);
+      try {
+        const res = await fetch("/api/profile", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          showToast("Master CV gravado", "success");
+          closeDrawer();
+          await loadMasterProfile();
+          if (selectedJobId) selectJob(selectedJobId);
+        }
+      } catch {
+        showToast("Erro ao salvar perfil", "error");
       }
-    } catch {
-      showToast("Erro ao salvar perfil", "error");
-    }
+    });
+  }
+}
+
+function collectDrawerExperiences() {
+  const expCards = document.querySelectorAll("#drawer-experiences-list > div");
+  const list = [];
+  expCards.forEach(card => {
+    list.push({
+      role: card.querySelector(".d-exp-role")?.value || "",
+      company: card.querySelector(".d-exp-company")?.value || "",
+      startDate: card.querySelector(".d-exp-start")?.value || "",
+      endDate: card.querySelector(".d-exp-end")?.value || "",
+      description: card.querySelector(".d-exp-desc")?.value || ""
+    });
   });
+  return list;
+}
+
+function collectDrawerEducation() {
+  const eduCards = document.querySelectorAll("#drawer-education-list > div");
+  const list = [];
+  eduCards.forEach(card => {
+    list.push({
+      degree: card.querySelector(".d-edu-degree")?.value || "",
+      institution: card.querySelector(".d-edu-inst")?.value || "",
+      startDate: card.querySelector(".d-edu-start")?.value || "",
+      endDate: card.querySelector(".d-edu-end")?.value || ""
+    });
+  });
+  return list;
 }
 
 function populateDrawerForm(p) {
-  document.getElementById("drawer-fullName").value = p.fullName || "";
-  document.getElementById("drawer-headline").value = p.headline || "";
-  document.getElementById("drawer-email").value = p.email || "";
-  document.getElementById("drawer-phone").value = p.phone || "";
-  document.getElementById("drawer-location").value = p.location || "";
-  document.getElementById("drawer-linkedin").value = p.linkedin || "";
-  document.getElementById("drawer-github").value = p.github || "";
-  document.getElementById("drawer-summary").value = p.summary || "";
-  document.getElementById("drawer-skills").value = (p.skills || []).join(", ");
-  document.getElementById("drawer-certifications").value = (p.certifications || []).join(", ");
+  if (!p) return;
+
+  const setVal = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.value = val || "";
+  };
+
+  setVal("drawer-fullName", p.fullName);
+  setVal("drawer-headline", p.headline);
+  setVal("drawer-email", p.email);
+  setVal("drawer-phone", p.phone);
+  setVal("drawer-location", p.location);
+  setVal("drawer-linkedin", p.linkedin);
+  setVal("drawer-github", p.github);
+  setVal("drawer-summary", p.summary);
+  setVal("drawer-skills", (p.skills || []).join(", "));
 
   renderDrawerExperiences(p.experiences || []);
   renderDrawerEducation(p.education || []);
@@ -203,15 +751,18 @@ function populateDrawerForm(p) {
 
 function renderDrawerExperiences(exps) {
   const container = document.getElementById("drawer-experiences-list");
+  if (!container) return;
   container.innerHTML = "";
 
   exps.forEach((exp, idx) => {
     const card = document.createElement("div");
-    card.className = "p-2.5 bg-zinc-900/60 rounded border border-zinc-800 space-y-1.5";
+    card.className = "p-3 rounded-lg border space-y-2";
+    card.style.borderColor = "var(--border-color)";
+    card.style.backgroundColor = "var(--bg-subtle)";
     card.innerHTML = `
-      <div class="flex items-center justify-between text-[10px] font-mono text-zinc-500">
-        <span>EXP #${idx + 1}</span>
-        <button type="button" class="btn-del-exp text-zinc-500 hover:text-rose-400" data-idx="${idx}">Remover</button>
+      <div class="flex items-center justify-between text-xs font-mono text-zinc-500">
+        <span>EXPERIÊNCIA #${idx + 1}</span>
+        <button type="button" class="btn-del-exp text-zinc-400 hover:text-rose-400 transition-colors font-mono" data-idx="${idx}">Remover</button>
       </div>
       <div class="grid grid-cols-2 gap-2">
         <input type="text" placeholder="Cargo" class="ui-input d-exp-role" value="${escapeHtml(exp.role || '')}" required>
@@ -219,7 +770,7 @@ function renderDrawerExperiences(exps) {
         <input type="text" placeholder="Início" class="ui-input d-exp-start font-mono text-xs" value="${escapeHtml(exp.startDate || '')}">
         <input type="text" placeholder="Fim" class="ui-input d-exp-end font-mono text-xs" value="${escapeHtml(exp.endDate || '')}">
       </div>
-      <textarea rows="2" placeholder="Bullets / Resultados" class="ui-input w-full d-exp-desc font-mono text-[11px]">${escapeHtml(exp.description || '')}</textarea>
+      <textarea rows="2" placeholder="Bullets / Resultados" class="ui-input w-full d-exp-desc font-mono text-xs leading-relaxed">${escapeHtml(exp.description || '')}</textarea>
     `;
     container.appendChild(card);
   });
@@ -227,23 +778,28 @@ function renderDrawerExperiences(exps) {
   container.querySelectorAll(".btn-del-exp").forEach(btn => {
     btn.addEventListener("click", (e) => {
       const idx = parseInt(e.target.dataset.idx, 10);
-      currentMasterProfile.experiences.splice(idx, 1);
-      renderDrawerExperiences(currentMasterProfile.experiences);
+      const exps = collectDrawerExperiences();
+      exps.splice(idx, 1);
+      if (currentMasterProfile) currentMasterProfile.experiences = exps;
+      renderDrawerExperiences(exps);
     });
   });
 }
 
 function renderDrawerEducation(edus) {
   const container = document.getElementById("drawer-education-list");
+  if (!container) return;
   container.innerHTML = "";
 
   edus.forEach((edu, idx) => {
     const card = document.createElement("div");
-    card.className = "p-2.5 bg-zinc-900/60 rounded border border-zinc-800 space-y-1.5";
+    card.className = "p-3 rounded-lg border space-y-2";
+    card.style.borderColor = "var(--border-color)";
+    card.style.backgroundColor = "var(--bg-subtle)";
     card.innerHTML = `
-      <div class="flex items-center justify-between text-[10px] font-mono text-zinc-500">
+      <div class="flex items-center justify-between text-xs font-mono text-zinc-500">
         <span>FORMAÇÃO #${idx + 1}</span>
-        <button type="button" class="btn-del-edu text-zinc-500 hover:text-rose-400" data-idx="${idx}">Remover</button>
+        <button type="button" class="btn-del-edu text-zinc-400 hover:text-rose-400 transition-colors font-mono" data-idx="${idx}">Remover</button>
       </div>
       <div class="grid grid-cols-2 gap-2">
         <input type="text" placeholder="Curso / Grau" class="ui-input d-edu-degree" value="${escapeHtml(edu.degree || '')}" required>
@@ -258,22 +814,28 @@ function renderDrawerEducation(edus) {
   container.querySelectorAll(".btn-del-edu").forEach(btn => {
     btn.addEventListener("click", (e) => {
       const idx = parseInt(e.target.dataset.idx, 10);
-      currentMasterProfile.education.splice(idx, 1);
-      renderDrawerEducation(currentMasterProfile.education);
+      const edus = collectDrawerEducation();
+      edus.splice(idx, 1);
+      if (currentMasterProfile) currentMasterProfile.education = edus;
+      renderDrawerEducation(edus);
     });
   });
 }
 
-// ==========================================
-// 2. COLUMN 1: SIDEBAR PIPELINE
-// ==========================================
+// ============================================================================
+// 6. PIPELINE SIDEBAR (Column 1)
+// ============================================================================
 async function loadJobs() {
   try {
     const res = await fetch("/api/jobs");
     const data = await res.json();
     currentJobs = data.jobs || [];
 
-    document.getElementById("queue-summary").textContent = `${currentJobs.length} vaga(s)`;
+    const qs = document.getElementById("queue-summary");
+    if (qs) {
+      qs.textContent = `${currentJobs.length} vaga(s)`;
+    }
+
     renderSidebarJobs();
 
     if (currentJobs.length > 0) {
@@ -282,8 +844,8 @@ async function loadJobs() {
       }
     } else {
       selectedJobId = null;
-      document.getElementById("workbench-empty").classList.remove("hidden");
-      document.getElementById("workbench-active").classList.add("hidden");
+      activeJobData = null;
+      showWorkbenchEmpty();
     }
   } catch (err) {
     console.error("Erro ao carregar vagas:", err);
@@ -292,6 +854,8 @@ async function loadJobs() {
 
 function renderSidebarJobs() {
   const container = document.getElementById("jobs-list");
+  if (!container) return;
+
   const filtered = currentJobs.filter(job => {
     const matchesSearch = job.title.toLowerCase().includes(currentSearchQuery) || job.company.toLowerCase().includes(currentSearchQuery);
     const matchesStatus = currentFilterStatus === "ALL" || job.status === currentFilterStatus;
@@ -300,7 +864,7 @@ function renderSidebarJobs() {
 
   if (filtered.length === 0) {
     container.innerHTML = `
-      <div class="p-6 text-center text-zinc-600 font-mono text-xs">
+      <div class="p-8 text-center text-zinc-500 font-mono text-xs">
         Nenhuma vaga correspondente.
       </div>
     `;
@@ -311,52 +875,81 @@ function renderSidebarJobs() {
   filtered.forEach(job => {
     const isSelected = job.id === selectedJobId;
     const row = document.createElement("div");
-    row.className = `py-2.5 px-3 border-b border-zinc-900 hover:bg-zinc-900/40 transition-colors cursor-pointer select-none ${isSelected ? 'sidebar-job-active' : ''}`;
+    row.className = `px-5 py-3.5 border-b cursor-pointer select-none job-row-spring group relative ${isSelected ? 'sidebar-job-active' : ''}`;
+    row.style.borderColor = "var(--border-color)";
     row.dataset.id = job.id;
 
+    const statusMap = {
+      SAVED: "Salva",
+      APPLIED: "Aplicada",
+      INTERVIEW: "Entrevista",
+      OFFER: "Oferta",
+      REJECTED: "Rejeitada"
+    };
+    const statusLabel = statusMap[job.status] || job.status;
+
     const scoreText = job.tailored 
-      ? `<span class="text-zinc-500 font-mono text-[11px]">${job.tailored.scoreBefore}</span> <span class="text-zinc-600">→</span> <span class="font-mono text-[11px] font-medium ${job.tailored.scoreAfter >= 80 ? 'text-emerald-400' : 'text-zinc-200'}">${job.tailored.scoreAfter}</span>`
-      : `<span class="text-zinc-600 font-mono text-[11px]">--</span>`;
+      ? `<span class="tabular-nums font-mono text-xs" style="color: var(--text-muted);">${job.tailored.scoreBefore}</span> <span style="color: var(--text-muted);">→</span> <span class="tabular-nums font-mono text-xs font-semibold ${job.tailored.scoreAfter >= 80 ? 'text-emerald-500' : ''}" style="${job.tailored.scoreAfter >= 80 ? '' : 'color: var(--text-primary);'}">${job.tailored.scoreAfter}</span>`
+      : `<span class="tabular-nums font-mono text-xs" style="color: var(--text-muted);">--</span>`;
 
     row.innerHTML = `
       <div class="flex items-baseline justify-between gap-2">
-        <div class="text-[13px] font-medium text-zinc-200 truncate">${escapeHtml(job.title)}</div>
+        <div class="text-sm font-semibold truncate pr-2" style="color: var(--text-primary);">${escapeHtml(job.title)}</div>
         <div class="shrink-0 tabular-nums">${scoreText}</div>
       </div>
-      <div class="flex items-center justify-between text-xs text-zinc-500 mt-0.5">
-        <span class="truncate">${escapeHtml(job.company)}</span>
-        <span class="font-mono text-[10px] uppercase text-zinc-600">${job.status}</span>
+      <div class="flex items-center justify-between text-xs mt-1.5" style="color: var(--text-secondary);">
+        <span class="truncate pr-2">${escapeHtml(job.company)}</span>
+        <div class="flex items-center gap-1.5 shrink-0">
+          <span class="text-[11px] font-medium px-2 py-0.5 rounded border" style="border-color: var(--border-color); background-color: var(--bg-subtle); color: var(--text-secondary);">${statusLabel}</span>
+          <button type="button" class="btn-delete-job p-1 rounded text-zinc-400 hover:text-rose-500 hover:bg-rose-500/15 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100" title="Excluir vaga" data-job-id="${job.id}">
+            <svg class="w-3.5 h-3.5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+          </button>
+        </div>
       </div>
     `;
 
     row.addEventListener("click", () => selectJob(job.id));
+
+    const btnDelete = row.querySelector(".btn-delete-job");
+    if (btnDelete) {
+      btnDelete.addEventListener("click", (e) => {
+        e.stopPropagation();
+        showDeleteJobModal(job.id, job.title);
+      });
+    }
+
     container.appendChild(row);
   });
 }
 
 function setupSidebarNavigation() {
-  // Search
-  document.getElementById("search-jobs").addEventListener("input", (e) => {
-    currentSearchQuery = e.target.value.toLowerCase();
-    renderSidebarJobs();
-  });
+  const searchInput = document.getElementById("search-jobs");
+  if (searchInput) {
+    searchInput.addEventListener("input", (e) => {
+      currentSearchQuery = e.target.value.toLowerCase();
+      renderSidebarJobs();
+    });
+  }
 
-  // Filter tabs
   document.querySelectorAll(".filter-tab-btn").forEach(btn => {
     btn.addEventListener("click", (e) => {
       document.querySelectorAll(".filter-tab-btn").forEach(b => {
-        b.className = "filter-tab-btn px-1.5 py-0.5 rounded hover:text-zinc-300";
+        b.className = "filter-tab-btn px-2 py-1 rounded-md text-zinc-400 hover:text-zinc-200";
+        b.style.backgroundColor = "transparent";
       });
-      e.target.className = "filter-tab-btn active px-1.5 py-0.5 rounded text-zinc-200 font-medium";
+      e.target.className = "filter-tab-btn active px-2.5 py-1 rounded-md font-medium";
+      e.target.style.backgroundColor = "var(--bg-subtle)";
+      e.target.style.color = "var(--text-primary)";
+
       currentFilterStatus = e.target.dataset.status;
       renderSidebarJobs();
     });
   });
 }
 
-// ==========================================
-// 3. COLUMN 2 & 3: JOB WORKBENCH & INSPECTOR
-// ==========================================
+// ============================================================================
+// 7. WORKBENCH & INSPECTOR (Columns 2 & 3)
+// ============================================================================
 async function selectJob(jobId) {
   selectedJobId = jobId;
   renderSidebarJobs();
@@ -365,14 +958,21 @@ async function selectJob(jobId) {
   if (!job) return;
 
   activeJobData = job;
-
-  document.getElementById("workbench-empty").classList.add("hidden");
-  document.getElementById("workbench-active").classList.remove("hidden");
+  showWorkbenchActive();
 
   // Populate Header
-  document.getElementById("job-header-company").textContent = job.company;
-  document.getElementById("job-header-title").textContent = job.title;
-  document.getElementById("job-header-status-select").value = job.status;
+  const jobHeaderCompany = document.getElementById("job-header-company");
+  const jobHeaderTitle = document.getElementById("job-header-title");
+  if (jobHeaderCompany) {
+    jobHeaderCompany.textContent = job.company || "";
+    jobHeaderCompany.title = job.company || "";
+  }
+  if (jobHeaderTitle) {
+    jobHeaderTitle.textContent = job.title || "";
+    jobHeaderTitle.title = job.title || "";
+  }
+  const jobStatusSelect = document.getElementById("job-header-status-select");
+  if (jobStatusSelect) jobStatusSelect.value = job.status;
 
   // Status Change Listener
   document.getElementById("job-header-status-select").onchange = async (e) => {
@@ -401,6 +1001,9 @@ async function selectJob(jobId) {
     clearTailoredEditor();
   }
 
+  // Load Knockout Questions for this job
+  await loadKnockoutQuestions(job.id);
+
   if (window.lucide) window.lucide.createIcons();
 }
 
@@ -408,18 +1011,42 @@ function renderInspectorTelemetry(job) {
   const keywords = job.topKeywords || [];
   const tailored = job.tailored;
 
-  // Section 1: Score ATS
+  // Section 1: Score ATS with Animated Count Up (Dual-Score)
   if (tailored) {
     const gain = Math.max(0, Math.round(tailored.scoreAfter - tailored.scoreBefore));
-    document.getElementById("inspect-score-val").textContent = tailored.scoreAfter;
-    document.getElementById("inspect-score-before").textContent = `antes: ${tailored.scoreBefore}`;
-    document.getElementById("inspect-score-diff").textContent = `+${gain} pts`;
-    document.getElementById("inspect-score-diff").className = "text-xs font-mono text-emerald-400 font-medium";
+    const sScore = tailored.auditAfter?.scannabilityScore !== undefined ? tailored.auditAfter.scannabilityScore : tailored.scoreAfter;
+    const tScore = tailored.auditAfter?.technicalScore !== undefined ? tailored.auditAfter.technicalScore : tailored.scoreAfter;
+    animateDualScores(sScore, tScore);
+
+    const diffEl = document.getElementById("inspect-technical-diff");
+    if (diffEl) {
+      diffEl.textContent = `+${gain} pts`;
+      diffEl.className = "text-xs font-mono text-emerald-400 font-semibold px-2 py-0.5 rounded";
+    }
+    const beforeEl = document.getElementById("inspect-technical-before");
+    if (beforeEl) beforeEl.textContent = `antes: ${tailored.scoreBefore}`;
+
+    // Legacy elements
+    if (document.getElementById("inspect-score-before")) document.getElementById("inspect-score-before").textContent = `antes: ${tailored.scoreBefore}`;
+    if (document.getElementById("inspect-score-diff")) document.getElementById("inspect-score-diff").textContent = `+${gain} pts`;
   } else {
-    document.getElementById("inspect-score-val").textContent = "--";
-    document.getElementById("inspect-score-before").textContent = "antes: --";
-    document.getElementById("inspect-score-diff").textContent = "--";
-    document.getElementById("inspect-score-diff").className = "text-xs font-mono text-zinc-600";
+    animateDualScores(null, null);
+    const diffEl = document.getElementById("inspect-technical-diff");
+    if (diffEl) {
+      diffEl.textContent = "--";
+      diffEl.className = "text-xs font-mono text-zinc-500";
+    }
+    const beforeEl = document.getElementById("inspect-technical-before");
+    if (beforeEl) beforeEl.textContent = "antes: --";
+
+    const badgeEl = document.getElementById("inspect-scannability-badge");
+    if (badgeEl) {
+      badgeEl.textContent = "Aguardando";
+      badgeEl.className = "text-xs font-mono text-zinc-500 font-semibold px-2 py-0.5 rounded";
+    }
+    const countEl = document.getElementById("inspect-scannability-metrics-count");
+    if (countEl) countEl.textContent = "0 métricas de impacto";
+
     resetBreakdownLines();
   }
 
@@ -427,16 +1054,30 @@ function renderInspectorTelemetry(job) {
   const tableBody = document.getElementById("inspect-keywords-table");
   document.getElementById("inspect-kw-count").textContent = `${keywords.length} termos`;
 
+  const density = job.tailored?.auditAfter?.keywordDensity || {};
+
   if (keywords.length === 0) {
-    tableBody.innerHTML = `<tr><td colspan="4" class="py-3 text-center text-zinc-600 text-[11px] italic">Sem keywords extraídas</td></tr>`;
+    tableBody.innerHTML = `<tr><td colspan="4" class="py-4 text-center text-zinc-500 text-xs italic">Sem keywords extraídas</td></tr>`;
   } else {
     tableBody.innerHTML = keywords.map(kw => {
+      const termLower = kw.term.toLowerCase();
+      const rawCount = density[kw.term] !== undefined 
+        ? density[kw.term] 
+        : (density[termLower] !== undefined ? density[termLower] : null);
+      const cvDisplay = rawCount !== null ? `${rawCount}x` : "--";
+      const cvClass = rawCount !== null && rawCount >= 1 
+        ? "py-2 text-center text-emerald-400 text-xs font-semibold" 
+        : "py-2 text-center text-zinc-400 text-xs";
+      const safeId = "kw-cv-" + kw.term.toLowerCase().replace(/[^a-z0-9]/g, "_");
+
       return `
-        <tr class="hover:bg-zinc-900/40">
-          <td class="py-1.5 font-sans text-xs text-zinc-200 truncate max-w-[110px]">${escapeHtml(kw.term)}</td>
-          <td class="py-1.5 text-center text-zinc-500 text-[11px]">${kw.count}x</td>
-          <td class="py-1.5 text-center text-zinc-400 text-[11px]" id="kw-cv-${escapeHtml(kw.term)}">--</td>
-          <td class="py-1.5 text-right text-emerald-400 text-xs">✓</td>
+        <tr class="hover:bg-zinc-800/20 transition-colors">
+          <td class="py-2 font-sans text-xs truncate max-w-[130px]" style="color: var(--text-primary);">${escapeHtml(kw.term)}</td>
+          <td class="py-2 text-center text-zinc-400 text-xs">${kw.count}x</td>
+          <td class="${cvClass}" id="${safeId}" data-term="${escapeHtml(kw.term)}">${cvDisplay}</td>
+          <td class="py-2 text-right text-emerald-500 text-xs font-semibold">
+            <svg class="w-3.5 h-3.5 inline" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          </td>
         </tr>
       `;
     }).join("");
@@ -444,53 +1085,159 @@ function renderInspectorTelemetry(job) {
 
   // Section 3: Propriedades do Binário
   document.getElementById("prop-title").textContent = job.title;
-  document.getElementById("prop-creator").textContent = currentMasterProfile?.fullName || "Carlos Silva";
+  document.getElementById("prop-creator").textContent = currentMasterProfile?.fullName || "Rodrigo Silva";
   document.getElementById("prop-keywords").textContent = keywords.slice(0, 4).map(k => k.term).join(", ") || "--";
 }
 
 function resetBreakdownLines() {
-  document.getElementById("breakdown-format").textContent = "--/30";
-  document.getElementById("breakdown-keywords").textContent = "--/35";
-  document.getElementById("breakdown-density").textContent = "--/20";
-  document.getElementById("breakdown-entity").textContent = "--/15";
+  if (document.getElementById("scannability-structure")) document.getElementById("scannability-structure").textContent = "--/30";
+  if (document.getElementById("scannability-metrics")) document.getElementById("scannability-metrics").textContent = "--/45";
+  if (document.getElementById("scannability-readability")) document.getElementById("scannability-readability").textContent = "--/25";
+  if (document.getElementById("line-scannability-structure")) document.getElementById("line-scannability-structure").style.width = "0%";
+  if (document.getElementById("line-scannability-metrics")) document.getElementById("line-scannability-metrics").style.width = "0%";
+  if (document.getElementById("line-scannability-readability")) document.getElementById("line-scannability-readability").style.width = "0%";
 
-  document.getElementById("line-format").style.width = "0%";
-  document.getElementById("line-keywords").style.width = "0%";
-  document.getElementById("line-density").style.width = "0%";
-  document.getElementById("line-entity").style.width = "0%";
+  if (document.getElementById("breakdown-format")) document.getElementById("breakdown-format").textContent = "--/30";
+  if (document.getElementById("breakdown-keywords")) document.getElementById("breakdown-keywords").textContent = "--/35";
+  if (document.getElementById("breakdown-density")) document.getElementById("breakdown-density").textContent = "--/20";
+  if (document.getElementById("breakdown-entity")) document.getElementById("breakdown-entity").textContent = "--/15";
+
+  if (document.getElementById("line-format")) document.getElementById("line-format").style.width = "0%";
+  if (document.getElementById("line-keywords")) document.getElementById("line-keywords").style.width = "0%";
+  if (document.getElementById("line-density")) document.getElementById("line-density").style.width = "0%";
+  if (document.getElementById("line-entity")) document.getElementById("line-entity").style.width = "0%";
 }
 
 function updateInspectorBreakdown(audit) {
   if (!audit) return;
-  const b = audit.breakdown;
 
-  document.getElementById("breakdown-format").textContent = `${b.formatting}/30`;
-  document.getElementById("breakdown-keywords").textContent = `${b.keywords}/35`;
-  document.getElementById("breakdown-density").textContent = `${b.density}/20`;
-  document.getElementById("breakdown-entity").textContent = `${b.entityCompliance}/15`;
+  // 1. Dual-Score Animated Values
+  const scannabilityScore = audit.scannabilityScore !== undefined ? audit.scannabilityScore : (audit.overallScore || 0);
+  const technicalScore = audit.technicalScore !== undefined ? audit.technicalScore : (audit.overallScore || 0);
+  animateDualScores(scannabilityScore, technicalScore);
 
-  document.getElementById("line-format").style.width = `${(b.formatting / 30) * 100}%`;
-  document.getElementById("line-keywords").style.width = `${(b.keywords / 35) * 100}%`;
-  document.getElementById("line-density").style.width = `${(b.density / 20) * 100}%`;
-  document.getElementById("line-entity").style.width = `${(b.entityCompliance / 15) * 100}%`;
+  // 2. Scannability & Impact Dimensions (Top Card)
+  if (audit.scannabilityBreakdown) {
+    const sb = audit.scannabilityBreakdown;
+    const structEl = document.getElementById("scannability-structure");
+    const structLine = document.getElementById("line-scannability-structure");
+    if (structEl) structEl.textContent = `${sb.structureClarity}/30`;
+    if (structLine) structLine.style.width = `${(sb.structureClarity / 30) * 100}%`;
+
+    const metricsEl = document.getElementById("scannability-metrics");
+    const metricsLine = document.getElementById("line-scannability-metrics");
+    if (metricsEl) metricsEl.textContent = `${sb.quantifiableMetrics}/45`;
+    if (metricsLine) metricsLine.style.width = `${(sb.quantifiableMetrics / 45) * 100}%`;
+
+    const readEl = document.getElementById("scannability-readability");
+    const readLine = document.getElementById("line-scannability-readability");
+    if (readEl) readEl.textContent = `${sb.humanReadability}/25`;
+    if (readLine) readLine.style.width = `${(sb.humanReadability / 25) * 100}%`;
+
+    const countEl = document.getElementById("inspect-scannability-metrics-count");
+    if (countEl) countEl.textContent = `${sb.metricsFoundCount} métricas encontradas`;
+
+    const badgeEl = document.getElementById("inspect-scannability-badge");
+    if (badgeEl) {
+      if (scannabilityScore >= 85) {
+        badgeEl.textContent = "Excelente (6s)";
+        badgeEl.className = "text-xs font-mono text-emerald-400 font-semibold px-2 py-0.5 rounded";
+      } else if (scannabilityScore >= 70) {
+        badgeEl.textContent = "Alta Clareza";
+        badgeEl.className = "text-xs font-mono text-emerald-400 font-semibold px-2 py-0.5 rounded";
+      } else if (scannabilityScore >= 50) {
+        badgeEl.textContent = "Moderada";
+        badgeEl.className = "text-xs font-mono text-amber-400 font-semibold px-2 py-0.5 rounded";
+      } else {
+        badgeEl.textContent = "Necessita Métricas";
+        badgeEl.className = "text-xs font-mono text-rose-400 font-semibold px-2 py-0.5 rounded";
+      }
+    }
+  }
+
+  // 3. Technical TF-IDF Dimensions (Bottom Card)
+  const b = audit.breakdown || {};
+  if (document.getElementById("breakdown-format")) {
+    document.getElementById("breakdown-format").textContent = `${b.formatting || 0}/30`;
+    document.getElementById("line-format").style.width = `${((b.formatting || 0) / 30) * 100}%`;
+  }
+  if (document.getElementById("breakdown-keywords")) {
+    document.getElementById("breakdown-keywords").textContent = `${b.keywords || 0}/35`;
+    document.getElementById("line-keywords").style.width = `${((b.keywords || 0) / 35) * 100}%`;
+  }
+  if (document.getElementById("breakdown-density")) {
+    document.getElementById("breakdown-density").textContent = `${b.density || 0}/20`;
+    document.getElementById("line-density").style.width = `${((b.density || 0) / 20) * 100}%`;
+  }
+  if (document.getElementById("breakdown-entity")) {
+    document.getElementById("breakdown-entity").textContent = `${b.entityCompliance || 0}/15`;
+    document.getElementById("line-entity").style.width = `${((b.entityCompliance || 0) / 15) * 100}%`;
+  }
 
   // Update CV counts in TF-IDF table
   const density = audit.keywordDensity || {};
   for (const [term, count] of Object.entries(density)) {
-    const cell = document.getElementById(`kw-cv-${term}`);
+    const safeId = "kw-cv-" + term.toLowerCase().replace(/[^a-z0-9]/g, "_");
+    const cell = document.getElementById(safeId) || document.getElementById(`kw-cv-${term}`);
     if (cell) {
       cell.textContent = `${count}x`;
-      cell.className = count >= 2 ? "py-1.5 text-center text-emerald-400 text-[11px] font-semibold" : "py-1.5 text-center text-zinc-400 text-[11px]";
+      cell.className = count >= 1 ? "py-2 text-center text-emerald-400 text-xs font-semibold" : "py-2 text-center text-zinc-400 text-xs";
     }
   }
+
+  // Also match any cells by data-term
+  document.querySelectorAll("[id^='kw-cv-']").forEach(cell => {
+    const term = cell.getAttribute("data-term");
+    if (term) {
+      const lower = term.toLowerCase();
+      if (density[term] !== undefined || density[lower] !== undefined) {
+        const c = density[term] !== undefined ? density[term] : density[lower];
+        cell.textContent = `${c}x`;
+        cell.className = c >= 1 ? "py-2 text-center text-emerald-400 text-xs font-semibold" : "py-2 text-center text-zinc-400 text-xs";
+      }
+    }
+  });
 }
 
-// Master CV in Diff
+// Client-side date range formatter
+function formatClientDateRange(start, end) {
+  if (!start && !end) return "";
+  if (start && (!end || end === "Atual" || end === "")) {
+    const two = start.match(/^(.+?\b(?:19\d\d|20\d\d))\s+(.+?\b(?:19\d\d|20\d\d|\batual\b|\bpresente?\b))$/i);
+    if (two) {
+      start = two[1];
+      end = two[2];
+    }
+  }
+  const formatSingle = (s) => {
+    if (!s) return "";
+    const lower = s.trim().toLowerCase();
+    if (["atual", "present", "presente", "current"].includes(lower)) return "Atual";
+    const ym = lower.match(/^(\d{4})[-/.](\d{1,2})$/);
+    const months = { "01": "Jan", "02": "Fev", "03": "Mar", "04": "Abr", "05": "Mai", "06": "Jun", "07": "Jul", "08": "Ago", "09": "Set", "10": "Out", "11": "Nov", "12": "Dez" };
+    if (ym) return `${months[ym[2].padStart(2, "0")] || ym[2]} ${ym[1]}`;
+    const mMatch = lower.normalize("NFD").replace(/[\u0300-\u036f]/g, "").match(/\b([a-z]+)\.?\s+(?:de\s+)?(\d{4})\b/);
+    const mWords = { "janeiro": "Jan", "jan": "Jan", "fevereiro": "Fev", "fev": "Fev", "marco": "Mar", "mar": "Mar", "abril": "Abr", "abr": "Abr", "maio": "Mai", "mai": "Mai", "junho": "Jun", "jun": "Jun", "julho": "Jul", "jul": "Jul", "agosto": "Ago", "ago": "Ago", "setembro": "Set", "set": "Set", "outubro": "Out", "out": "Out", "novembro": "Nov", "nov": "Nov", "dezembro": "Dez", "dez": "Dez" };
+    if (mMatch && mWords[mMatch[1]]) return `${mWords[mMatch[1]]} ${mMatch[2]}`;
+    const yr = lower.match(/\b(19\d\d|20\d\d)\b/);
+    if (yr) return yr[1];
+    return s.trim();
+  };
+  const sFormatted = formatSingle(start);
+  const eFormatted = formatSingle(end);
+  if (!sFormatted && !eFormatted) return "";
+  if (sFormatted && !eFormatted) return sFormatted;
+  if (!sFormatted && eFormatted) return eFormatted;
+  if (sFormatted === eFormatted) return sFormatted;
+  return `${sFormatted} – ${eFormatted}`;
+}
+
+// Master CV in Diff Pane
 function renderMasterCvDiff() {
   const container = document.getElementById("diff-master-content");
   if (!currentMasterProfile || !currentMasterProfile.fullName) {
     container.innerHTML = `
-      <div class="p-6 text-center text-zinc-600 font-mono text-xs">
+      <div class="p-8 text-center text-zinc-500 font-mono text-xs">
         Nenhum Master CV cadastrado. Clique no ícone de documento no topo da sidebar para importar seu PDF.
       </div>
     `;
@@ -499,33 +1246,33 @@ function renderMasterCvDiff() {
 
   const p = currentMasterProfile;
   container.innerHTML = `
-    <div class="border-b border-zinc-800/80 pb-3">
-      <div class="text-sm font-semibold text-zinc-200">${escapeHtml(p.fullName)}</div>
+    <div class="border-b pb-3" style="border-color: var(--border-color);">
+      <div class="text-sm font-semibold" style="color: var(--text-primary);">${escapeHtml(p.fullName)}</div>
       <div class="text-xs text-zinc-400 mt-0.5">${escapeHtml(p.headline)}</div>
-      <div class="text-[11px] text-zinc-500 mt-1">${escapeHtml(p.email)} | ${escapeHtml(p.phone || '')} | ${escapeHtml(p.location || '')}</div>
+      <div class="text-xs text-zinc-500 mt-1">${escapeHtml(p.email)} | ${escapeHtml(p.phone || '')} | ${escapeHtml(p.location || '')}</div>
     </div>
 
     <div>
-      <div class="text-[10px] font-mono uppercase text-zinc-500 mb-1">Resumo Original</div>
-      <p class="text-zinc-400 text-xs leading-relaxed">${escapeHtml(p.summary)}</p>
+      <div class="text-xs font-mono uppercase text-zinc-500 font-semibold mb-1">Resumo Original</div>
+      <p class="text-sm leading-relaxed" style="color: var(--text-secondary);">${escapeHtml(p.summary)}</p>
     </div>
 
     <div>
-      <div class="text-[10px] font-mono uppercase text-zinc-500 mb-1.5">Experiências Originais</div>
-      <div class="space-y-3">
+      <div class="text-xs font-mono uppercase text-zinc-500 font-semibold mb-2">Experiências Originais</div>
+      <div class="space-y-3.5">
         ${(p.experiences || []).map(exp => `
           <div>
-            <div class="text-zinc-300 font-medium">${escapeHtml(exp.role)} — <span class="text-zinc-500">${escapeHtml(exp.company)}</span></div>
-            <div class="text-[10px] font-mono text-zinc-600">${escapeHtml(exp.startDate)} - ${escapeHtml(exp.endDate)}</div>
-            <div class="text-zinc-400 text-xs mt-1 whitespace-pre-line leading-relaxed">${escapeHtml(exp.description)}</div>
+            <div class="text-sm font-medium" style="color: var(--text-primary);">${escapeHtml(exp.role)} — <span class="text-zinc-400">${escapeHtml(exp.company)}</span></div>
+            <div class="text-xs font-mono tabular-nums" style="color: var(--text-secondary);">${escapeHtml(formatClientDateRange(exp.startDate, exp.endDate))}</div>
+            <div class="text-xs mt-1 whitespace-pre-line leading-relaxed" style="color: var(--text-secondary);">${escapeHtml(exp.description)}</div>
           </div>
         `).join('')}
       </div>
     </div>
 
     <div>
-      <div class="text-[10px] font-mono uppercase text-zinc-500 mb-1">Habilidades Base</div>
-      <div class="text-zinc-400 font-mono text-[11px]">${(p.skills || []).join(' • ')}</div>
+      <div class="text-xs font-mono uppercase text-zinc-500 font-semibold mb-1">Habilidades Base</div>
+      <div class="font-mono text-xs leading-relaxed" style="color: var(--text-secondary);">${(p.skills || []).join(' • ')}</div>
     </div>
   `;
 }
@@ -560,15 +1307,17 @@ function populateTailoredEditor(data) {
   const expContainer = document.getElementById("edit-tailored-experiences");
   expContainer.innerHTML = "";
 
-  (tailoredResume.experiences || []).forEach((exp, idx) => {
+  (tailoredResume.experiences || []).forEach((exp) => {
     const card = document.createElement("div");
-    card.className = "p-2.5 rounded bg-zinc-900/40 border border-zinc-800/80 space-y-1";
+    card.className = "p-3 rounded-lg border space-y-1.5";
+    card.style.borderColor = "var(--border-color)";
+    card.style.backgroundColor = "var(--bg-subtle)";
     card.innerHTML = `
       <div class="flex items-center justify-between text-xs font-mono">
-        <span class="text-zinc-300 font-medium">${escapeHtml(exp.role)} — ${escapeHtml(exp.company)}</span>
-        <span class="text-[10px] text-zinc-600">${escapeHtml(exp.startDate)} - ${escapeHtml(exp.endDate)}</span>
+        <span class="font-semibold" style="color: var(--text-primary);">${escapeHtml(exp.role)} — ${escapeHtml(exp.company)}</span>
+        <span class="text-xs tabular-nums" style="color: var(--text-secondary);">${escapeHtml(formatClientDateRange(exp.startDate, exp.endDate))}</span>
       </div>
-      <textarea rows="4" class="ui-input w-full font-sans text-xs leading-relaxed text-zinc-200 tailored-exp-input">${escapeHtml(exp.description)}</textarea>
+      <textarea rows="4" class="ui-input w-full font-sans text-xs leading-relaxed tailored-exp-input">${escapeHtml(exp.description)}</textarea>
     `;
     expContainer.appendChild(card);
   });
@@ -577,7 +1326,7 @@ function populateTailoredEditor(data) {
 function updateSummaryDottedPreview(text, keywords) {
   const preview = document.getElementById("summary-dotted-preview");
   if (!text) {
-    preview.innerHTML = `<span class="text-zinc-600 italic">Sem resumo otimizado</span>`;
+    preview.innerHTML = `<span class="text-zinc-500 italic">Sem resumo otimizado</span>`;
     return;
   }
 
@@ -598,13 +1347,13 @@ function clearTailoredEditor() {
   document.getElementById("edit-tailored-summary").value = "";
   document.getElementById("edit-tailored-skills").value = "";
   document.getElementById("edit-tailored-experiences").innerHTML = `
-    <div class="p-6 text-center text-zinc-600 font-mono text-xs">
+    <div class="p-8 text-center text-zinc-500 font-mono text-xs">
       Clique em "Otimizar Currículo" para gerar a versão com as 7 camadas.
     </div>
   `;
-  document.getElementById("summary-dotted-preview").innerHTML = `<span class="text-zinc-600 italic">Aguardando otimização...</span>`;
+  document.getElementById("summary-dotted-preview").innerHTML = `<span class="text-zinc-500 italic">Aguardando otimização...</span>`;
   document.getElementById("a4-preview-content").innerHTML = `
-    <div class="p-12 text-center text-zinc-600 font-mono text-xs">
+    <div class="p-16 text-center text-zinc-500 font-mono text-xs">
       Otimize o currículo para visualizar o layout da folha A4 Linear.
     </div>
   `;
@@ -620,220 +1369,572 @@ function renderJobDescriptionTab(job) {
 function renderA4Preview(resume) {
   const container = document.getElementById("a4-preview-content");
   container.innerHTML = `
-    <div class="border-b border-zinc-700 pb-3 mb-4">
-      <h1 class="text-base font-bold text-white tracking-tight uppercase">${escapeHtml(resume.fullName)}</h1>
-      <div class="text-xs text-zinc-300 mt-0.5">${escapeHtml(resume.headline)}</div>
-      <div class="text-[11px] text-zinc-500 mt-1">${escapeHtml(resume.email)}  |  ${escapeHtml(resume.phone || '')}  |  ${escapeHtml(resume.location || '')}</div>
+    <div class="border-b pb-4 mb-5" style="border-color: var(--border-color);">
+      <h1 class="text-lg font-bold tracking-tight uppercase" style="color: var(--text-primary);">${escapeHtml(resume.fullName)}</h1>
+      <div class="text-xs mt-1" style="color: var(--text-secondary);">${escapeHtml(resume.headline)}</div>
+      <div class="text-xs text-zinc-500 mt-1">${escapeHtml(resume.email)}  |  ${escapeHtml(resume.phone || '')}  |  ${escapeHtml(resume.location || '')}</div>
     </div>
 
-    <div class="mb-4">
-      <div class="text-[11px] font-bold uppercase text-white border-b border-zinc-800 pb-1 mb-1 font-mono">Resumo Profissional</div>
-      <p class="text-xs text-zinc-300 leading-relaxed">${escapeHtml(resume.summary)}</p>
+    <div class="mb-5">
+      <div class="text-xs font-bold uppercase pb-1 mb-1.5 font-mono border-b" style="color: var(--text-primary); border-color: var(--border-color);">Resumo Profissional</div>
+      <p class="text-xs leading-relaxed" style="color: var(--text-secondary);">${escapeHtml(resume.summary)}</p>
     </div>
 
-    <div class="mb-4">
-      <div class="text-[11px] font-bold uppercase text-white border-b border-zinc-800 pb-1 mb-1 font-mono">Experiência Profissional</div>
-      <div class="space-y-3">
+    <div class="mb-5">
+      <div class="text-xs font-bold uppercase pb-1 mb-2 font-mono border-b" style="color: var(--text-primary); border-color: var(--border-color);">Experiência Profissional</div>
+      <div class="space-y-3.5">
         ${(resume.experiences || []).map(exp => `
           <div>
-            <div class="font-bold text-white text-xs">${escapeHtml(exp.role)} — <span class="font-normal text-zinc-400">${escapeHtml(exp.company)}</span> <span class="text-[10px] text-zinc-500 float-right">(${escapeHtml(exp.startDate)} - ${escapeHtml(exp.endDate)})</span></div>
-            <div class="text-xs text-zinc-400 mt-1 whitespace-pre-line leading-relaxed">${escapeHtml(exp.description)}</div>
+            <div class="font-bold text-xs" style="color: var(--text-primary);">${escapeHtml(exp.role)} — <span class="font-normal" style="color: var(--text-secondary);">${escapeHtml(exp.company)}</span> <span class="text-[11px] float-right font-mono tabular-nums" style="color: var(--text-secondary);">(${escapeHtml(formatClientDateRange(exp.startDate, exp.endDate))})</span></div>
+            <div class="text-xs mt-1 whitespace-pre-line leading-relaxed" style="color: var(--text-secondary);">${escapeHtml(exp.description)}</div>
           </div>
         `).join('')}
       </div>
     </div>
 
-    <div class="mb-4">
-      <div class="text-[11px] font-bold uppercase text-white border-b border-zinc-800 pb-1 mb-1 font-mono">Formação Acadêmica</div>
-      <div class="space-y-1">
+    <div class="mb-5">
+      <div class="text-xs font-bold uppercase pb-1 mb-1.5 font-mono border-b" style="color: var(--text-primary); border-color: var(--border-color);">Formação Acadêmica</div>
+      <div class="space-y-1.5">
         ${(resume.education || []).map(edu => `
-          <div class="text-xs text-zinc-300">${escapeHtml(edu.degree)} — <span class="text-zinc-500">${escapeHtml(edu.institution)}</span> <span class="text-[10px] text-zinc-600">(${escapeHtml(edu.startDate)} - ${escapeHtml(edu.endDate)})</span></div>
+          <div class="text-xs" style="color: var(--text-secondary);"><span class="font-medium" style="color: var(--text-primary);">${escapeHtml(edu.degree)}</span> — <span class="text-zinc-500">${escapeHtml(edu.institution)}</span> <span class="text-[11px] text-zinc-500 float-right font-mono">(${escapeHtml(formatClientDateRange(edu.startDate, edu.endDate))})</span></div>
         `).join('')}
       </div>
     </div>
 
     <div>
-      <div class="text-[11px] font-bold uppercase text-white border-b border-zinc-800 pb-1 mb-1 font-mono">Habilidades Técnicas</div>
-      <div class="text-xs text-zinc-400 font-mono">${(resume.skills || []).join('   •   ')}</div>
+      <div class="text-xs font-bold uppercase pb-1 mb-1.5 font-mono border-b" style="color: var(--text-primary); border-color: var(--border-color);">Habilidades Técnicas</div>
+      <div class="text-xs font-mono leading-relaxed" style="color: var(--text-secondary);">${(resume.skills || []).join('   •   ')}</div>
     </div>
   `;
 }
 
-// ==========================================
-// 4. WORKBENCH TABS & ACTIONS
-// ==========================================
+// ============================================================================
+// 8. WORKBENCH TABS & ACTIONS
+// ============================================================================
 function setupWorkbenchTabs() {
   document.querySelectorAll(".nav-tab-btn").forEach(btn => {
-    btn.addEventListener("click", (e) => {
+    btn.addEventListener("click", () => {
       const target = btn.dataset.tab;
       document.querySelectorAll(".nav-tab-btn").forEach(b => {
-        b.className = "nav-tab-btn h-full flex items-center text-xs font-medium text-zinc-400 hover:text-zinc-200 transition-colors";
+        b.className = "nav-tab-btn h-full flex items-center text-sm font-medium text-zinc-400 hover:text-zinc-200 transition-colors";
       });
-      btn.className = "nav-tab-btn nav-tab-active h-full flex items-center text-xs font-medium text-zinc-100 transition-colors";
+      btn.className = "nav-tab-btn nav-tab-active h-full flex items-center text-sm font-medium transition-colors";
 
-      document.querySelectorAll(".tab-pane-content").forEach(p => p.classList.add("hidden"));
-      document.getElementById(target).classList.remove("hidden");
+      document.querySelectorAll(".tab-pane-content").forEach(p => {
+        p.classList.add("hidden");
+        p.classList.remove("fade-slide-up");
+      });
+
+      const targetPane = document.getElementById(target);
+      if (targetPane) {
+        targetPane.classList.remove("hidden");
+        void targetPane.offsetWidth; // re-trigger animation
+        targetPane.classList.add("fade-slide-up");
+      }
+
+      // If user switches to Knockout Questions tab, reload questions
+      if (target === "tab-knockout" && selectedJobId) {
+        loadKnockoutQuestions(selectedJobId);
+      }
 
       // Actions visibility
       const actions = document.getElementById("tab-diff-actions");
-      if (target === "tab-diff") {
-        actions.classList.remove("hidden");
-      } else {
-        actions.classList.add("hidden");
+      if (actions) {
+        if (target === "tab-diff") {
+          actions.classList.remove("hidden");
+        } else {
+          actions.classList.add("hidden");
+        }
       }
     });
   });
+}
+
+function updateTailorEngineUI(engine) {
+  currentTailorEngine = engine;
+  localStorage.setItem("ats_use_gemini_tailoring", engine === "gemini" ? "true" : "false");
+
+  const label = document.getElementById("tailor-btn-label");
+  const icon = document.getElementById("tailor-btn-icon");
+  const checkGemini = document.getElementById("check-engine-gemini");
+  const checkLocal = document.getElementById("check-engine-local");
+
+  if (engine === "gemini") {
+    if (label) label.textContent = "Otimizar com IA";
+    if (icon) {
+      icon.setAttribute("data-lucide", "sparkles");
+      icon.className = "w-3.5 h-3.5 fill-current text-amber-300";
+    }
+    if (checkGemini) checkGemini.classList.remove("hidden");
+    if (checkLocal) checkLocal.classList.add("hidden");
+  } else {
+    if (label) label.textContent = "Otimizar (Local)";
+    if (icon) {
+      icon.setAttribute("data-lucide", "cpu");
+      icon.className = "w-3.5 h-3.5 text-blue-300";
+    }
+    if (checkGemini) checkGemini.classList.add("hidden");
+    if (checkLocal) checkLocal.classList.remove("hidden");
+  }
+
+  if (window.lucide) window.lucide.createIcons();
 }
 
 function setupWorkbenchActions() {
-  // Otimizar Currículo (Thin top 2px bar progress)
-  const btnRun = document.getElementById("btn-run-tailor");
-  btnRun.addEventListener("click", async () => {
-    if (!selectedJobId) return;
-    if (!currentMasterProfile || !currentMasterProfile.fullName) {
-      showToast("Cadastre o Master CV primeiro", "error");
-      document.getElementById("btn-open-profile-drawer").click();
-      return;
-    }
+  // Sync engine UI with state
+  updateTailorEngineUI(currentTailorEngine);
 
-    const bar = document.getElementById("top-progress-bar");
-    bar.style.opacity = "1";
-    bar.style.width = "30%";
+  // Toggle Mode Dropdown Menu
+  const btnModeMenu = document.getElementById("btn-tailor-mode-menu");
+  const modeDropdown = document.getElementById("tailor-mode-dropdown-menu");
+  const modeChevron = document.getElementById("tailor-mode-chevron-icon");
 
-    setTimeout(() => { bar.style.width = "75%"; }, 100);
+  if (btnModeMenu && modeDropdown) {
+    btnModeMenu.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const isHidden = modeDropdown.classList.contains("hidden");
+      // Close other dropdowns
+      document.getElementById("download-dropdown-menu")?.classList.add("hidden");
+      document.getElementById("download-chevron-icon")?.classList.remove("rotate-180");
 
-    try {
-      const res = await fetch(`/api/jobs/${selectedJobId}/tailor`, { method: "POST" });
-      const data = await res.json();
-
-      bar.style.width = "100%";
-      setTimeout(() => {
-        bar.style.opacity = "0";
-        bar.style.width = "0%";
-      }, 300);
-
-      if (res.ok) {
-        showToast(`Otimizado: Score ${data.scoreAfter}/100 (+${Math.round(data.scoreAfter - data.scoreBefore)} pts)`, "success");
-        await loadJobs();
-        selectJob(selectedJobId);
+      if (isHidden) {
+        modeDropdown.classList.remove("hidden");
+        modeChevron?.classList.add("rotate-180");
       } else {
-        showToast(data.error || "Erro ao otimizar", "error");
+        modeDropdown.classList.add("hidden");
+        modeChevron?.classList.remove("rotate-180");
       }
-    } catch {
-      bar.style.opacity = "0";
-      showToast("Erro na requisição", "error");
-    }
-  });
+    });
+
+    // Options inside mode dropdown
+    document.querySelectorAll(".tailor-engine-option-btn").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const selectedEngine = btn.dataset.engine;
+        if (selectedEngine) {
+          updateTailorEngineUI(selectedEngine);
+          showToast(`Motor selecionado: ${selectedEngine === "gemini" ? "Gemini 1.5 Flash (IA)" : "Motor ATS Local"}`, "info");
+        }
+        modeDropdown.classList.add("hidden");
+        modeChevron?.classList.remove("rotate-180");
+      });
+    });
+
+    // Close on outside click
+    document.addEventListener("click", (e) => {
+      if (!modeDropdown.contains(e.target) && !btnModeMenu.contains(e.target)) {
+        modeDropdown.classList.add("hidden");
+        modeChevron?.classList.remove("rotate-180");
+      }
+    });
+  }
+
+  // Otimizar Currículo (Thin top 2.5px bar progress)
+  const btnRun = document.getElementById("btn-run-tailor");
+  if (btnRun) {
+    btnRun.addEventListener("click", async () => {
+      if (!selectedJobId) return;
+      if (!currentMasterProfile || !currentMasterProfile.fullName) {
+        showToast("Cadastre o Master CV primeiro", "error");
+        openProfileDrawer();
+        return;
+      }
+
+      const useAi = (currentTailorEngine === "gemini");
+      const label = document.getElementById("tailor-btn-label");
+      const icon = document.getElementById("tailor-btn-icon");
+
+      if (useAi) {
+        if (icon) {
+          icon.setAttribute("data-lucide", "sparkles");
+          icon.className = "w-4 h-4 animate-spin text-amber-300";
+        }
+        if (label) label.textContent = "Otimizando com IA...";
+        showToast("Conectando ao Gemini 1.5 Flash para otimização contextual...", "info");
+      } else {
+        if (icon) {
+          icon.setAttribute("data-lucide", "loader-2");
+          icon.className = "w-4 h-4 animate-spin text-white";
+        }
+        if (label) label.textContent = "Otimizando...";
+      }
+      if (window.lucide) window.lucide.createIcons();
+      btnRun.disabled = true;
+
+      const bar = document.getElementById("top-progress-bar");
+      bar.style.opacity = "1";
+      bar.style.width = "30%";
+
+      setTimeout(() => { bar.style.width = "75%"; }, 150);
+
+      try {
+        const res = await fetch(`/api/jobs/${selectedJobId}/tailor`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ useAi })
+        });
+        const data = await res.json();
+
+        bar.style.width = "100%";
+        setTimeout(() => {
+          bar.style.opacity = "0";
+          bar.style.width = "0%";
+        }, 300);
+
+        if (res.ok) {
+          const engineLabel = data.engine === "gemini" ? "Gemini IA" : "Motor ATS";
+          const diffPts = Math.round(data.scoreAfter - data.scoreBefore);
+          showToast(`Otimizado (${engineLabel}): Score ${data.scoreAfter}/100 (+${diffPts} pts)`, "success");
+          await loadJobs();
+          selectJob(selectedJobId);
+        } else {
+          showToast(data.error || "Erro ao otimizar", "error");
+        }
+      } catch {
+        bar.style.opacity = "0";
+        showToast("Erro na requisição", "error");
+      } finally {
+        updateTailorEngineUI(currentTailorEngine);
+        btnRun.disabled = false;
+        if (window.lucide) window.lucide.createIcons();
+      }
+    });
+  }
 
   // Recalcular Score inline
-  document.getElementById("btn-recalculate").addEventListener("click", async () => {
-    if (!selectedJobId) return;
+  const btnRecalculate = document.getElementById("btn-recalculate");
+  if (btnRecalculate) {
+    btnRecalculate.addEventListener("click", async () => {
+      if (!selectedJobId) return;
 
-    const btn = document.getElementById("btn-recalculate");
-    btn.innerHTML = `<i data-lucide="refresh-cw" class="w-3 h-3 animate-spin"></i><span>Calculando...</span>`;
+      btnRecalculate.innerHTML = `<i data-lucide="refresh-cw" class="w-3.5 h-3.5 animate-spin"></i><span>Calculando...</span>`;
 
-    const headline = document.getElementById("edit-tailored-title").value;
-    const summary = document.getElementById("edit-tailored-summary").value;
-    const skills = document.getElementById("edit-tailored-skills").value.split(",").map(s => s.trim()).filter(Boolean);
+      const headline = document.getElementById("edit-tailored-title").value;
+      const summary = document.getElementById("edit-tailored-summary").value;
+      const skills = document.getElementById("edit-tailored-skills").value.split(",").map(s => s.trim()).filter(Boolean);
 
-    const expTextareas = document.querySelectorAll("#edit-tailored-experiences textarea");
-    const experiences = (currentMasterProfile?.experiences || []).map((exp, idx) => ({
-      ...exp,
-      description: expTextareas[idx] ? expTextareas[idx].value : exp.description
-    }));
+      const expTextareas = document.querySelectorAll("#edit-tailored-experiences textarea");
+      const experiences = (currentMasterProfile?.experiences || []).map((exp, idx) => ({
+        ...exp,
+        description: expTextareas[idx] ? expTextareas[idx].value : exp.description
+      }));
 
-    const updatedResume = {
-      ...currentMasterProfile,
-      headline,
-      summary,
-      skills,
-      experiences
-    };
+      const updatedResume = {
+        ...currentMasterProfile,
+        headline,
+        summary,
+        skills,
+        experiences
+      };
 
-    try {
-      const res = await fetch(`/api/jobs/${selectedJobId}/tailor`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tailoredResume: updatedResume })
-      });
-      const data = await res.json();
-      if (res.ok) {
-        showToast(`Score: ${data.scoreAfter}/100`, "success");
-        document.getElementById("inspect-score-val").textContent = data.scoreAfter;
-        updateInspectorBreakdown(data.auditAfter);
-        renderA4Preview(updatedResume);
-        await loadJobs();
+      try {
+        const res = await fetch(`/api/jobs/${selectedJobId}/tailor`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tailoredResume: updatedResume })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(`Score: ${data.scoreAfter}/100`, "success");
+          animateScoreCountUp(data.scoreAfter);
+          updateInspectorBreakdown(data.auditAfter);
+          renderA4Preview(updatedResume);
+          await loadJobs();
+        }
+      } catch {
+        showToast("Erro ao recalcular", "error");
+      } finally {
+        btnRecalculate.innerHTML = `<i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-emerald-400"></i><span>Recalcular Score</span>`;
+        if (window.lucide) window.lucide.createIcons();
       }
-    } catch {
-      showToast("Erro ao recalcular", "error");
-    } finally {
-      btn.innerHTML = `<i data-lucide="refresh-cw" class="w-3 h-3"></i><span>Recalcular Score</span>`;
-      if (window.lucide) window.lucide.createIcons();
-    }
-  });
+    });
+  }
 
-  // Export PDF
-  document.getElementById("btn-download-pdf").addEventListener("click", () => {
-    if (selectedJobId) {
-      window.location.href = `/api/jobs/${selectedJobId}/download/pdf`;
-      showToast("Exportando PDF...", "info");
-    }
-  });
+  // Download Dropdown Menu & Formats
+  const btnDownloadMenu = document.getElementById("btn-download-menu");
+  const downloadDropdown = document.getElementById("download-dropdown-menu");
+  const downloadChevron = document.getElementById("download-chevron-icon");
+  const downloadOptionBtns = document.querySelectorAll(".download-option-btn");
 
-  // Export DOCX
-  document.getElementById("btn-download-docx").addEventListener("click", () => {
-    if (selectedJobId) {
-      window.location.href = `/api/jobs/${selectedJobId}/download/docx`;
-      showToast("Exportando DOCX...", "info");
+  if (btnDownloadMenu && downloadDropdown) {
+    btnDownloadMenu.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const isHidden = downloadDropdown.classList.contains("hidden");
+      if (isHidden) {
+        downloadDropdown.classList.remove("hidden");
+        if (downloadChevron) downloadChevron.style.transform = "rotate(180deg)";
+      } else {
+        downloadDropdown.classList.add("hidden");
+        if (downloadChevron) downloadChevron.style.transform = "rotate(0deg)";
+      }
+    });
+
+    // Close when clicking anywhere outside
+    document.addEventListener("click", (e) => {
+      if (!downloadDropdown.contains(e.target) && !btnDownloadMenu.contains(e.target)) {
+        downloadDropdown.classList.add("hidden");
+        if (downloadChevron) downloadChevron.style.transform = "rotate(0deg)";
+      }
+    });
+
+    // Options selection
+    downloadOptionBtns.forEach(btn => {
+      btn.addEventListener("click", () => {
+        const format = btn.getAttribute("data-format");
+        downloadDropdown.classList.add("hidden");
+        if (downloadChevron) downloadChevron.style.transform = "rotate(0deg)";
+
+        if (!selectedJobId) {
+          showToast("Selecione uma vaga para exportar", "warning");
+          return;
+        }
+
+        const formatLabels = {
+          docx: "DOCX (Word ATS ⭐)",
+          pdf: "PDF (Linear ATS XMP)",
+          txt: "Texto Puro (.txt)",
+          md: "Markdown (.md)",
+          json: "JSON Resume (.json)"
+        };
+
+        const label = formatLabels[format] || format.toUpperCase();
+        showToast(`Exportando currículo em ${label}...`, "info");
+        window.location.href = `/api/jobs/${selectedJobId}/download/${format}`;
+      });
+    });
+
+    // Quick Action: Copiar Texto Puro (Clipboard)
+    const btnCopyPlainText = document.getElementById("btn-copy-plain-text");
+    if (btnCopyPlainText) {
+      btnCopyPlainText.addEventListener("click", async (e) => {
+        e.stopPropagation();
+
+        if (!selectedJobId) {
+          showToast("Selecione uma vaga para copiar o currículo", "warning");
+          return;
+        }
+
+        const copyLabel = document.getElementById("copy-quick-label");
+        const copyBadge = document.getElementById("copy-quick-badge");
+        const copyDesc = document.getElementById("copy-quick-desc");
+        const copyBox = document.getElementById("copy-icon-box");
+
+        // Feedback inicial
+        if (copyLabel) copyLabel.textContent = "Compilando...";
+        if (copyBadge) copyBadge.textContent = "Aguarde";
+
+        try {
+          const res = await fetch(`/api/jobs/${selectedJobId}/download/txt`);
+          if (!res.ok) throw new Error("Falha ao obter texto puro do currículo");
+          const plainText = await res.text();
+
+          // Escrita na área de transferência com fallback
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(plainText);
+          } else {
+            const textArea = document.createElement("textarea");
+            textArea.value = plainText;
+            textArea.style.position = "fixed";
+            textArea.style.opacity = "0";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            document.execCommand("copy");
+            document.body.removeChild(textArea);
+          }
+
+          // Feedback visual estrito: "Copiado!"
+          if (copyLabel) copyLabel.textContent = "✅ Copiado!";
+          if (copyBadge) {
+            copyBadge.textContent = "Copiado!";
+            copyBadge.className = "text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500 text-zinc-950 font-bold border border-emerald-400";
+          }
+          if (copyDesc) copyDesc.textContent = "Pronto para colar em formulários da Gupy!";
+          if (copyBox) copyBox.className = "p-1.5 rounded-md bg-emerald-500 text-zinc-950 mt-0.5 border border-emerald-400 shrink-0 transition-colors";
+
+          showToast("Currículo copiado para o Clipboard! Pronto para a Gupy.", "success");
+
+          // Restaura estado após 2.5s
+          setTimeout(() => {
+            if (copyLabel) copyLabel.textContent = "📋 Copiar Texto Puro (Clipboard)";
+            if (copyBadge) {
+              copyBadge.textContent = "Rápido";
+              copyBadge.className = "text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-medium border border-emerald-500/30";
+            }
+            if (copyDesc) copyDesc.textContent = "Texto limpo para colar em formulários e Gupy";
+            if (copyBox) copyBox.className = "p-1.5 rounded-md bg-emerald-500/20 text-emerald-400 mt-0.5 border border-emerald-500/30 shrink-0 transition-colors";
+          }, 2500);
+
+          // Fecha dropdown suavemente após 750ms para que o usuário veja a confirmação visual
+          setTimeout(() => {
+            downloadDropdown.classList.add("hidden");
+            if (downloadChevron) downloadChevron.style.transform = "rotate(0deg)";
+          }, 750);
+
+        } catch (err) {
+          console.error("Erro ao copiar texto:", err);
+          showToast("Erro ao copiar texto para a área de transferência", "error");
+          if (copyLabel) copyLabel.textContent = "📋 Copiar Texto Puro (Clipboard)";
+          if (copyBadge) copyBadge.textContent = "Rápido";
+        }
+      });
     }
-  });
+  }
 
   // Save JD changes
-  document.getElementById("btn-save-jd").addEventListener("click", async () => {
-    if (!selectedJobId) return;
-    const rawDescription = document.getElementById("jd-raw-text").value;
-    const jobUrl = document.getElementById("jd-url-input").value;
+  const btnSaveJd = document.getElementById("btn-save-jd");
+  if (btnSaveJd) {
+    btnSaveJd.addEventListener("click", async () => {
+      if (!selectedJobId) return;
+      const rawDescription = document.getElementById("jd-raw-text").value;
+      const jobUrl = document.getElementById("jd-url-input").value;
 
-    await fetch(`/api/jobs/${selectedJobId}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ rawDescription, jobUrl })
+      await fetch(`/api/jobs/${selectedJobId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rawDescription, jobUrl })
+      });
+      showToast("Requisitos atualizados", "success");
+      await loadJobs();
+      selectJob(selectedJobId);
     });
-    showToast("Requisitos atualizados", "success");
-    await loadJobs();
-    selectJob(selectedJobId);
-  });
+  }
 
   // Re-extract JD
-  document.getElementById("btn-re-extract-url").addEventListener("click", async () => {
-    const url = document.getElementById("jd-url-input").value.trim();
-    if (!url) {
-      showToast("Insira a URL da vaga", "error");
-      return;
-    }
-
-    try {
-      const res = await fetch("/api/jobs/extract-url", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url })
-      });
-      const data = await res.json();
-      if (res.ok) {
-        document.getElementById("jd-raw-text").value = data.description;
-        showToast("Dados re-extraídos da URL", "success");
-      } else {
-        showToast(data.error || "Erro ao extrair", "error");
+  const btnReExtract = document.getElementById("btn-re-extract-url");
+  if (btnReExtract) {
+    btnReExtract.addEventListener("click", async () => {
+      const url = document.getElementById("jd-url-input").value.trim();
+      if (!url) {
+        showToast("Insira a URL da vaga", "error");
+        return;
       }
-    } catch {
-      showToast("Erro de rede", "error");
+
+      try {
+        const res = await fetch("/api/jobs/extract-url", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          document.getElementById("jd-raw-text").value = data.description;
+          showToast("Dados re-extraídos da URL", "success");
+        } else {
+          showToast(data.error || "Erro ao extrair", "error");
+        }
+      } catch {
+        showToast("Erro de rede", "error");
+      }
+    });
+  }
+
+  // Delete job modal bindings
+  const btnCancelDelete = document.getElementById("btn-cancel-delete-job");
+  if (btnCancelDelete) {
+    btnCancelDelete.addEventListener("click", hideDeleteJobModal);
+  }
+
+  const btnConfirmDelete = document.getElementById("btn-confirm-delete-job");
+  if (btnConfirmDelete) {
+    btnConfirmDelete.addEventListener("click", executeDeleteJob);
+  }
+
+  const modalDelete = document.getElementById("modal-confirm-delete-job");
+  if (modalDelete) {
+    modalDelete.addEventListener("click", (e) => {
+      if (e.target === modalDelete) hideDeleteJobModal();
+    });
+  }
+
+  // Close modal on Escape key
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && modalDelete && !modalDelete.classList.contains("hidden")) {
+      hideDeleteJobModal();
     }
   });
+
+  // Delete Job from Top Header
+  const btnHeaderDelete = document.getElementById("btn-header-delete-job");
+  if (btnHeaderDelete) {
+    btnHeaderDelete.addEventListener("click", () => {
+      if (selectedJobId) {
+        showDeleteJobModal(selectedJobId);
+      }
+    });
+  }
+
+  // Delete Job from JD Tab
+  const btnTabDelete = document.getElementById("btn-tab-delete-job");
+  if (btnTabDelete) {
+    btnTabDelete.addEventListener("click", () => {
+      if (selectedJobId) {
+        showDeleteJobModal(selectedJobId);
+      }
+    });
+  }
 }
 
-// ==========================================
-// 5. ADD JOB MODAL
-// ==========================================
+let pendingDeleteJobId = null;
+
+function showDeleteJobModal(jobId, jobTitle) {
+  if (!jobId) return;
+  pendingDeleteJobId = jobId;
+  const targetJob = currentJobs.find(j => j.id === jobId) || (activeJobData && activeJobData.id === jobId ? activeJobData : null);
+  const title = jobTitle || (targetJob ? targetJob.title : "esta vaga");
+
+  const titleEl = document.getElementById("modal-delete-job-title");
+  if (titleEl) titleEl.textContent = `"${title}"`;
+
+  const modal = document.getElementById("modal-confirm-delete-job");
+  if (modal) modal.classList.remove("hidden");
+  if (window.lucide) window.lucide.createIcons();
+}
+
+function hideDeleteJobModal() {
+  pendingDeleteJobId = null;
+  const modal = document.getElementById("modal-confirm-delete-job");
+  if (modal) modal.classList.add("hidden");
+}
+
+async function executeDeleteJob() {
+  if (!pendingDeleteJobId) return;
+  const jobId = pendingDeleteJobId;
+  hideDeleteJobModal();
+
+  try {
+    const res = await fetch(`/api/jobs/${jobId}`, {
+      method: "DELETE"
+    });
+
+    if (res.ok) {
+      showToast("Vaga removida com sucesso", "info");
+      
+      // If the deleted job was currently active, clear active selection
+      if (selectedJobId === jobId) {
+        selectedJobId = null;
+        activeJobData = null;
+      }
+      
+      await loadJobs();
+    } else {
+      const data = await res.json().catch(() => ({}));
+      showToast(data.error || "Erro ao excluir vaga", "error");
+    }
+  } catch (err) {
+    console.error("Erro ao excluir vaga:", err);
+    showToast("Erro de rede ao excluir vaga", "error");
+  }
+}
+
+// Legacy alias for compatibility
+async function handleDeleteJob(jobId, jobTitle) {
+  showDeleteJobModal(jobId, jobTitle);
+}
+
+// ============================================================================
+// 9. ADD JOB MODAL
+// ============================================================================
 function setupAddJobModal() {
   const modal = document.getElementById("modal-add-job");
   const btnOpen = document.getElementById("btn-open-add-job");
@@ -844,93 +1945,124 @@ function setupAddJobModal() {
   const urlInput = document.getElementById("modal-job-url");
   const feedback = document.getElementById("modal-extract-feedback");
 
-  btnOpen.addEventListener("click", () => {
-    form.reset();
-    urlInput.value = "";
-    feedback.textContent = "";
-    modal.classList.remove("hidden");
-  });
+  if (btnOpen) {
+    btnOpen.addEventListener("click", () => {
+      form.reset();
+      urlInput.value = "";
+      feedback.textContent = "";
+      modal.classList.remove("hidden");
+    });
+  }
 
   const closeModal = () => modal.classList.add("hidden");
-  btnClose.addEventListener("click", closeModal);
-  btnCancel.addEventListener("click", closeModal);
+  if (btnClose) btnClose.addEventListener("click", closeModal);
+  if (btnCancel) btnCancel.addEventListener("click", closeModal);
 
-  btnExtract.addEventListener("click", async () => {
-    const url = urlInput.value.trim();
-    if (!url) {
-      feedback.textContent = "Insira uma URL.";
-      return;
-    }
-
-    feedback.innerHTML = `<span class="text-zinc-400">Extraindo dados...</span>`;
-
-    try {
-      const res = await fetch("/api/jobs/extract-url", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url })
-      });
-      const data = await res.json();
-
-      if (res.ok) {
-        document.getElementById("modal-input-title").value = data.title || "";
-        document.getElementById("modal-input-company").value = data.company || "";
-        document.getElementById("modal-input-description").value = data.description || "";
-        feedback.innerHTML = `<span class="text-emerald-400">✓ ${data.company} • ${data.keywords.length} keywords</span>`;
-      } else {
-        feedback.innerHTML = `<span class="text-zinc-400">${data.error}</span>`;
-      }
-    } catch {
-      feedback.innerHTML = `<span class="text-rose-400">Erro na extração</span>`;
-    }
-  });
-
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-
-    const payload = {
-      title: document.getElementById("modal-input-title").value,
-      company: document.getElementById("modal-input-company").value,
-      jobUrl: urlInput.value.trim() || undefined,
-      status: document.getElementById("modal-input-status").value,
-      notes: document.getElementById("modal-input-notes").value,
-      rawDescription: document.getElementById("modal-input-description").value
-    };
-
-    try {
-      const res = await fetch("/api/jobs", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
-      if (res.ok) {
+  // Fechar ao clicar no background externo (backdrop)
+  if (modal) {
+    let startedOnBackdrop = false;
+    modal.addEventListener("mousedown", (e) => {
+      startedOnBackdrop = (e.target === modal);
+    });
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal && startedOnBackdrop) {
         closeModal();
-        showToast("Vaga cadastrada", "success");
-        await loadJobs();
-        selectJob(data.job.id);
       }
-    } catch {
-      showToast("Erro ao cadastrar", "error");
+      startedOnBackdrop = false;
+    });
+  }
+
+  // Fechar ao pressionar tecla Escape
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && modal && !modal.classList.contains("hidden")) {
+      closeModal();
     }
   });
+
+  if (btnExtract) {
+    btnExtract.addEventListener("click", async () => {
+      const url = urlInput.value.trim();
+      if (!url) {
+        feedback.textContent = "Insira uma URL.";
+        return;
+      }
+
+      feedback.innerHTML = `<span class="text-zinc-400">Extraindo dados...</span>`;
+
+      try {
+        const res = await fetch("/api/jobs/extract-url", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url })
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+          document.getElementById("modal-input-title").value = data.title || "";
+          document.getElementById("modal-input-company").value = data.company || "";
+          document.getElementById("modal-input-description").value = data.description || "";
+          feedback.innerHTML = `<span class="text-emerald-400 font-medium">${escapeHtml(data.company)} • ${data.keywords.length} keywords extraídas</span>`;
+        } else {
+          feedback.innerHTML = `<span class="text-zinc-400">${data.error}</span>`;
+        }
+      } catch {
+        feedback.innerHTML = `<span class="text-rose-400">Erro na extração</span>`;
+      }
+    });
+  }
+
+  if (form) {
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const payload = {
+        title: document.getElementById("modal-input-title").value,
+        company: document.getElementById("modal-input-company").value,
+        jobUrl: urlInput.value.trim() || undefined,
+        status: document.getElementById("modal-input-status").value,
+        notes: document.getElementById("modal-input-notes").value,
+        rawDescription: document.getElementById("modal-input-description").value
+      };
+
+      try {
+        const res = await fetch("/api/jobs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok) {
+          closeModal();
+          showToast("Vaga cadastrada", "success");
+          await loadJobs();
+          selectJob(data.job.id);
+        }
+      } catch {
+        showToast("Erro ao cadastrar", "error");
+      }
+    });
+  }
 }
 
-// ==========================================
-// 6. TOAST SYSTEM
-// ==========================================
+// ============================================================================
+// 10. TOAST SYSTEM
+// ============================================================================
 function showToast(message, type = "info") {
   const container = document.getElementById("toast-container");
+  if (!container) return;
+
   const toast = document.createElement("div");
 
   const colors = {
-    success: "border-zinc-700 text-zinc-100",
+    success: "border-emerald-500/40 text-emerald-300",
     error: "border-rose-900/60 text-rose-300",
-    info: "border-zinc-800 text-zinc-300"
+    info: "border-zinc-700 text-zinc-200"
   };
 
-  toast.className = `toast-item pointer-events-auto px-3 py-1.5 rounded-md bg-[#121215] border ${colors[type]} shadow-lg flex items-center gap-2`;
-  toast.innerHTML = `<span>${escapeHtml(message)}</span>`;
+  toast.className = `toast-item pointer-events-auto px-4 py-2.5 rounded-lg border ${colors[type]} shadow-xl flex items-center gap-2.5`;
+  toast.style.backgroundColor = "var(--bg-panel)";
+  toast.style.borderColor = "var(--border-color)";
+  toast.innerHTML = `<span class="text-xs font-mono font-medium">${escapeHtml(message)}</span>`;
 
   container.appendChild(toast);
 
@@ -938,10 +2070,12 @@ function showToast(message, type = "info") {
     toast.style.opacity = "0";
     toast.style.transition = "opacity 0.2s ease";
     setTimeout(() => toast.remove(), 200);
-  }, 2500);
+  }, 2600);
 }
 
-// Security
+// ============================================================================
+// 11. SECURITY & ESCAPING
+// ============================================================================
 function escapeHtml(str) {
   if (!str) return "";
   return String(str)
@@ -950,4 +2084,321 @@ function escapeHtml(str) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
+}
+
+// ============================================================================
+// 12. KNOCKOUT QUESTIONS TAB (Perguntas Eliminatórias)
+// ============================================================================
+const kqAutoSaveTimeouts = new Map();
+
+async function loadKnockoutQuestions(jobId) {
+  if (!jobId) return;
+  try {
+    const res = await fetch(`/api/jobs/${jobId}/knockout`);
+    const data = await res.json();
+    if (res.ok) {
+      currentKnockoutQuestions = data.questions || [];
+      renderKnockoutQuestionsList();
+    }
+  } catch (err) {
+    console.error("Erro ao carregar perguntas eliminatórias:", err);
+  }
+}
+
+function renderKnockoutQuestionsList() {
+  const container = document.getElementById("knockout-questions-list");
+  const emptyState = document.getElementById("knockout-empty-state");
+  if (!container) return;
+
+  if (currentKnockoutQuestions.length === 0) {
+    container.innerHTML = "";
+    if (emptyState) emptyState.classList.remove("hidden");
+    return;
+  }
+
+  if (emptyState) emptyState.classList.add("hidden");
+
+  container.innerHTML = currentKnockoutQuestions.map((q, idx) => {
+    const currentAnswer = q.candidateAnswer || q.aiSuggestedAnswer || "";
+
+    return `
+      <div class="p-5 rounded-xl border space-y-3.5 fade-slide-up" style="border-color: var(--border-color); background-color: var(--bg-panel);" id="kq-card-${escapeHtml(q.id)}">
+        
+        <!-- Header da Pergunta -->
+        <div class="flex items-start justify-between gap-3">
+          <div class="space-y-1 flex-1">
+            <div class="flex items-center gap-2">
+              <span class="text-[11px] font-mono px-2 py-0.5 rounded font-semibold border" style="border-color: var(--border-color); background-color: var(--bg-subtle); color: var(--text-secondary);">
+                #${idx + 1}
+              </span>
+              <span class="text-xs font-mono text-zinc-500">Formulário da Vaga</span>
+            </div>
+            <h4 class="text-sm font-semibold leading-relaxed" style="color: var(--text-primary);">${escapeHtml(q.questionText)}</h4>
+          </div>
+
+          <div class="flex items-center gap-2 shrink-0">
+            <!-- Excluir Pergunta -->
+            <button class="btn-delete-kq btn-spring p-1.5 rounded-md text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer" data-id="${escapeHtml(q.id)}" title="Excluir pergunta">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Resposta Final Unificada (Método STAR / IA) com Salvamento Automático -->
+        <div class="space-y-2 pt-1">
+          <div class="flex items-center justify-between text-xs font-mono">
+            <span class="text-zinc-500 font-semibold uppercase flex items-center gap-1.5">
+              <i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-emerald-500"></i>
+              <span>Resposta Validada (Pronta para Gupy / Greenhouse)</span>
+            </span>
+            <span class="text-zinc-500 text-[11px]" id="kq-counter-${escapeHtml(q.id)}">${currentAnswer.length} caracteres</span>
+          </div>
+
+          <textarea rows="4" class="kq-answer-textarea ui-input w-full font-sans text-xs leading-relaxed" placeholder="A resposta será gerada automaticamente..." data-id="${escapeHtml(q.id)}">${escapeHtml(currentAnswer)}</textarea>
+
+          <div class="flex items-center justify-between pt-1">
+            <!-- Indicador de Salvamento Automático -->
+            <div class="text-[11px] font-mono flex items-center gap-1.5" id="kq-autosave-${escapeHtml(q.id)}">
+              <i data-lucide="check" class="w-3 h-3 text-emerald-500"></i>
+              <span class="text-zinc-400">Salvo automaticamente</span>
+            </div>
+
+            <!-- Ações -->
+            <div class="flex items-center gap-2">
+              <button class="btn-regenerate-kq btn-spring p-1.5 rounded-md border text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer" style="border-color: var(--border-color); background-color: var(--bg-subtle);" data-id="${escapeHtml(q.id)}" title="Regerar resposta com IA">
+                <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
+              </button>
+              <button class="btn-copy-kq btn-spring px-3 py-1.5 rounded-md border text-xs font-mono font-medium flex items-center gap-1.5 cursor-pointer transition-colors" style="border-color: var(--border-color); background-color: var(--bg-subtle); color: var(--text-primary);" data-id="${escapeHtml(q.id)}">
+                <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                <span>Copiar Resposta</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    `;
+  }).join("");
+
+  if (window.lucide) window.lucide.createIcons();
+
+  // Attach card event listeners
+  setupKnockoutCardListeners();
+}
+
+function setupKnockoutCardListeners() {
+  // Delete Question
+  document.querySelectorAll(".btn-delete-kq").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const qid = btn.dataset.id;
+      if (!confirm("Deseja realmente remover esta pergunta eliminatória?")) return;
+      try {
+        const res = await fetch(`/api/jobs/${selectedJobId}/knockout/${qid}`, { method: "DELETE" });
+        if (res.ok) {
+          currentKnockoutQuestions = currentKnockoutQuestions.filter(item => item.id !== qid);
+          showToast("Pergunta removida", "info");
+          renderKnockoutQuestionsList();
+        }
+      } catch {
+        showToast("Erro ao excluir", "error");
+      }
+    });
+  });
+
+  // Regenerate Answer (discreet refresh option)
+  document.querySelectorAll(".btn-regenerate-kq").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const qid = btn.dataset.id;
+      const originalHtml = btn.innerHTML;
+      btn.innerHTML = `<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i>`;
+      btn.disabled = true;
+
+      try {
+        const res = await fetch(`/api/jobs/${selectedJobId}/knockout/${qid}/generate`, { method: "POST" });
+        const data = await res.json();
+        if (res.ok) {
+          showToast("Resposta regerada com sucesso!", "success");
+          await loadKnockoutQuestions(selectedJobId);
+        } else {
+          showToast(data.error || "Erro ao regerar resposta", "error");
+          btn.innerHTML = originalHtml;
+          btn.disabled = false;
+        }
+      } catch {
+        showToast("Erro de rede na geração", "error");
+        btn.innerHTML = originalHtml;
+        btn.disabled = false;
+      }
+    });
+  });
+
+  // Copy Answer
+  document.querySelectorAll(".btn-copy-kq").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const qid = btn.dataset.id;
+      const card = document.getElementById(`kq-card-${qid}`);
+      const textarea = card?.querySelector(".kq-answer-textarea");
+      const answerText = textarea?.value?.trim() || "";
+
+      if (!answerText) {
+        showToast("Nenhuma resposta para copiar.", "info");
+        return;
+      }
+
+      await navigator.clipboard.writeText(answerText);
+      const originalHtml = btn.innerHTML;
+      btn.innerHTML = `<i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i><span class="text-emerald-400">Copiada!</span>`;
+      showToast("Resposta copiada para o formulário!", "success");
+      setTimeout(() => {
+        btn.innerHTML = originalHtml;
+        if (window.lucide) window.lucide.createIcons();
+      }, 2000);
+    });
+  });
+
+  // Auto-save on textarea edit
+  document.querySelectorAll(".kq-answer-textarea").forEach(textarea => {
+    const qid = textarea.dataset.id;
+    const counter = document.getElementById(`kq-counter-${qid}`);
+    const indicator = document.getElementById(`kq-autosave-${qid}`);
+
+    const saveAnswer = async (text) => {
+      try {
+        if (indicator) {
+          indicator.innerHTML = `<i data-lucide="loader-2" class="w-3 h-3 animate-spin text-zinc-400"></i><span class="text-zinc-400">Salvando...</span>`;
+          if (window.lucide) window.lucide.createIcons();
+        }
+        const res = await fetch(`/api/jobs/${selectedJobId}/knockout/${qid}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ candidateAnswer: text })
+        });
+        if (res.ok) {
+          const q = currentKnockoutQuestions.find(i => i.id === qid);
+          if (q) q.candidateAnswer = text;
+          if (indicator) {
+            indicator.innerHTML = `<i data-lucide="check" class="w-3 h-3 text-emerald-500"></i><span class="text-emerald-500">Salvo automaticamente</span>`;
+            if (window.lucide) window.lucide.createIcons();
+          }
+        }
+      } catch (err) {
+        if (indicator) {
+          indicator.innerHTML = `<span class="text-rose-400">Erro ao salvar</span>`;
+        }
+      }
+    };
+
+    textarea.addEventListener("input", (e) => {
+      const val = e.target.value;
+      if (counter) counter.textContent = `${val.length} caracteres`;
+
+      if (indicator) {
+        indicator.innerHTML = `<span class="text-zinc-400">Alterações não salvas...</span>`;
+      }
+
+      if (kqAutoSaveTimeouts.has(qid)) {
+        clearTimeout(kqAutoSaveTimeouts.get(qid));
+      }
+
+      const timeout = setTimeout(() => {
+        saveAnswer(val);
+        kqAutoSaveTimeouts.delete(qid);
+      }, 600);
+      kqAutoSaveTimeouts.set(qid, timeout);
+    });
+
+    textarea.addEventListener("blur", (e) => {
+      if (kqAutoSaveTimeouts.has(qid)) {
+        clearTimeout(kqAutoSaveTimeouts.get(qid));
+        kqAutoSaveTimeouts.delete(qid);
+        saveAnswer(e.target.value);
+      }
+    });
+  });
+}
+
+function setupKnockoutQuestionsEvents() {
+  // Quick template pills
+  document.querySelectorAll(".kq-quick-pill").forEach(pill => {
+    pill.addEventListener("click", () => {
+      const input = document.getElementById("knockout-new-question-input");
+      if (input) {
+        input.value = pill.dataset.template || "";
+        input.focus();
+      }
+    });
+  });
+
+  // Add Question Button: creates question AND automatically triggers response generation
+  const btnAdd = document.getElementById("btn-add-knockout");
+  const input = document.getElementById("knockout-new-question-input");
+
+  if (btnAdd && input) {
+    const handleAdd = async () => {
+      if (!selectedJobId) {
+        showToast("Selecione uma vaga primeiro", "info");
+        return;
+      }
+      const text = input.value.trim();
+      if (!text) {
+        showToast("Insira o texto da pergunta", "info");
+        input.focus();
+        return;
+      }
+
+      const origHtml = btnAdd.innerHTML;
+      btnAdd.disabled = true;
+      btnAdd.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Gerando resposta...</span>`;
+
+      try {
+        // 1. Cria a pergunta
+        const res = await fetch(`/api/jobs/${selectedJobId}/knockout`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ questionText: text })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.question?.id) {
+          showToast(data.error || "Erro ao adicionar pergunta", "error");
+          btnAdd.disabled = false;
+          btnAdd.innerHTML = origHtml;
+          return;
+        }
+
+        const qid = data.question.id;
+        input.value = "";
+
+        // 2. Triga automaticamente a geração de resposta inteligente
+        const genRes = await fetch(`/api/jobs/${selectedJobId}/knockout/${qid}/generate`, {
+          method: "POST"
+        });
+        const genData = await genRes.json();
+
+        if (genRes.ok) {
+          showToast("Pergunta adicionada e resposta gerada com sucesso!", "success");
+        } else {
+          showToast("Pergunta criada", "info");
+        }
+
+        await loadKnockoutQuestions(selectedJobId);
+      } catch (err) {
+        console.error("Erro ao adicionar pergunta e gerar resposta:", err);
+        showToast("Erro na requisição", "error");
+      } finally {
+        btnAdd.disabled = false;
+        btnAdd.innerHTML = origHtml;
+        if (window.lucide) window.lucide.createIcons();
+      }
+    };
+
+    btnAdd.addEventListener("click", handleAdd);
+
+    // Support Ctrl+Enter / Enter in textarea
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        handleAdd();
+      }
+    });
+  }
 }

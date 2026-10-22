@@ -70,6 +70,19 @@ export function initDb(dbPath = "ats_tracker.sqlite") {
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS knockout_questions (
+      id TEXT PRIMARY KEY,
+      job_id TEXT NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
+      question_text TEXT NOT NULL,
+      candidate_answer TEXT,
+      ai_suggested_answer TEXT,
+      status TEXT NOT NULL DEFAULT 'Pendente',
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_knockout_job_id ON knockout_questions(job_id);
   `);
 
   return db;

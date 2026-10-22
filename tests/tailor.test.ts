@@ -76,12 +76,114 @@ describe("7-Layer Algorithmic Resume Tailoring Engine", () => {
     expect(result.tailoredResume.summary).toMatch(/(anos|meses)/i);
     expect(result.tailoredResume.education[0].degree).toMatch(/(Graduação completa|Bacharelado|Ensino Superior)/i);
 
-    // Layer 5: Regex window boundary bleed line at end of Summary
-    expect(result.tailoredResume.summary).toContain("Core Stack & Especialidades:");
+    // Layer 5: Summary flows organically without artificial "Core Stack & Especialidades" label
+    expect(result.tailoredResume.summary).not.toContain("Core Stack & Especialidades:");
+    expect(result.tailoredResume.summary).toContain("Node.js");
+    expect(result.tailoredResume.summary).toContain("TypeScript");
+
+    // Dates are formatted cleanly as Mês YYYY
+    expect(firstExp.startDate).toBe("Jan 2021");
 
     // Layer 6: Document metadata is populated
     expect(result.metadata.title).toBe(jobInfo.title);
     expect(result.metadata.author).toBe(masterProfile.fullName);
     expect(result.metadata.keywords.length).toBeGreaterThan(0);
+  });
+
+  it("should NOT repeat artificial suffixes, should NOT inject executive lines into ancient roles, and should NOT contain Page markers", async () => {
+    const profileWithAncientExp: ResumeData = {
+      ...masterProfile,
+      experiences: [
+        {
+          company: "Chamleo",
+          role: "Principal Backend Engineer",
+          startDate: "2020",
+          endDate: "Atual",
+          description: "Supervisão e desenvolvimento de plataforma de alta performance.\nRedução de latência em 70%."
+        },
+        {
+          company: "Mindworks Informática",
+          role: "Web Developer",
+          startDate: "2010",
+          endDate: "2012",
+          description: "Diagramação de layout e manutenção web."
+        }
+      ],
+      education: [
+        {
+          institution: "Universidad Europea del Atlántico",
+          degree: "Máster en Software",
+          startDate: "2023",
+          endDate: "2025"
+        },
+        {
+          institution: "Anhanguera",
+          degree: "Ciência da Computação",
+          startDate: "2011",
+          endDate: "2014"
+        }
+      ]
+    };
+
+    const result = await tailorResume(profileWithAncientExp, jobInfo);
+
+    // 1. No repetitive phrase spam
+    const fullText = JSON.stringify(result.tailoredResume);
+    expect(fullText).not.toContain("Utilização de ");
+    expect(fullText).not.toMatch(/Page\s+\d+\s+of\s+\d+/i);
+
+    // 2. Keywords woven naturally into existing bullets (no artificial labels)
+    const exp0 = result.tailoredResume.experiences[0];
+    const exp1 = result.tailoredResume.experiences[1];
+
+    expect(exp0.description).not.toContain("Stack técnica & Práticas:");
+    expect(exp0.description).not.toContain("Tecnologias e Práticas aplicadas:");
+    expect(exp0.description).toContain("Node.js");
+    expect(exp0.description).toContain("TypeScript");
+
+    // Ancient experience (> 8 years ago) must remain clean without artificial tags
+    expect(exp1.description).not.toContain("Stack técnica & Práticas:");
+    expect(exp1.description).toContain("Diagramação de layout e manutenção web.");
+
+    // 3. Education has clean single variation
+    const edu0 = result.tailoredResume.education[0];
+    const edu1 = result.tailoredResume.education[1];
+
+    expect(edu0.degree).toContain("Pós-Graduação / Mestrado");
+    expect(edu0.degree).not.toContain("Graduação completa / Bacharelado");
+
+    expect(edu1.degree).toContain("Graduação completa / Bacharelado");
+    expect(edu1.degree).not.toContain("Pós-Graduação / Mestrado");
+  });
+
+  it("should NEVER allow internal NLP engineering terms to leak into technical skills", async () => {
+    const jobWithNlpTerms = {
+      ...jobInfo,
+      keywords: [
+        { term: "node.js", tfidf: 4.2, count: 5, stem: "node.js" },
+        { term: "tf-idf", tfidf: 3.9, count: 4, stem: "tfidf" },
+        { term: "algoritmo", tfidf: 3.5, count: 3, stem: "algorit" },
+        { term: "parser", tfidf: 3.2, count: 3, stem: "parse" },
+        { term: "score", tfidf: 2.8, count: 2, stem: "scor" },
+        { term: "typescript", tfidf: 2.5, count: 2, stem: "typescript" }
+      ]
+    };
+
+    const profileWithNlpSkills: ResumeData = {
+      ...masterProfile,
+      skills: ["JavaScript", "Tf-idf", "Algoritmo", "Parser", "Score", "TypeScript"]
+    };
+
+    const result = await tailorResume(profileWithNlpSkills, jobWithNlpTerms);
+
+    const skillsLower = result.tailoredResume.skills.map(s => s.toLowerCase());
+    expect(skillsLower).not.toContain("tf-idf");
+    expect(skillsLower).not.toContain("tfidf");
+    expect(skillsLower).not.toContain("algoritmo");
+    expect(skillsLower).not.toContain("parser");
+    expect(skillsLower).not.toContain("score");
+
+    expect(skillsLower.some(s => s.includes("typescript"))).toBe(true);
+    expect(skillsLower.some(s => s.includes("node.js"))).toBe(true);
   });
 });

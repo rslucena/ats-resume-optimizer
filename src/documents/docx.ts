@@ -1,11 +1,16 @@
 import { Document, Paragraph, TextRun, HeadingLevel, Packer, AlignmentType } from "docx";
 import type { ResumeData } from "../types/resume.ts";
 import type { DocumentMetadata } from "./pdf.ts";
+import { sanitizeLocation } from "../services/cvExtractor.ts";
+import { formatDateRange } from "../utils/dateFormat.ts";
+import { sanitizeResumeUtf8, sanitizeUtf8 } from "../utils/encoding.ts";
 
 export async function generateAtsDocx(
-  resume: ResumeData,
-  metadata: DocumentMetadata
+  rawResume: ResumeData,
+  rawMetadata: DocumentMetadata
 ): Promise<Buffer> {
+  const resume = sanitizeResumeUtf8(rawResume);
+  const metadata = sanitizeResumeUtf8(rawMetadata);
   const children: Paragraph[] = [];
 
   // Candidate Name (Heading 1 / Title style, single column)
@@ -42,10 +47,11 @@ export async function generateAtsDocx(
   }
 
   // Contact Info Line (Clean ATS body format)
+  const cleanLocation = sanitizeLocation(resume.location);
   const contactParts = [
     resume.email,
     resume.phone,
-    resume.location,
+    cleanLocation,
     resume.linkedin,
     resume.github
   ].filter(Boolean);
@@ -115,7 +121,7 @@ export async function generateAtsDocx(
               color: "000000"
             }),
             new TextRun({
-              text: `   (${exp.startDate} - ${exp.endDate})`,
+              text: formatDateRange(exp.startDate, exp.endDate) ? `   (${formatDateRange(exp.startDate, exp.endDate)})` : "",
               italics: true,
               size: 18,
               font: "Arial",
@@ -156,6 +162,8 @@ export async function generateAtsDocx(
     children.push(createSectionHeader("Formação Acadêmica"));
 
     for (const edu of resume.education) {
+      const eduDates = formatDateRange(edu.startDate, edu.endDate);
+      const eduSubtitle = eduDates ? ` — ${edu.institution} (${eduDates})` : ` — ${edu.institution}`;
       children.push(
         new Paragraph({
           children: [
@@ -167,7 +175,7 @@ export async function generateAtsDocx(
               color: "000000"
             }),
             new TextRun({
-              text: ` — ${edu.institution} (${edu.startDate} - ${edu.endDate})`,
+              text: eduSubtitle,
               size: 19,
               font: "Arial",
               color: "444444"

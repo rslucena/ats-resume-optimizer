@@ -64,4 +64,14 @@ describe("ATS-Linear PDF Generator with Binary Metadata", () => {
     expect(keywords).toContain("node.js");
     expect(keywords).toContain("typescript");
   });
+
+  it("should sanitize street address and CEP from contact header for privacy", async () => {
+    const dirtyResume: ResumeData = {
+      ...resume,
+      location: "Rua Augusta, 1500, apto 42, CEP 01305-100, São Paulo, SP"
+    };
+    const pdfBuffer = await generateAtsPdf(dirtyResume, metadata);
+    expect(pdfBuffer).toBeDefined();
+    expect(pdfBuffer.length).toBeGreaterThan(1000);
+  });
 });

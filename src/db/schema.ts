@@ -50,9 +50,22 @@ export const tailoredResumesTable = sqliteTable("tailored_resumes", {
   updatedAt: integer("updated_at").notNull()
 });
 
+export const knockoutQuestionsTable = sqliteTable("knockout_questions", {
+  id: text("id").primaryKey(),
+  jobId: text("job_id").notNull().references(() => jobsTable.id, { onDelete: "cascade" }),
+  questionText: text("question_text").notNull(),
+  candidateAnswer: text("candidate_answer"),
+  aiSuggestedAnswer: text("ai_suggested_answer"),
+  status: text("status").notNull().default("Pendente"), // 'Pendente' | 'Aprovada'
+  createdAt: integer("created_at").notNull(),
+  updatedAt: integer("updated_at").notNull()
+});
+
 export type MasterProfile = typeof masterProfilesTable.$inferSelect;
 export type InsertMasterProfile = typeof masterProfilesTable.$inferInsert;
 export type Job = typeof jobsTable.$inferSelect;
 export type InsertJob = typeof jobsTable.$inferInsert;
 export type TailoredResume = typeof tailoredResumesTable.$inferSelect;
 export type InsertTailoredResume = typeof tailoredResumesTable.$inferInsert;
+export type KnockoutQuestion = typeof knockoutQuestionsTable.$inferSelect;
+export type InsertKnockoutQuestion = typeof knockoutQuestionsTable.$inferInsert;

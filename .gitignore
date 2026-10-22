@@ -6,4 +6,8 @@ node_modules/
 dist/
 .DS_Store
 .env
+.env.*
+!.env.example
 .taste-skill/
+output_*
+*.log

@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "skills": {
+    "agent-browser": {
+      "source": "vercel-labs/agent-browser",
+      "sourceType": "github",
+      "skillPath": "skills/agent-browser/SKILL.md",
+      "computedHash": "80161e6836b3b40f4e83730a290deb40ac14d877d38c97ad5f6d71be37ce74c3"
+    },
+    "cv-creator": {
+      "source": "curiositech/some_claude_skills",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/cv-creator/SKILL.md",
+      "computedHash": "0dfa4f13669a9dc288e2147363fe56ba1bdf72c063327ca17fe2bcc72902d3a4"
+    },
+    "design-taste-frontend": {
+      "source": "leonxlnx/taste-skill",
+      "sourceType": "github",
+      "skillPath": "skills/taste-skill/SKILL.md",
+      "computedHash": "69021ac7e671c0c0d85d65b570003cef360b1c296323fa28c042884e146478ca"
+    },
+    "frontend-design": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "skillPath": "skills/frontend-design/SKILL.md",
+      "computedHash": "89496d5dd00f4810205f351759594fc2742bf8eea85a2f2b2d1de59f4bd91576"
+    },
+    "resume-ats-optimizer": {
+      "source": "paramchoudhary/resumeskills",
+      "sourceType": "github",
+      "skillPath": "skills/resume-ats-optimizer/SKILL.md",
+      "computedHash": "2e3782b6176807b6d714213a14258bd86ca988d442757674eb86181d81465abd"
+    }
+  }
+}

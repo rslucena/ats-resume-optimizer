@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR" class="dark h-full">
+<html lang="pt-BR" class="h-full" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,28 +10,12 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
-      darkMode: 'class',
+      darkMode: ['class', '[data-theme="dark"]'],
       theme: {
         extend: {
           fontFamily: {
             sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
             mono: ['JetBrains Mono', 'monospace'],
-          },
-          colors: {
-            zinc: {
-              950: '#09090b',
-              900: '#121215',
-              850: '#18181b',
-              800: '#27272a',
-              700: '#3f3f46',
-              600: '#52525b',
-              500: '#71717a',
-              400: '#a1a1aa',
-              300: '#d4d4d8',
-              200: '#e4e4e7',
-              100: '#f4f4f5',
-              50: '#fafafa',
-            }
           }
         }
       }
@@ -40,190 +24,430 @@
   <link rel="stylesheet" href="/styles.css">
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
-<body class="bg-zinc-950 text-zinc-100 h-full flex overflow-hidden antialiased selection:bg-zinc-800 selection:text-white">
+<body class="h-full flex overflow-hidden antialiased select-none">
 
-  <!-- COLUNA 1: SIDEBAR ESQUERDA — PIPELINE DE VAGAS (w-72, bg-[#09090b], border-r border-zinc-800/80) -->
-  <aside class="w-72 h-full bg-[#09090b] border-r border-zinc-800/80 flex flex-col shrink-0 overflow-hidden select-none">
+  <!-- COLUNA 1: SIDEBAR ESQUERDA — PIPELINE DE VAGAS (Flexível & Retrátil) -->
+  <aside id="sidebar-left" class="collapsible-sidebar min-w-[260px] max-w-[600px] h-full flex flex-col shrink-0 overflow-hidden" style="width: 360px; background-color: var(--bg-panel);">
     
-    <!-- Topo da Sidebar (h-12) -->
-    <div class="h-12 px-3 border-b border-zinc-800/80 flex items-center justify-between shrink-0">
-      <div class="flex items-center gap-2">
-        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-        <span class="font-medium text-xs text-zinc-200 tracking-tight">ATS Optimizer Studio</span>
+    <!-- Topo da Sidebar (h-14, 56px) -->
+    <div class="h-14 px-4 border-b flex items-center justify-between shrink-0" style="border-color: var(--border-color);">
+      <div class="flex items-center gap-2.5">
+        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+        <span class="font-semibold text-sm tracking-tight" style="color: var(--text-primary);">ATS Optimizer</span>
+        <span id="queue-summary" class="text-xs font-mono text-zinc-500 ml-1.5 font-normal">0 vagas</span>
       </div>
 
-      <div class="flex items-center gap-1">
-        <button id="btn-open-profile-drawer" class="p-1.5 rounded-md hover:bg-zinc-850 text-zinc-400 hover:text-zinc-200 transition-colors" title="Configurar Currículo Base (Master CV)">
-          <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+      <div class="flex items-center gap-1.5">
+        <button id="btn-open-add-job" class="btn-spring nav-icon-btn p-2 rounded-lg" title="Cadastrar Nova Vaga">
+          <i data-lucide="plus" class="w-4 h-4 stroke-[2]"></i>
         </button>
-        <button id="btn-open-add-job" class="p-1.5 rounded-md hover:bg-zinc-850 text-zinc-400 hover:text-zinc-200 transition-colors" title="Cadastrar Nova Vaga">
-          <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+        <button id="btn-toggle-sidebar-left" class="btn-spring nav-icon-btn p-2 rounded-lg" title="Recolher Sidebar Esquerda (Ctrl+B)">
+          <i data-lucide="panel-left-close" class="w-4 h-4"></i>
         </button>
       </div>
     </div>
 
     <!-- Busca e Filtros -->
-    <div class="p-2.5 border-b border-zinc-800/80 space-y-2 shrink-0">
+    <div class="p-3.5 border-b space-y-2.5 shrink-0" style="border-color: var(--border-color);">
       <div class="relative">
-        <i data-lucide="search" class="w-3 h-3 text-zinc-500 absolute left-2.5 top-1/2 -translate-y-1/2"></i>
-        <input type="text" id="search-jobs" placeholder="Buscar vaga ou empresa..." class="ui-input w-full pl-7 text-[11px] h-7">
+        <i data-lucide="search" class="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2"></i>
+        <input type="text" id="search-jobs" placeholder="Buscar cargo ou empresa..." class="ui-input w-full pl-9 h-10 text-sm">
       </div>
 
-      <!-- Filtros em texto sóbrio -->
-      <div class="flex items-center gap-1 text-[11px] font-mono text-zinc-500 pt-0.5">
-        <button class="filter-tab-btn active px-1.5 py-0.5 rounded text-zinc-200 font-medium" data-status="ALL">Todas</button>
-        <button class="filter-tab-btn px-1.5 py-0.5 rounded hover:text-zinc-300" data-status="SAVED">Salvas</button>
-        <button class="filter-tab-btn px-1.5 py-0.5 rounded hover:text-zinc-300" data-status="APPLIED">Aplicadas</button>
-        <button class="filter-tab-btn px-1.5 py-0.5 rounded hover:text-zinc-300" data-status="INTERVIEW">Entrevista</button>
+      <!-- Filtros com espaço horizontal confortável -->
+      <div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs font-mono no-scrollbar">
+        <button class="filter-tab-btn active px-2.5 py-1 rounded-md font-medium" data-status="ALL" style="background-color: var(--bg-subtle); color: var(--text-primary);">Todas</button>
+        <button class="filter-tab-btn px-2 py-1 rounded-md text-zinc-400 hover:text-zinc-200" data-status="SAVED">Salvas</button>
+        <button class="filter-tab-btn px-2 py-1 rounded-md text-zinc-400 hover:text-zinc-200" data-status="APPLIED">Aplicadas</button>
+        <button class="filter-tab-btn px-2 py-1 rounded-md text-zinc-400 hover:text-zinc-200" data-status="INTERVIEW">Entrevista</button>
+        <button class="filter-tab-btn px-2 py-1 rounded-md text-zinc-400 hover:text-zinc-200" data-status="OFFER">Oferta</button>
       </div>
     </div>
 
     <!-- Lista de Vagas -->
-    <div id="jobs-list" class="flex-1 overflow-y-auto divide-y divide-zinc-900/80">
-      <div class="p-6 text-center text-zinc-600 font-mono text-[11px]">
-        Carregando pipeline...
+    <div id="jobs-list" class="flex-1 overflow-y-auto divide-y" style="border-color: var(--border-color);">
+      <div class="p-8 text-center text-zinc-500 font-mono text-xs">
+        Carregando vagas...
       </div>
     </div>
 
-    <!-- Rodapé da Sidebar -->
-    <div class="h-9 px-3 border-t border-zinc-800/80 flex items-center justify-between text-[11px] font-mono text-zinc-500 shrink-0">
-      <span id="queue-summary">0 vagas</span>
-      <span id="sidebar-master-status" class="truncate max-w-[140px] text-zinc-400">Master CV: --</span>
+    <!-- Rodapé da Sidebar: Card Completo e Legível do Master CV -->
+    <div class="p-3.5 border-t shrink-0" style="border-color: var(--border-color); background-color: var(--bg-subtle);">
+      <div class="p-3 rounded-lg border flex flex-col gap-2" style="border-color: var(--border-color); background-color: var(--card-bg);">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold" style="color: var(--text-secondary);">Currículo Base</span>
+          <span id="sidebar-master-dot" class="w-2 h-2 rounded-full bg-emerald-500"></span>
+        </div>
+        <div class="text-sm font-semibold truncate" id="sidebar-master-name" style="color: var(--text-primary);">
+          Carregando...
+        </div>
+        <div class="flex items-center justify-between pt-1 border-t text-xs" style="border-color: var(--border-color);">
+          <span id="sidebar-master-status-text" class="text-xs text-zinc-400">Pronto para matching</span>
+          <button id="btn-sidebar-edit-master" class="text-xs font-medium text-emerald-400 hover:underline">
+            Editar
+          </button>
+        </div>
+      </div>
     </div>
 
   </aside>
 
-  <!-- COLUNA 2: CENTRO — O DOCUMENTO & DIFF WORKBENCH (flex-1, bg-[#0e0e10]) -->
-  <main class="flex-1 h-full bg-[#0e0e10] flex flex-col overflow-hidden relative">
+  <!-- COLUNA RECOLHIDA ESQUERDA (DOCK NÃO-FLUTUANTE): Texto vertical + Botão expandir no topo -->
+  <aside id="sidebar-left-collapsed" class="sidebar-collapsed-strip hidden h-full flex flex-col items-center shrink-0 border-r py-3 px-1 select-none cursor-pointer" style="width: 52px;" title="Clique para expandir Pipeline de Vagas (Ctrl+B)">
+    <!-- Ícone de expandir no topo -->
+    <button id="btn-reopen-sidebar-left" class="btn-spring collapsed-btn p-2 rounded-lg mb-3" title="Expandir Pipeline de Vagas (Ctrl+B)">
+      <i data-lucide="panel-left-open" class="w-4 h-4"></i>
+    </button>
+    <!-- Texto vertical com o título da sessão -->
+    <div class="flex-1 w-full flex items-center justify-center py-4">
+      <span class="collapsed-title text-xs font-medium whitespace-nowrap writing-mode-vertical">
+        Pipeline de Vagas
+      </span>
+    </div>
+  </aside>
+
+  <!-- DIVISÓRIA FLEXÍVEL 1: Sidebar Esquerda / Centro -->
+  <div id="resizer-left" class="resizer-divider" title="Arraste para redimensionar (Duplo clique para 360px)"></div>
+
+  <!-- COLUNA 2: CENTRO — O DOCUMENTO & DIFF WORKBENCH (flex-1) -->
+  <main class="flex-1 h-full flex flex-col overflow-hidden relative" style="background-color: var(--bg-canvas);">
     
-    <!-- Top 2px Progress Bar (Loading de Otimização sutil) -->
-    <div class="h-[2px] w-full bg-transparent overflow-hidden shrink-0 z-20">
+    <!-- Top Header (Persistent) -->
+    <header id="main-header" class="h-14 px-4 sm:px-6 border-b flex items-center justify-between shrink-0 select-none" style="border-color: var(--border-color); background-color: var(--bg-panel);">
+      
+      <!-- Breadcrumb: Studio Brand & Active Job Navigation -->
+      <div class="flex items-center gap-2 text-sm font-semibold min-w-0 flex-1 mr-3 overflow-hidden">
+        <!-- Brand / Workspace -->
+        <div class="flex items-center gap-1.5 shrink-0">
+          <i data-lucide="layers" class="w-4 h-4 text-emerald-500 shrink-0"></i>
+          <h1 id="app-workspace-title" class="text-sm font-bold whitespace-nowrap shrink-0 inline m-0" style="color: var(--text-primary);">ATS Studio</h1>
+        </div>
+        <span class="text-zinc-500 shrink-0 select-none">/</span>
+
+        <!-- Empty state breadcrumb -->
+        <div id="header-breadcrumb-empty" class="inline-flex items-center text-sm font-medium shrink-0 truncate" style="color: var(--text-secondary);">
+          <span>Pipeline de Candidaturas</span>
+        </div>
+
+        <!-- Active job breadcrumb -->
+        <div id="header-breadcrumb-active" class="hidden items-center gap-2 min-w-0 flex-1 overflow-hidden">
+          <span id="job-header-company" class="text-xs sm:text-sm font-medium truncate shrink-0 max-w-[120px]" style="color: var(--text-secondary);" title="">Empresa</span>
+          <span class="text-zinc-500 shrink-0 select-none">/</span>
+          <span id="job-header-title" class="text-sm font-semibold truncate min-w-0 flex-1" style="color: var(--text-primary);" title="">Título da Vaga</span>
+          
+          <!-- Status pill (shrink-0 prevents wrapping) -->
+          <div class="flex items-center shrink-0 ml-1">
+            <div class="flex items-center rounded-md border px-2 py-0.5 text-xs font-mono font-medium transition-colors" style="border-color: var(--border-color); background-color: var(--bg-subtle);">
+              <select id="job-header-status-select" class="bg-transparent text-xs font-mono border-0 focus:outline-none cursor-pointer p-0 font-medium whitespace-nowrap" style="color: var(--text-secondary);" title="Status da candidatura">
+                <option value="SAVED">Salva</option>
+                <option value="APPLIED">Aplicada</option>
+                <option value="INTERVIEW">Entrevista</option>
+                <option value="OFFER">Oferta</option>
+                <option value="REJECTED">Rejeitada</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Header: Theme Toggle & Actions -->
+      <div class="flex items-center gap-2.5 shrink-0">
+        
+        <!-- Botão Único de Alternância de Tema (Somente Ícone) -->
+        <button id="theme-toggle-btn" class="btn-spring h-9 w-9 rounded-lg border flex items-center justify-center transition-colors shrink-0" style="border-color: var(--border-color); background-color: var(--bg-subtle); color: var(--text-secondary);" title="Alternar tema (Claro / Escuro)">
+          <i data-lucide="sun" id="theme-toggle-icon" class="w-4 h-4"></i>
+        </button>
+
+        <!-- Job Actions (Visible when job is active) -->
+        <div id="header-job-actions" class="hidden items-center gap-2 shrink-0">
+          <div class="h-4 w-[1px] mx-0.5 shrink-0" style="background-color: var(--border-color);"></div>
+
+          <!-- Botão Primário Unificado com Dropdown de Seleção de Motor (Gemini / ATS Local) -->
+          <div class="relative inline-flex items-center shrink-0" id="tailor-dropdown-container">
+            <div class="inline-flex items-center rounded-lg border overflow-hidden shrink-0" style="border-color: var(--border-color); background-color: transparent; color: var(--text-primary);">
+              
+              <!-- Ação Principal de Otimizar -->
+              <button id="btn-run-tailor" class="btn-spring h-9 px-3 text-xs sm:text-sm font-semibold flex items-center gap-2 cursor-pointer transition-colors whitespace-nowrap hover:bg-zinc-500/10" style="color: var(--text-primary); background: transparent;" title="Executar otimização do currículo">
+                <i data-lucide="sparkles" id="tailor-btn-icon" class="w-3.5 h-3.5 fill-amber-400 text-amber-400 shrink-0"></i>
+                <span id="tailor-btn-label" class="whitespace-nowrap">Otimizar com IA</span>
+              </button>
+
+              <!-- Divisor Vertical Fino -->
+              <div class="w-[1px] h-4 shrink-0" style="background-color: var(--border-color);"></div>
+
+              <!-- Botão Seletor de Modo (Chevron) -->
+              <button id="btn-tailor-mode-menu" class="btn-spring h-9 px-2 flex items-center justify-center cursor-pointer transition-colors hover:bg-zinc-500/10 shrink-0" style="color: var(--text-secondary); background: transparent;" title="Alterar motor de otimização (Gemini IA ou Motor Local)">
+                <i data-lucide="chevron-down" id="tailor-mode-chevron-icon" class="w-3.5 h-3.5 transition-transform duration-200"></i>
+              </button>
+            </div>
+
+            <!-- Submenu Dropdown de Motores -->
+            <div id="tailor-mode-dropdown-menu" class="hidden absolute right-0 top-full mt-2 w-72 rounded-xl border p-1.5 shadow-2xl z-50 fade-slide-up" style="background-color: var(--bg-panel); border-color: var(--border-color);">
+              <div class="px-2.5 py-1.5 text-[11px] font-mono font-medium border-b mb-1 flex items-center justify-between" style="border-color: var(--border-color); color: var(--text-secondary);">
+                <span>Motor de Otimização</span>
+              </div>
+
+              <!-- 1. Gemini 1.5 Flash (IA) -->
+              <button class="tailor-engine-option-btn w-full text-left p-2 rounded-lg flex items-start gap-2.5 transition-colors group cursor-pointer" data-engine="gemini">
+                <div class="p-1.5 rounded-md bg-amber-500/10 text-amber-400 mt-0.5 border border-amber-500/25 shrink-0">
+                  <i data-lucide="sparkles" class="w-4 h-4 fill-amber-400 text-amber-400"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs font-semibold" style="color: var(--text-primary);">Gemini 1.5 Flash (IA)</span>
+                    <i data-lucide="check" id="check-engine-gemini" class="w-3.5 h-3.5 text-emerald-500 font-bold"></i>
+                  </div>
+                  <p class="text-[11px] text-zinc-400 leading-tight mt-0.5">Reescrita contextual, linguagem fluida e natural</p>
+                </div>
+              </button>
+
+              <!-- 2. Motor ATS Local (Determinístico 7 camadas) -->
+              <button class="tailor-engine-option-btn w-full text-left p-2 rounded-lg flex items-start gap-2.5 transition-colors group cursor-pointer" data-engine="local">
+                <div class="p-1.5 rounded-md bg-blue-500/10 text-blue-400 mt-0.5 border border-blue-500/25 shrink-0">
+                  <i data-lucide="cpu" class="w-4 h-4 text-blue-400"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs font-semibold" style="color: var(--text-primary);">Motor ATS Local</span>
+                    <i data-lucide="check" id="check-engine-local" class="w-3.5 h-3.5 text-emerald-500 font-bold hidden"></i>
+                  </div>
+                  <p class="text-[11px] text-zinc-400 leading-tight mt-0.5">Algoritmo matemático 7 camadas (100% offline)</p>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <!-- Download Dropdown Menu -->
+          <div class="relative shrink-0" id="download-dropdown-container">
+            <button id="btn-download-menu" class="btn-spring h-9 px-3 rounded-lg border text-xs font-medium flex items-center gap-1.5 cursor-pointer transition-colors whitespace-nowrap" style="border-color: var(--border-color); background-color: var(--btn-secondary-bg); color: var(--btn-secondary-text);" title="Exportar Currículo em Múltiplos Formatos">
+              <i data-lucide="download" class="w-3.5 h-3.5 shrink-0"></i>
+              <span class="whitespace-nowrap">Download</span>
+              <i data-lucide="chevron-down" id="download-chevron-icon" class="w-3 h-3 text-zinc-400 transition-transform duration-200 shrink-0"></i>
+            </button>
+
+            <!-- Submenu Dropdown Panel -->
+            <div id="download-dropdown-menu" class="hidden absolute right-0 mt-2 w-72 rounded-xl border p-1.5 shadow-2xl z-50 fade-slide-up" style="background-color: var(--bg-panel); border-color: var(--border-color);">
+              <div class="px-2.5 py-1.5 text-[11px] font-mono text-zinc-500 font-medium border-b mb-1.5 flex items-center justify-between" style="border-color: var(--border-color);">
+                <span>Formatos de Exportação</span>
+                <span class="text-[11px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 font-normal">5 Formatos</span>
+              </div>
+
+              <!-- Acesso Rápido: Copiar Texto Puro (Clipboard) -->
+              <button id="btn-copy-plain-text" class="w-full text-left p-2 rounded-lg flex items-start gap-2.5 transition-all group cursor-pointer hover:bg-emerald-500/10 border border-emerald-500/25 mb-1.5" style="background-color: rgba(16, 185, 129, 0.05);" title="Copiar currículo formatado para colar em formulários ATS (Gupy, Kenoby)">
+                <div id="copy-icon-box" class="p-1.5 rounded-md bg-emerald-500/20 text-emerald-400 mt-0.5 border border-emerald-500/30 shrink-0 transition-colors">
+                  <i data-lucide="clipboard-copy" id="copy-quick-icon" class="w-4 h-4"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center justify-between">
+                    <span id="copy-quick-label" class="text-xs font-semibold text-emerald-400">📋 Copiar Texto Puro (Clipboard)</span>
+                    <span id="copy-quick-badge" class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-medium border border-emerald-500/30">
+                      Rápido
+                    </span>
+                  </div>
+                  <p id="copy-quick-desc" class="text-[11px] text-zinc-400 leading-tight mt-0.5">Texto limpo para colar em formulários e Gupy</p>
+                </div>
+              </button>
+
+              <div class="my-1 border-t" style="border-color: var(--border-color);"></div>
+
+              <!-- 1. DOCX (Word ⭐ ATS Recomendado) - PRIMEIRO! -->
+              <button class="download-option-btn w-full text-left p-2 rounded-lg flex items-start gap-2.5 transition-colors group cursor-pointer" data-format="docx">
+                <div class="p-1.5 rounded-md bg-amber-500/10 text-amber-400 mt-0.5 border border-amber-500/25 shrink-0">
+                  <i data-lucide="star" class="w-4 h-4 fill-amber-400 text-amber-400"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs font-semibold" style="color: var(--text-primary);">DOCX (Word)</span>
+                    <span class="text-[11px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-medium border border-amber-500/30 flex items-center gap-1">
+                      <i data-lucide="award" class="w-3 h-3"></i><span>ATS</span>
+                    </span>
+                  </div>
+                  <p class="text-[11px] text-zinc-400 leading-tight mt-0.5">Recomendado para robôs de triagem</p>
+                </div>
+              </button>
+
+              <!-- 2. PDF (Linear ATS XMP) - SEGUNDO! -->
+              <button class="download-option-btn w-full text-left p-2 rounded-lg flex items-start gap-2.5 transition-colors group cursor-pointer" data-format="pdf">
+                <div class="p-1.5 rounded-md bg-rose-500/10 text-rose-400 mt-0.5 border border-rose-500/25 shrink-0">
+                  <i data-lucide="file-text" class="w-4 h-4"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs font-semibold" style="color: var(--text-primary);">PDF (Linear ATS)</span>
+                    <span class="text-[11px] font-mono px-1.5 py-0.5 rounded bg-zinc-800/80 text-zinc-400 border border-zinc-700/50">
+                      XMP
+                    </span>
+                  </div>
+                  <p class="text-[11px] text-zinc-400 leading-tight mt-0.5">Metadados XMP incorporados</p>
+                </div>
+              </button>
+
+              <div class="my-1 border-t" style="border-color: var(--border-color);"></div>
+
+              <!-- 3. TXT (Texto Puro / Raw ATS) -->
+              <button class="download-option-btn w-full text-left p-2 rounded-lg flex items-start gap-2.5 transition-colors group cursor-pointer" data-format="txt">
+                <div class="p-1.5 rounded-md bg-blue-500/10 text-blue-400 mt-0.5 border border-blue-500/25 shrink-0">
+                  <i data-lucide="align-left" class="w-4 h-4"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs font-semibold" style="color: var(--text-primary);">Texto Puro (.txt)</span>
+                    <span class="text-[11px] font-mono px-1.5 py-0.5 rounded bg-zinc-800/80 text-zinc-400 border border-zinc-700/50">
+                      UTF-8
+                    </span>
+                  </div>
+                  <p class="text-[11px] text-zinc-400 leading-tight mt-0.5">Para colar direto em formulários</p>
+                </div>
+              </button>
+
+              <!-- 4. Markdown (.md) -->
+              <button class="download-option-btn w-full text-left p-2 rounded-lg flex items-start gap-2.5 transition-colors group cursor-pointer" data-format="md">
+                <div class="p-1.5 rounded-md bg-blue-500/10 text-blue-400 mt-0.5 border border-blue-500/25 shrink-0">
+                  <i data-lucide="file-code" class="w-4 h-4"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs font-semibold" style="color: var(--text-primary);">Markdown (.md)</span>
+                    <span class="text-[11px] font-mono px-1.5 py-0.5 rounded bg-zinc-800/80 text-zinc-400 border border-zinc-700/50">
+                      GitHub
+                    </span>
+                  </div>
+                  <p class="text-[11px] text-zinc-400 leading-tight mt-0.5">Para repositórios e documentações</p>
+                </div>
+              </button>
+
+              <!-- 5. JSON Resume (.json) -->
+              <button class="download-option-btn w-full text-left p-2 rounded-lg flex items-start gap-2.5 transition-colors group cursor-pointer" data-format="json">
+                <div class="p-1.5 rounded-md bg-emerald-500/10 text-emerald-400 mt-0.5 border border-emerald-500/25 shrink-0">
+                  <i data-lucide="braces" class="w-4 h-4"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs font-semibold" style="color: var(--text-primary);">JSON Resume (.json)</span>
+                    <span class="text-[11px] font-mono px-1.5 py-0.5 rounded bg-zinc-800/80 text-zinc-400 border border-zinc-700/50">
+                      Schema
+                    </span>
+                  </div>
+                  <p class="text-[11px] text-zinc-400 leading-tight mt-0.5">Padrão aberto universal</p>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Top Progress Bar (Animação de Otimização sutil) -->
+    <div class="h-[2.5px] w-full bg-transparent overflow-hidden shrink-0 z-20">
       <div id="top-progress-bar" class="h-full bg-emerald-500 w-0 opacity-0"></div>
     </div>
 
-    <!-- Empty State -->
+    <!-- Empty State Interativo (Quick Start) -->
     <div id="workbench-empty" class="flex-1 flex flex-col items-center justify-center p-8 text-center select-none">
-      <div class="w-10 h-10 rounded-md border border-zinc-800 bg-zinc-900 flex items-center justify-center text-zinc-500 mb-3">
-        <i data-lucide="layers" class="w-4 h-4 stroke-[1.5]"></i>
+      <div class="max-w-md w-full p-8 rounded-xl border text-center shadow-lg space-y-5" style="border-color: var(--border-color); background-color: var(--bg-panel);">
+        <div class="w-12 h-12 rounded-xl border flex items-center justify-center mx-auto" style="border-color: var(--border-color); background-color: var(--bg-subtle); color: var(--text-primary);">
+          <i data-lucide="layers" class="w-6 h-6 text-emerald-400 stroke-[1.5]"></i>
+        </div>
+        <div>
+          <h2 class="text-base font-semibold" style="color: var(--text-primary);">ATS Resume Optimizer & Job Tracker</h2>
+          <p class="text-sm text-zinc-400 mt-1.5 leading-relaxed">
+            Selecione uma vaga no pipeline à esquerda para inspecionar os scores matemáticos de TF-IDF, comparar diffs e gerar PDFs/DOCX otimizados.
+          </p>
+        </div>
+
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-2.5 pt-2">
+          <button id="btn-empty-add-job" class="btn-spring w-full sm:w-auto px-4 py-2.5 rounded-lg text-sm font-semibold flex items-center justify-center gap-2" style="background-color: var(--btn-primary-bg); color: var(--btn-primary-text);">
+            <i data-lucide="plus" class="w-4 h-4 stroke-[2.5]"></i>
+            <span>Cadastrar Nova Vaga</span>
+          </button>
+          <button id="btn-empty-config-master" class="btn-spring w-full sm:w-auto px-4 py-2.5 rounded-lg border text-sm font-medium flex items-center justify-center gap-2" style="border-color: var(--border-color); background-color: var(--btn-secondary-bg); color: var(--btn-secondary-text);">
+            <i data-lucide="file-text" class="w-4 h-4 text-zinc-400"></i>
+            <span>Configurar Master CV</span>
+          </button>
+        </div>
       </div>
-      <h3 class="text-xs font-medium text-zinc-300">Nenhuma vaga selecionada</h3>
-      <p class="text-[11px] text-zinc-500 max-w-xs mt-1">Selecione uma vaga no pipeline à esquerda ou cadastre uma nova para auditar e otimizar.</p>
     </div>
 
     <!-- Active Job Area -->
     <div id="workbench-active" class="flex-1 flex flex-col overflow-hidden hidden">
       
-      <!-- Header da Vaga (h-12, border-b border-zinc-800/80, px-6) -->
-      <div class="h-12 px-6 border-b border-zinc-800/80 flex items-center justify-between shrink-0 bg-[#0e0e10]">
-        
-        <!-- Breadcrumb & Status -->
-        <div class="flex items-center gap-2 min-w-0">
-          <span id="job-header-company" class="text-xs text-zinc-500 font-medium">Empresa</span>
-          <span class="text-zinc-700">/</span>
-          <span id="job-header-title" class="text-xs font-semibold text-zinc-100 truncate">Título da Vaga</span>
-          
-          <select id="job-header-status-select" class="ml-2 bg-transparent text-[11px] font-mono text-zinc-400 border-0 focus:outline-none cursor-pointer hover:text-zinc-200">
-            <option value="SAVED" class="bg-zinc-900">Salva</option>
-            <option value="APPLIED" class="bg-zinc-900">Aplicada</option>
-            <option value="INTERVIEW" class="bg-zinc-900">Entrevista</option>
-            <option value="OFFER" class="bg-zinc-900">Oferta</option>
-            <option value="REJECTED" class="bg-zinc-900">Rejeitada</option>
-          </select>
-        </div>
-
-        <!-- Botões de Ação Sóbrios -->
-        <div class="flex items-center gap-2">
-          <button id="btn-run-tailor" class="px-3 py-1.5 rounded-md bg-[#ededef] hover:bg-white text-[#09090b] text-xs font-medium shadow-sm transition-all flex items-center gap-1.5">
-            <i data-lucide="zap" class="w-3.5 h-3.5 fill-[#09090b] stroke-none"></i>
-            <span>Otimizar Currículo</span>
-          </button>
-
-          <div class="h-3 w-[1px] bg-zinc-800 mx-1"></div>
-
-          <button id="btn-download-pdf" class="px-2.5 py-1.5 rounded-md border border-zinc-800 hover:border-zinc-700 bg-zinc-900 hover:bg-zinc-850 text-xs text-zinc-300 hover:text-white flex items-center gap-1.5 transition-colors">
-            <i data-lucide="download" class="w-3 h-3 text-zinc-400"></i>
-            <span>Exportar PDF</span>
-          </button>
-
-          <button id="btn-download-docx" class="px-2.5 py-1.5 rounded-md border border-zinc-800 hover:border-zinc-700 bg-zinc-900 hover:bg-zinc-850 text-xs text-zinc-300 hover:text-white flex items-center gap-1.5 transition-colors">
-            <i data-lucide="download" class="w-3 h-3 text-zinc-400"></i>
-            <span>Exportar DOCX</span>
-          </button>
-        </div>
-
-      </div>
-
-      <!-- Sub-header de Abas (h-10, border-b border-zinc-800/80, px-6) -->
-      <div class="h-10 px-6 border-b border-zinc-800/80 flex items-center justify-between shrink-0 bg-[#0e0e10]">
-        <div class="flex items-center gap-6 h-full">
-          <button class="nav-tab-btn nav-tab-active h-full flex items-center text-xs font-medium text-zinc-100 transition-colors" data-tab="tab-diff">
-            Editor Comparativo
-          </button>
-          <button class="nav-tab-btn h-full flex items-center text-xs font-medium text-zinc-400 hover:text-zinc-200 transition-colors" data-tab="tab-preview">
-            Folha A4 (Preview)
-          </button>
-          <button class="nav-tab-btn h-full flex items-center text-xs font-medium text-zinc-400 hover:text-zinc-200 transition-colors" data-tab="tab-jd">
+      <!-- Sub-header de Abas (h-12, 48px) -->
+      <div class="h-12 px-6 border-b flex items-center justify-between shrink-0" style="border-color: var(--border-color); background-color: var(--bg-panel);">
+        <div class="flex items-center gap-8 h-full">
+          <button class="nav-tab-btn nav-tab-active h-full flex items-center text-sm font-medium transition-colors" data-tab="tab-jd">
             Descrição da Vaga
           </button>
+          <button class="nav-tab-btn h-full flex items-center text-sm font-medium text-zinc-400 hover:text-zinc-200 transition-colors" data-tab="tab-diff">
+            Editor Comparativo
+          </button>
+          <button class="nav-tab-btn h-full flex items-center text-sm font-medium text-zinc-400 hover:text-zinc-200 transition-colors" data-tab="tab-preview">
+            Folha A4 (Preview)
+          </button>
+          <button class="nav-tab-btn h-full flex items-center text-sm font-medium text-zinc-400 hover:text-zinc-200 transition-colors" data-tab="tab-knockout">
+            Perguntas Eliminatórias
+          </button>
         </div>
 
-        <div id="tab-diff-actions" class="flex items-center gap-2">
-          <button id="btn-recalculate" class="text-[11px] font-mono text-zinc-400 hover:text-zinc-200 flex items-center gap-1 transition-colors">
-            <i data-lucide="refresh-cw" class="w-3 h-3"></i>
+        <div id="tab-diff-actions" class="flex items-center gap-2 hidden">
+          <button id="btn-recalculate" class="btn-spring px-3 py-1.5 rounded-md border text-xs font-mono flex items-center gap-1.5 transition-colors" style="border-color: var(--border-color); background-color: var(--bg-subtle); color: var(--text-secondary);">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-emerald-500"></i>
             <span>Recalcular Score</span>
           </button>
         </div>
       </div>
 
       <!-- Corpo Central: Abas de Trabalho -->
-      <div class="flex-1 overflow-y-auto p-6">
+      <div class="flex-1 overflow-y-auto p-6" id="center-workbench-scroll">
         
-        <!-- Aba 1: Editor Comparativo (Duas folhas lado a lado) -->
-        <div id="tab-diff" class="tab-pane-content grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Aba 2: Editor Comparativo (Duas folhas com divisória flexível) -->
+        <div id="tab-diff" class="tab-pane-content fade-slide-up hidden flex flex-col lg:flex-row h-full gap-0 relative">
           
           <!-- Folha Esquerda: Master CV Original -->
-          <div class="space-y-4">
-            <div class="flex items-center justify-between border-b border-zinc-800/80 pb-2">
-              <span class="text-[11px] font-mono text-zinc-500 uppercase tracking-wider">Currículo Base (Original)</span>
-              <span class="text-[10px] font-mono text-zinc-600">Somente Leitura</span>
+          <div id="diff-pane-left" class="space-y-5 flex-1 min-w-[280px] lg:pr-5 overflow-y-auto" style="flex: 1 1 50%;">
+            <div class="flex items-center justify-between border-b pb-2.5" style="border-color: var(--border-color);">
+              <span class="text-xs font-semibold" style="color: var(--text-secondary);">Currículo Base (Original)</span>
+              <span class="text-xs font-mono text-zinc-500">Somente Leitura</span>
             </div>
 
-            <div id="diff-master-content" class="space-y-4 text-xs text-zinc-400 leading-relaxed font-sans">
+            <div id="diff-master-content" class="space-y-5 text-sm leading-relaxed" style="color: var(--text-secondary);">
               <!-- Rendered via app.js -->
             </div>
           </div>
 
+          <!-- DIVISÓRIA FLEXÍVEL 3: Diff Splitter -->
+          <div id="resizer-diff" class="resizer-divider hidden lg:flex mx-1" title="Arraste para redimensionar (Duplo clique para 50/50)"></div>
+
           <!-- Folha Direita: Tailored CV Otimizado (Live Editable) -->
-          <div class="space-y-4">
-            <div class="flex items-center justify-between border-b border-zinc-800/80 pb-2">
-              <span class="text-[11px] font-mono text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
-                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                Currículo Otimizado
+          <div id="diff-pane-right" class="space-y-5 select-text flex-1 min-w-[320px] lg:pl-5 overflow-y-auto" style="flex: 1 1 50%;">
+            <div class="flex items-center justify-between border-b pb-2.5" style="border-color: var(--border-color);">
+              <span class="text-xs font-semibold text-emerald-500 flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                Currículo Otimizado (7 Camadas ATS)
               </span>
-              <span class="text-[10px] font-mono text-zinc-500">Edição direta</span>
+              <span class="text-xs font-mono text-zinc-500">Edição direta ativa</span>
             </div>
 
-            <div class="space-y-4 text-xs text-zinc-100">
+            <div class="space-y-5 text-sm">
               <div>
-                <label class="block text-[10px] font-mono text-zinc-500 uppercase mb-1">Título do Cargo</label>
-                <input type="text" id="edit-tailored-title" class="ui-input w-full font-mono text-xs text-zinc-100">
+                <label class="block text-xs font-medium mb-1.5" style="color: var(--text-secondary);">Título do Cargo</label>
+                <input type="text" id="edit-tailored-title" class="ui-input w-full font-mono text-sm">
               </div>
 
               <div>
-                <label class="block text-[10px] font-mono text-zinc-500 uppercase mb-1">Resumo Profissional (2x-3x TF-IDF & Boundary Bleed)</label>
-                <textarea id="edit-tailored-summary" rows="5" class="ui-input w-full font-sans text-xs leading-relaxed text-zinc-100"></textarea>
-                <!-- Dotted preview -->
-                <div id="summary-dotted-preview" class="mt-1.5 p-2 rounded bg-zinc-900/60 border border-zinc-800/80 text-[11px] leading-relaxed text-zinc-300 font-sans"></div>
+                <label class="block text-xs font-medium mb-1.5" style="color: var(--text-secondary);">Resumo Profissional (2x-3x TF-IDF & Linha Bleed)</label>
+                <textarea id="edit-tailored-summary" rows="5" class="ui-input w-full font-sans text-sm leading-relaxed"></textarea>
+                <!-- Dotted preview com realce suave -->
+                <div id="summary-dotted-preview" class="mt-2 p-3 rounded-lg border text-sm leading-relaxed" style="border-color: var(--border-color); background-color: var(--bg-subtle);"></div>
               </div>
 
               <div>
-                <label class="block text-[10px] font-mono text-zinc-500 uppercase mb-1">Habilidades (Siglas + Extenso)</label>
-                <input type="text" id="edit-tailored-skills" class="ui-input w-full font-mono text-xs text-zinc-100">
+                <label class="block text-xs font-medium mb-1.5" style="color: var(--text-secondary);">Habilidades (Siglas + Extenso)</label>
+                <input type="text" id="edit-tailored-skills" class="ui-input w-full font-mono text-sm">
               </div>
 
               <div>
-                <label class="block text-[10px] font-mono text-zinc-500 uppercase mb-1">Experiências (Regra da 1ª Linha)</label>
-                <div id="edit-tailored-experiences" class="space-y-3">
+                <label class="block text-xs font-mono uppercase text-zinc-400 font-semibold mb-1.5">Experiências (Regra da 1ª Linha)</label>
+                <div id="edit-tailored-experiences" class="space-y-3.5">
                   <!-- Dynamic experiences inputs -->
                 </div>
               </div>
@@ -233,33 +457,89 @@
         </div>
 
         <!-- Aba 2: Folha A4 (Preview) -->
-        <div id="tab-preview" class="tab-pane-content hidden">
+        <div id="tab-preview" class="tab-pane-content fade-slide-up hidden">
           <div class="a4-document" id="a4-preview-content">
             <!-- A4 Preview content -->
           </div>
         </div>
 
-        <!-- Aba 3: Descrição da Vaga -->
-        <div id="tab-jd" class="tab-pane-content hidden max-w-3xl space-y-4">
+        <!-- Aba 1: Descrição da Vaga -->
+        <div id="tab-jd" class="tab-pane-content fade-slide-up max-w-4xl space-y-5">
           <div class="flex items-center justify-between">
-            <span class="text-[11px] font-mono uppercase text-zinc-500">Requisitos Originais da Vaga</span>
-            <span id="jd-word-count" class="text-[11px] font-mono text-zinc-500">0 palavras</span>
+            <span class="text-xs font-mono uppercase text-zinc-400 font-semibold">Requisitos Originais da Vaga</span>
+            <span id="jd-word-count" class="text-xs font-mono text-zinc-500">0 palavras</span>
           </div>
 
-          <div class="flex gap-2">
-            <input type="url" id="jd-url-input" placeholder="https://..." class="ui-input flex-1 font-mono text-xs">
-            <button type="button" id="btn-re-extract-url" class="px-3 py-1.5 rounded-md border border-zinc-800 bg-zinc-900 hover:bg-zinc-850 text-xs font-mono text-zinc-300">
-              Re-extrair
+          <div class="flex gap-2.5">
+            <input type="url" id="jd-url-input" placeholder="https://gupy.io/... ou https://greenhouse.io/..." class="ui-input flex-1 font-mono text-sm">
+            <button type="button" id="btn-re-extract-url" class="btn-spring px-4 py-2 rounded-lg border text-xs font-mono font-medium" style="border-color: var(--border-color); background-color: var(--bg-subtle); color: var(--text-primary);">
+              Re-extrair URL
             </button>
           </div>
 
           <textarea id="jd-raw-text" rows="16" class="ui-input w-full font-mono text-xs leading-relaxed"></textarea>
 
-          <div class="flex justify-end">
-            <button id="btn-save-jd" class="px-3 py-1.5 rounded-md bg-zinc-100 hover:bg-white text-zinc-950 font-medium text-xs">
-              Salvar Alterações
+          <div class="flex items-center justify-between pt-2 border-t" style="border-color: var(--border-color);">
+            <button type="button" id="btn-tab-delete-job" class="btn-spring px-3.5 py-2 rounded-lg border text-xs font-medium text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 flex items-center gap-1.5 transition-colors" style="border-color: rgba(244, 63, 94, 0.25);">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              <span>Excluir Vaga</span>
+            </button>
+
+            <button id="btn-save-jd" class="btn-spring px-5 py-2.5 rounded-lg text-sm font-semibold" style="background-color: var(--btn-primary-bg); color: var(--btn-primary-text);">
+              Salvar Alterações da Vaga
             </button>
           </div>
+        </div>
+
+        <!-- Aba 4: Perguntas Eliminatórias (Knockout Questions) -->
+        <div id="tab-knockout" class="tab-pane-content hidden space-y-6 max-w-4xl mx-auto">
+          
+          <!-- Form: Adicionar Pergunta -->
+          <div class="p-5 rounded-xl border space-y-3" style="border-color: var(--border-color); background-color: var(--bg-panel);">
+            <label class="text-xs font-mono uppercase font-semibold flex items-center justify-between" style="color: var(--text-secondary);">
+              <span>Nova Pergunta do Formulário</span>
+              <span class="text-[11px] font-normal" style="color: var(--text-muted);">Cole a pergunta exatamente como exigida na candidatura</span>
+            </label>
+            <textarea id="knockout-new-question-input" rows="2" class="ui-input w-full font-sans text-xs leading-relaxed" placeholder="Ex: Qual sua experiência prática com microsserviços em Node.js e TypeScript? Descreva um desafio técnico recente..."></textarea>
+            
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-1">
+              <!-- Sugestões Rápidas de Perguntas Frequentes -->
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-[11px] font-mono" style="color: var(--text-muted);">Exemplos rápidos:</span>
+                <button type="button" class="kq-quick-pill text-[11px] font-mono px-2.5 py-1 rounded-md border transition-colors cursor-pointer" style="border-color: var(--border-color); background-color: var(--bg-subtle); color: var(--text-secondary);" data-template="Qual sua experiência prática com a stack exigida para esta posição?">
+                  Stack Prática
+                </button>
+                <button type="button" class="kq-quick-pill text-[11px] font-mono px-2.5 py-1 rounded-md border transition-colors cursor-pointer" style="border-color: var(--border-color); background-color: var(--bg-subtle); color: var(--text-secondary);" data-template="Conte sobre um desafio técnico complexo que você solucionou em produção.">
+                  Desafio Técnico
+                </button>
+                <button type="button" class="kq-quick-pill text-[11px] font-mono px-2.5 py-1 rounded-md border transition-colors cursor-pointer" style="border-color: var(--border-color); background-color: var(--bg-subtle); color: var(--text-secondary);" data-template="Qual sua pretensão salarial e disponibilidade para início?">
+                  Salário & Início
+                </button>
+              </div>
+
+              <button id="btn-add-knockout" class="btn-spring h-10 px-4 rounded-lg text-xs font-semibold flex items-center gap-2 shrink-0 w-full sm:w-auto justify-center" style="background-color: var(--btn-primary-bg); color: var(--btn-primary-text);">
+                <i data-lucide="plus" class="w-4 h-4 stroke-[2.5]"></i>
+                <span>Adicionar Pergunta</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Empty State da Lista -->
+          <div id="knockout-empty-state" class="p-8 rounded-xl border text-center space-y-3" style="border-color: var(--border-color); background-color: var(--bg-panel);">
+            <div class="w-10 h-10 rounded-lg border flex items-center justify-center mx-auto text-zinc-500" style="border-color: var(--border-color); background-color: var(--bg-subtle);">
+              <i data-lucide="help-circle" class="w-5 h-5 text-zinc-400"></i>
+            </div>
+            <div>
+              <p class="text-sm font-medium" style="color: var(--text-primary);">Nenhuma pergunta cadastrada para esta vaga</p>
+              <p class="text-xs text-zinc-400 mt-1">Cole perguntas da Gupy/Greenhouse acima. A resposta inteligente é gerada automaticamente ao adicionar.</p>
+            </div>
+          </div>
+
+          <!-- Lista de Perguntas Eliminatórias -->
+          <div id="knockout-questions-list" class="space-y-4">
+            <!-- Cards renderizados dinamicamente via app.js -->
+          </div>
+
         </div>
 
       </div>
@@ -268,87 +548,171 @@
 
   </main>
 
-  <!-- COLUNA 3: DIREITA — PAINEL INSPETOR DE TELEMETRIA ATS (w-80, bg-[#09090b], border-l border-zinc-800/80) -->
-  <aside class="w-80 h-full bg-[#09090b] border-l border-zinc-800/80 flex flex-col shrink-0 overflow-y-auto select-none">
+  <!-- DIVISÓRIA FLEXÍVEL 2: Centro / Inspetor ATS -->
+  <div id="resizer-right" class="resizer-divider" title="Arraste para redimensionar (Duplo clique para 400px)"></div>
+
+  <!-- COLUNA RECOLHIDA DIREITA (DOCK NÃO-FLUTUANTE): Texto vertical + Botão expandir no topo -->
+  <aside id="sidebar-right-collapsed" class="sidebar-collapsed-strip hidden h-full flex flex-col items-center shrink-0 border-l py-3 px-1 select-none cursor-pointer" style="width: 52px;" title="Clique para expandir Inspetor ATS (Ctrl+J ou Ctrl+I)">
+    <!-- Ícone de expandir no topo -->
+    <button id="btn-reopen-sidebar-right" class="btn-spring collapsed-btn p-2 rounded-lg mb-3" title="Expandir Inspetor ATS (Ctrl+J ou Ctrl+I)">
+      <i data-lucide="panel-right-open" class="w-4 h-4"></i>
+    </button>
+    <!-- Texto vertical com o título da sessão -->
+    <div class="flex-1 w-full flex items-center justify-center py-4">
+      <span class="collapsed-title text-xs font-medium whitespace-nowrap writing-mode-vertical">
+        Inspetor ATS
+      </span>
+    </div>
+  </aside>
+
+  <!-- COLUNA 3: DIREITA — PAINEL INSPETOR DE TELEMETRIA ATS (Flexível & Retrátil) -->
+  <aside id="sidebar-right" class="collapsible-sidebar min-w-[280px] max-w-[700px] h-full flex flex-col shrink-0 overflow-y-auto" style="width: 400px; background-color: var(--bg-panel);">
     
-    <!-- Topo do Inspetor -->
-    <div class="h-12 px-4 border-b border-zinc-800/80 flex items-center justify-between shrink-0">
-      <span class="text-[11px] font-mono uppercase tracking-wider text-zinc-400 font-medium">Auditoria 7-Camadas ATS</span>
-      <span id="inspector-sync-indicator" class="text-[10px] font-mono text-zinc-500">Sincronizado</span>
+    <!-- Topo do Inspetor (h-14, 56px) -->
+    <div class="h-14 px-5 border-b flex items-center justify-between shrink-0" style="border-color: var(--border-color);">
+      <div class="flex items-center gap-2">
+        <i data-lucide="bar-chart-2" class="w-4 h-4 text-emerald-400"></i>
+        <span class="text-xs font-semibold" style="color: var(--text-primary);">Auditoria 7-Camadas ATS</span>
+      </div>
+      <button id="btn-close-sidebar-right" class="btn-spring p-2 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40" title="Recolher Inspetor ATS (Ctrl+J)">
+        <i data-lucide="panel-right-close" class="w-4 h-4"></i>
+      </button>
     </div>
 
-    <!-- Seção 1: Score ATS -->
-    <div class="p-4 border-b border-zinc-800/80 space-y-3">
-      <div class="flex items-baseline justify-between">
-        <div>
-          <span class="text-[10px] font-mono uppercase text-zinc-500">Score de Compatibilidade</span>
-          <div class="flex items-baseline gap-2 mt-0.5">
-            <span id="inspect-score-val" class="text-4xl font-mono font-light text-zinc-100 tabular-nums">--</span>
-            <span class="text-xs font-mono text-zinc-500">de 100</span>
-          </div>
+    <!-- DUAL-SCORE: 1. Métrica Principal (Topo) — Índice de Escaneabilidade & Impacto -->
+    <div class="p-5 border-b space-y-3.5" style="border-color: var(--border-color); background-color: var(--bg-subtle);">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-1.5">
+          <i data-lucide="eye" class="w-3.5 h-3.5 text-emerald-400"></i>
+          <span class="text-xs font-semibold" style="color: var(--text-primary);">Índice de Escaneabilidade & Impacto</span>
+        </div>
+        <span class="text-[11px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold">
+          Humano • 6s
+        </span>
+      </div>
+
+      <div class="flex items-baseline justify-between pt-0.5">
+        <div class="flex items-baseline gap-2">
+          <span id="inspect-scannability-val" class="text-4xl font-mono font-light tabular-nums" style="color: var(--text-primary);">0</span>
+          <span class="text-sm font-mono text-zinc-500">/ 100</span>
         </div>
         <div class="text-right">
-          <span id="inspect-score-diff" class="text-xs font-mono text-emerald-400 font-medium">+0 pts</span>
-          <div id="inspect-score-before" class="text-[11px] font-mono text-zinc-500 mt-0.5">antes: --</div>
+          <span id="inspect-scannability-badge" class="text-xs font-mono text-emerald-400 font-semibold px-2 py-0.5 rounded" style="background-color: var(--kw-highlight-bg);">Alta Clareza</span>
+          <div id="inspect-scannability-metrics-count" class="text-[11px] font-mono text-zinc-400 mt-1">0 métricas de impacto</div>
         </div>
       </div>
 
-      <!-- Segmented Lines -->
-      <div class="space-y-1.5 pt-1">
-        <div class="flex justify-between text-[11px] font-mono text-zinc-400">
-          <span>Formatação</span>
-          <span id="breakdown-format">--/30</span>
+      <!-- 3 Dimensões de Escaneabilidade & Impacto -->
+      <div class="space-y-2 pt-1 border-t" style="border-color: var(--border-color);">
+        <div class="flex justify-between text-xs font-mono" style="color: var(--text-secondary);">
+          <span class="flex items-center gap-1"><i data-lucide="layout" class="w-3 h-3 text-zinc-400"></i> Estrutura & Seções</span>
+          <span id="scannability-structure" class="tabular-nums">--/30</span>
         </div>
-        <div class="w-full h-1 bg-zinc-850 rounded-full overflow-hidden">
-          <div id="line-format" class="h-full bg-zinc-400 w-0 transition-all duration-300"></div>
+        <div class="w-full h-1.5 progress-track rounded-full overflow-hidden">
+          <div id="line-scannability-structure" class="h-full bg-emerald-500 w-0" style="transition: width 600ms var(--ease-spring);"></div>
         </div>
 
-        <div class="flex justify-between text-[11px] font-mono text-zinc-400">
+        <div class="flex justify-between text-xs font-mono" style="color: var(--text-secondary);">
+          <span class="flex items-center gap-1"><i data-lucide="trending-up" class="w-3 h-3 text-amber-400"></i> Métricas Numéricas de Impacto</span>
+          <span id="scannability-metrics" class="tabular-nums">--/45</span>
+        </div>
+        <div class="w-full h-1.5 progress-track rounded-full overflow-hidden">
+          <div id="line-scannability-metrics" class="h-full bg-amber-400 w-0" style="transition: width 600ms var(--ease-spring);"></div>
+        </div>
+
+        <div class="flex justify-between text-xs font-mono" style="color: var(--text-secondary);">
+          <span class="flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3 text-cyan-400"></i> Legibilidade Rápida (6s Scan)</span>
+          <span id="scannability-readability" class="tabular-nums">--/25</span>
+        </div>
+        <div class="w-full h-1.5 progress-track rounded-full overflow-hidden">
+          <div id="line-scannability-readability" class="h-full bg-cyan-400 w-0" style="transition: width 600ms var(--ease-spring);"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DUAL-SCORE: 2. Métrica Secundária (Abaixo) — Alinhamento Técnico TF-IDF -->
+    <div class="p-5 border-b space-y-3.5" style="border-color: var(--border-color);">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-1.5">
+          <i data-lucide="cpu" class="w-3.5 h-3.5 text-sky-400"></i>
+          <span class="text-xs font-semibold" style="color: var(--text-primary);">Alinhamento Técnico TF-IDF</span>
+        </div>
+        <span class="text-[11px] font-mono px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20 font-semibold">
+          Robô ATS
+        </span>
+      </div>
+
+      <div class="flex items-baseline justify-between pt-0.5">
+        <div class="flex items-baseline gap-2">
+          <span id="inspect-technical-val" class="text-3xl font-mono font-light tabular-nums" style="color: var(--text-primary);">0</span>
+          <!-- Keep hidden inspect-score-val so any legacy reference continues to work -->
+          <span id="inspect-score-val" class="hidden">0</span>
+          <span class="text-xs font-mono text-zinc-500">/ 100</span>
+        </div>
+        <div class="text-right">
+          <span id="inspect-technical-diff" class="text-xs font-mono text-emerald-400 font-semibold px-2 py-0.5 rounded" style="background-color: var(--kw-highlight-bg);">+0 pts</span>
+          <span id="inspect-score-diff" class="hidden">+0 pts</span>
+          <div id="inspect-technical-before" class="text-xs font-mono text-zinc-500 mt-1">antes: --</div>
+          <div id="inspect-score-before" class="hidden">antes: --</div>
+        </div>
+      </div>
+
+      <!-- Segmented Lines de Dimensões Algorítmicas -->
+      <div class="space-y-2 pt-1 border-t" style="border-color: var(--border-color);">
+        <div class="flex justify-between text-xs font-mono" style="color: var(--text-secondary);">
+          <span>Formatação Linear</span>
+          <span id="breakdown-format" class="tabular-nums">--/30</span>
+        </div>
+        <div class="w-full h-1.5 progress-track rounded-full overflow-hidden">
+          <div id="line-format" class="h-full bg-zinc-400 w-0" style="transition: width 600ms var(--ease-spring);"></div>
+        </div>
+
+        <div class="flex justify-between text-xs font-mono" style="color: var(--text-secondary);">
           <span>Keywords TF-IDF</span>
-          <span id="breakdown-keywords">--/35</span>
+          <span id="breakdown-keywords" class="tabular-nums">--/35</span>
         </div>
-        <div class="w-full h-1 bg-zinc-850 rounded-full overflow-hidden">
-          <div id="line-keywords" class="h-full bg-emerald-500 w-0 transition-all duration-300"></div>
+        <div class="w-full h-1.5 progress-track rounded-full overflow-hidden">
+          <div id="line-keywords" class="h-full bg-emerald-500 w-0" style="transition: width 600ms var(--ease-spring);"></div>
         </div>
 
-        <div class="flex justify-between text-[11px] font-mono text-zinc-400">
+        <div class="flex justify-between text-xs font-mono" style="color: var(--text-secondary);">
           <span>Densidade & 1ª Linha</span>
-          <span id="breakdown-density">--/20</span>
+          <span id="breakdown-density" class="tabular-nums">--/20</span>
         </div>
-        <div class="w-full h-1 bg-zinc-850 rounded-full overflow-hidden">
-          <div id="line-density" class="h-full bg-zinc-300 w-0 transition-all duration-300"></div>
+        <div class="w-full h-1.5 progress-track rounded-full overflow-hidden">
+          <div id="line-density" class="h-full bg-cyan-400 w-0" style="transition: width 600ms var(--ease-spring);"></div>
         </div>
 
-        <div class="flex justify-between text-[11px] font-mono text-zinc-400">
+        <div class="flex justify-between text-xs font-mono" style="color: var(--text-secondary);">
           <span>Blindagem Regex</span>
-          <span id="breakdown-entity">--/15</span>
+          <span id="breakdown-entity" class="tabular-nums">--/15</span>
         </div>
-        <div class="w-full h-1 bg-zinc-850 rounded-full overflow-hidden">
-          <div id="line-entity" class="h-full bg-zinc-300 w-0 transition-all duration-300"></div>
+        <div class="w-full h-1.5 progress-track rounded-full overflow-hidden">
+          <div id="line-entity" class="h-full bg-sky-400 w-0" style="transition: width 600ms var(--ease-spring);"></div>
         </div>
       </div>
     </div>
 
     <!-- Seção 2: Densidade TF-IDF (Tabela Vertical Completa) -->
-    <div class="p-4 border-b border-zinc-800/80 space-y-2">
+    <div class="p-5 border-b space-y-3" style="border-color: var(--border-color);">
       <div class="flex items-center justify-between">
-        <span class="text-[11px] font-mono uppercase tracking-wider text-zinc-500">Densidade TF-IDF (Top 15)</span>
-        <span id="inspect-kw-count" class="text-[10px] font-mono text-zinc-500">0 termos</span>
+        <span class="text-xs font-semibold" style="color: var(--text-secondary);">Densidade TF-IDF (Top 15)</span>
+        <span id="inspect-kw-count" class="text-xs font-mono text-zinc-500 tabular-nums">0 termos</span>
       </div>
 
       <div class="overflow-x-auto">
         <table class="w-full text-left font-mono text-xs">
           <thead>
-            <tr class="text-[10px] text-zinc-600 border-b border-zinc-850">
-              <th class="pb-1.5 font-normal">Termo</th>
-              <th class="pb-1.5 text-center font-normal">Vaga</th>
-              <th class="pb-1.5 text-center font-normal">CV</th>
-              <th class="pb-1.5 text-right font-normal">Status</th>
+            <tr class="text-xs text-zinc-500 border-b" style="border-color: var(--border-color);">
+              <th class="pb-2 font-semibold">Termo</th>
+              <th class="pb-2 text-center font-semibold">Vaga</th>
+              <th class="pb-2 text-center font-semibold">CV</th>
+              <th class="pb-2 text-right font-semibold">Status</th>
             </tr>
           </thead>
-          <tbody id="inspect-keywords-table" class="divide-y divide-zinc-900 text-zinc-300">
+          <tbody id="inspect-keywords-table" class="divide-y" style="border-color: var(--border-color);">
             <tr>
-              <td colspan="4" class="py-3 text-center text-zinc-600 text-[11px] italic">Sem keywords</td>
+              <td colspan="4" class="py-4 text-center text-zinc-500 text-xs italic">Sem keywords</td>
             </tr>
           </tbody>
         </table>
@@ -356,58 +720,58 @@
     </div>
 
     <!-- Seção 3: Propriedades do Binário (XMP / OpenXML Key-Value) -->
-    <div class="p-4 border-b border-zinc-800/80 space-y-2">
-      <span class="text-[11px] font-mono uppercase tracking-wider text-zinc-500">Propriedades do Binário (XMP / OpenXML)</span>
-      <div class="space-y-1.5 font-mono text-xs pt-1">
-        <div class="flex justify-between gap-2">
-          <span class="text-zinc-500 text-[11px] shrink-0">dc:title</span>
-          <span id="prop-title" class="text-zinc-300 text-[11px] truncate text-right">--</span>
+    <div class="p-5 border-b space-y-3" style="border-color: var(--border-color);">
+      <span class="text-xs font-semibold" style="color: var(--text-secondary);">Propriedades do Binário (XMP / OpenXML)</span>
+      <div class="space-y-2 font-mono text-xs pt-1">
+        <div class="flex justify-between gap-3">
+          <span class="text-zinc-500 text-xs shrink-0 font-medium">dc:title</span>
+          <span id="prop-title" class="text-xs truncate text-right font-medium" style="color: var(--text-primary);">--</span>
         </div>
-        <div class="flex justify-between gap-2">
-          <span class="text-zinc-500 text-[11px] shrink-0">dc:creator</span>
-          <span id="prop-creator" class="text-zinc-300 text-[11px] truncate text-right">--</span>
+        <div class="flex justify-between gap-3">
+          <span class="text-zinc-500 text-xs shrink-0 font-medium">dc:creator</span>
+          <span id="prop-creator" class="text-xs truncate text-right font-medium" style="color: var(--text-primary);">--</span>
         </div>
-        <div class="flex justify-between gap-2">
-          <span class="text-zinc-500 text-[11px] shrink-0">cp:keywords</span>
-          <span id="prop-keywords" class="text-emerald-400 text-[11px] truncate text-right">--</span>
+        <div class="flex justify-between gap-3">
+          <span class="text-zinc-500 text-xs shrink-0 font-medium">cp:keywords</span>
+          <span id="prop-keywords" class="text-emerald-400 text-xs truncate text-right">--</span>
         </div>
-        <div class="flex justify-between gap-2">
-          <span class="text-zinc-500 text-[11px] shrink-0">Category</span>
-          <span class="text-zinc-400 text-[11px]">Currículo</span>
+        <div class="flex justify-between gap-3">
+          <span class="text-zinc-500 text-xs shrink-0 font-medium">Category</span>
+          <span class="text-xs" style="color: var(--text-secondary);">Currículo</span>
         </div>
       </div>
     </div>
 
     <!-- Seção 4: Checklist das 7 Camadas -->
-    <div class="p-4 space-y-2 font-mono text-xs">
-      <span class="text-[11px] uppercase tracking-wider text-zinc-500">Regras Algorítmicas</span>
-      <div class="space-y-1.5 pt-1 text-[11px] text-zinc-400">
-        <div class="flex items-center gap-2">
-          <i data-lucide="check" class="w-3 h-3 text-emerald-400"></i>
-          <span>1. Densidade TF-IDF Proporcional</span>
+    <div class="p-5 space-y-3 font-mono text-xs">
+      <span class="text-xs font-semibold" style="color: var(--text-secondary);">Regras Algorítmicas de ATS</span>
+      <div class="space-y-2 pt-1 text-xs" style="color: var(--text-secondary);">
+        <div class="flex items-center gap-2.5">
+          <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400 shrink-0"></i>
+          <span>1. Densidade TF-IDF Proporcional (2x-3x)</span>
         </div>
-        <div class="flex items-center gap-2">
-          <i data-lucide="check" class="w-3 h-3 text-emerald-400"></i>
-          <span>2. Regra da 1ª Linha (Executiva)</span>
+        <div class="flex items-center gap-2.5">
+          <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400 shrink-0"></i>
+          <span>2. Regra da 1ª Linha (Resumo Executivo)</span>
         </div>
-        <div class="flex items-center gap-2">
-          <i data-lucide="check" class="w-3 h-3 text-emerald-400"></i>
-          <span>3. Variações de Entidade (Anos/Meses)</span>
+        <div class="flex items-center gap-2.5">
+          <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400 shrink-0"></i>
+          <span>3. Variações de Entidade (Anos / Meses)</span>
         </div>
-        <div class="flex items-center gap-2">
-          <i data-lucide="check" class="w-3 h-3 text-emerald-400"></i>
+        <div class="flex items-center gap-2.5">
+          <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400 shrink-0"></i>
           <span>4. Enriquecimento Vetorial da Stack</span>
         </div>
-        <div class="flex items-center gap-2">
-          <i data-lucide="check" class="w-3 h-3 text-emerald-400"></i>
+        <div class="flex items-center gap-2.5">
+          <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400 shrink-0"></i>
           <span>5. Boundary Bleed Regex (Linha Final)</span>
         </div>
-        <div class="flex items-center gap-2">
-          <i data-lucide="check" class="w-3 h-3 text-emerald-400"></i>
+        <div class="flex items-center gap-2.5">
+          <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400 shrink-0"></i>
           <span>6. Injeção InfoDict & XMP Stream</span>
         </div>
-        <div class="flex items-center gap-2">
-          <i data-lucide="check" class="w-3 h-3 text-emerald-400"></i>
+        <div class="flex items-center gap-2.5">
+          <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400 shrink-0"></i>
           <span>7. Auditor Local Matemático</span>
         </div>
       </div>
@@ -417,92 +781,105 @@
 
   <!-- DRAWER: MASTER CV CONFIGURATION -->
   <div id="drawer-profile" class="fixed inset-0 bg-black/60 backdrop-blur-[2px] z-50 hidden flex justify-end select-none">
-    <div class="w-full max-w-xl bg-[#09090b] border-l border-zinc-800/80 h-full flex flex-col shadow-2xl overflow-hidden">
+    <div class="w-full max-w-2xl border-l h-full flex flex-col shadow-2xl overflow-hidden select-text" style="background-color: var(--bg-panel); border-color: var(--border-color);">
       
-      <div class="h-12 px-4 border-b border-zinc-800/80 flex items-center justify-between shrink-0">
-        <span class="text-xs font-medium text-zinc-200">Currículo Base (Master CV)</span>
-        <button id="drawer-profile-close" class="p-1 rounded hover:bg-zinc-850 text-zinc-400 hover:text-white">
-          <i data-lucide="x" class="w-4 h-4"></i>
+      <div class="h-14 px-6 border-b flex items-center justify-between shrink-0" style="border-color: var(--border-color);">
+        <span class="text-sm font-semibold" style="color: var(--text-primary);">Currículo Base (Master CV)</span>
+        <button id="drawer-profile-close" class="btn-spring p-2 rounded-lg text-zinc-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
         </button>
       </div>
 
-      <div class="flex-1 overflow-y-auto p-5 space-y-5 text-xs">
+      <div class="flex-1 overflow-y-auto p-6 space-y-6 text-sm">
         
         <!-- Drag and Drop Dropzone -->
-        <div id="pdf-dropzone" class="border border-dashed border-zinc-800 hover:border-zinc-700 rounded-md p-5 text-center transition-colors cursor-pointer bg-zinc-900/30">
-          <i data-lucide="upload" class="w-5 h-5 mx-auto text-zinc-500 mb-1.5 stroke-[1.5]"></i>
-          <p class="text-xs text-zinc-300">Arraste seu PDF base aqui ou clique para selecionar</p>
+        <div id="pdf-dropzone" class="border-2 border-dashed rounded-xl p-6 text-center transition-colors cursor-pointer" style="border-color: var(--border-color); background-color: var(--bg-subtle);">
+          <i data-lucide="upload" class="w-6 h-6 mx-auto text-zinc-400 mb-2 stroke-[1.5]"></i>
+          <p class="text-sm font-medium" style="color: var(--text-primary);">Arraste seu PDF base aqui ou clique para selecionar</p>
+          <p class="text-xs text-zinc-400 font-mono mt-1">Extração automática de seções e contatos via pdf-parse</p>
           <input type="file" id="drawer-pdf-input" accept=".pdf" class="hidden">
-          <div id="drawer-upload-status" class="mt-2 text-[11px] font-mono"></div>
+          <div id="drawer-upload-status" class="mt-2 text-xs font-mono"></div>
         </div>
 
-        <form id="master-profile-form" class="space-y-3.5">
-          <div class="grid grid-cols-2 gap-3">
+        <!-- Smart Reprocessor Action -->
+        <div class="flex items-center justify-between gap-3 p-3 rounded-lg border" style="border-color: var(--border-color); background-color: var(--bg-subtle);">
+          <div class="flex items-center gap-2 text-xs text-zinc-400">
+            <i data-lucide="sparkles" class="w-4 h-4 text-emerald-400"></i>
+            <span>Parser Inteligente v2 (Sanitização LinkedIn)</span>
+          </div>
+          <button type="button" id="btn-reprocess-master" class="btn-spring px-3 py-1.5 rounded-lg border text-xs font-medium flex items-center gap-1.5 hover:text-white" style="border-color: var(--border-color); background-color: var(--card-bg); color: var(--text-primary);" title="Re-executa o parser inteligente sobre o PDF base salvo, limpando páginas e unificando experiências e formação">
+            <i data-lucide="rotate-cw" class="w-3.5 h-3.5 text-emerald-400"></i>
+            <span>Re-processar e Limpar Master CV</span>
+          </button>
+        </div>
+
+        <form id="master-profile-form" class="space-y-4">
+          <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="block text-[10px] font-mono text-zinc-500 uppercase mb-1">Nome Completo</label>
+              <label class="block text-xs font-mono text-zinc-400 uppercase font-semibold mb-1.5">Nome Completo</label>
               <input type="text" id="drawer-fullName" class="ui-input w-full" required>
             </div>
             <div>
-              <label class="block text-[10px] font-mono text-zinc-500 uppercase mb-1">Título / Headline</label>
+              <label class="block text-xs font-mono text-zinc-400 uppercase font-semibold mb-1.5">Título / Headline</label>
               <input type="text" id="drawer-headline" class="ui-input w-full" required>
             </div>
           </div>
 
-          <div class="grid grid-cols-3 gap-3">
+          <div class="grid grid-cols-3 gap-4">
             <div>
-              <label class="block text-[10px] font-mono text-zinc-500 uppercase mb-1">E-mail</label>
+              <label class="block text-xs font-mono text-zinc-400 uppercase font-semibold mb-1.5">E-mail</label>
               <input type="email" id="drawer-email" class="ui-input w-full font-mono text-xs" required>
             </div>
             <div>
-              <label class="block text-[10px] font-mono text-zinc-500 uppercase mb-1">Telefone</label>
+              <label class="block text-xs font-mono text-zinc-400 uppercase font-semibold mb-1.5">Telefone</label>
               <input type="text" id="drawer-phone" class="ui-input w-full font-mono text-xs">
             </div>
             <div>
-              <label class="block text-[10px] font-mono text-zinc-500 uppercase mb-1">Localização</label>
-              <input type="text" id="drawer-location" class="ui-input w-full text-xs">
+              <label class="block text-xs font-mono text-zinc-400 uppercase font-semibold mb-1.5">Localização</label>
+              <input type="text" id="drawer-location" class="ui-input w-full">
             </div>
           </div>
 
-          <div class="grid grid-cols-2 gap-3">
+          <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="block text-[10px] font-mono text-zinc-500 uppercase mb-1">LinkedIn</label>
+              <label class="block text-xs font-mono text-zinc-400 uppercase font-semibold mb-1.5">LinkedIn</label>
               <input type="text" id="drawer-linkedin" class="ui-input w-full font-mono text-xs">
             </div>
             <div>
-              <label class="block text-[10px] font-mono text-zinc-500 uppercase mb-1">GitHub</label>
+              <label class="block text-xs font-mono text-zinc-400 uppercase font-semibold mb-1.5">GitHub</label>
               <input type="text" id="drawer-github" class="ui-input w-full font-mono text-xs">
             </div>
           </div>
 
           <div>
-            <label class="block text-[10px] font-mono text-zinc-500 uppercase mb-1">Resumo Original</label>
+            <label class="block text-xs font-mono text-zinc-400 uppercase font-semibold mb-1.5">Resumo Original</label>
             <textarea id="drawer-summary" rows="4" class="ui-input w-full font-sans leading-relaxed"></textarea>
           </div>
 
           <div>
-            <label class="block text-[10px] font-mono text-zinc-500 uppercase mb-1">Habilidades</label>
+            <label class="block text-xs font-mono text-zinc-400 uppercase font-semibold mb-1.5">Habilidades (separadas por vírgula)</label>
             <input type="text" id="drawer-skills" class="ui-input w-full font-mono text-xs">
           </div>
 
           <div>
-            <div class="flex items-center justify-between mb-1">
-              <label class="text-[10px] font-mono text-zinc-500 uppercase">Experiências</label>
-              <button type="button" id="btn-drawer-add-exp" class="text-xs text-zinc-400 hover:text-white font-mono">+ Adicionar</button>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="text-xs font-mono text-zinc-400 uppercase font-semibold">Experiências</label>
+              <button type="button" id="btn-drawer-add-exp" class="text-xs text-emerald-400 hover:underline font-mono">+ Adicionar</button>
             </div>
-            <div id="drawer-experiences-list" class="space-y-2.5"></div>
+            <div id="drawer-experiences-list" class="space-y-3"></div>
           </div>
 
           <div>
-            <div class="flex items-center justify-between mb-1">
-              <label class="text-[10px] font-mono text-zinc-500 uppercase">Formação</label>
-              <button type="button" id="btn-drawer-add-edu" class="text-xs text-zinc-400 hover:text-white font-mono">+ Adicionar</button>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="text-xs font-mono text-zinc-400 uppercase font-semibold">Formação</label>
+              <button type="button" id="btn-drawer-add-edu" class="text-xs text-emerald-400 hover:underline font-mono">+ Adicionar</button>
             </div>
-            <div id="drawer-education-list" class="space-y-2.5"></div>
+            <div id="drawer-education-list" class="space-y-3"></div>
           </div>
 
-          <div class="pt-3 border-t border-zinc-800/80 flex justify-end gap-2">
-            <button type="button" id="btn-drawer-cancel" class="px-3 py-1.5 rounded-md border border-zinc-800 text-zinc-400 hover:text-white text-xs">Cancelar</button>
-            <button type="submit" class="px-3.5 py-1.5 rounded-md bg-zinc-100 hover:bg-white text-zinc-950 font-medium text-xs">Salvar Master CV</button>
+          <div class="pt-4 border-t flex justify-end gap-3" style="border-color: var(--border-color);">
+            <button type="button" id="btn-drawer-cancel" class="btn-spring px-4 py-2 rounded-lg border text-sm" style="border-color: var(--border-color); color: var(--text-secondary);">Cancelar</button>
+            <button type="submit" class="btn-spring px-5 py-2 rounded-lg text-sm font-semibold" style="background-color: var(--btn-primary-bg); color: var(--btn-primary-text);">Salvar Master CV</button>
           </div>
         </form>
 
@@ -513,41 +890,41 @@
 
   <!-- MODAL: ADD JOB -->
   <div id="modal-add-job" class="fixed inset-0 bg-black/60 backdrop-blur-[2px] z-50 hidden flex items-center justify-center p-4 select-none">
-    <div class="w-full max-w-lg bg-[#09090b] border border-zinc-800/80 rounded-md p-5 space-y-4 shadow-2xl">
-      <div class="flex items-center justify-between border-b border-zinc-800/80 pb-2.5">
-        <span class="text-xs font-semibold text-zinc-100">Cadastrar Nova Vaga</span>
-        <button id="modal-add-job-close" class="p-1 rounded text-zinc-400 hover:text-white">
-          <i data-lucide="x" class="w-4 h-4"></i>
+    <div class="w-full max-w-lg border rounded-xl p-6 space-y-5 shadow-2xl" style="background-color: var(--bg-panel); border-color: var(--border-color);">
+      <div class="flex items-center justify-between border-b pb-3" style="border-color: var(--border-color);">
+        <span class="text-sm font-bold" style="color: var(--text-primary);">Cadastrar Nova Vaga</span>
+        <button id="modal-add-job-close" class="btn-spring p-1.5 rounded-lg text-zinc-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
         </button>
       </div>
 
       <!-- Quick URL Extraction -->
-      <div class="p-2.5 rounded bg-zinc-900/40 border border-zinc-800/80 space-y-1.5">
-        <label class="block text-[10px] font-mono text-zinc-500 uppercase">Extrair da URL</label>
+      <div class="p-3.5 rounded-lg border space-y-2" style="border-color: var(--border-color); background-color: var(--bg-subtle);">
+        <label class="block text-xs font-mono text-zinc-400 uppercase font-semibold">Extrair Automaticamente via URL</label>
         <div class="flex gap-2">
           <input type="url" id="modal-job-url" placeholder="https://..." class="ui-input flex-1 font-mono text-xs">
-          <button type="button" id="btn-modal-extract" class="px-3 py-1 rounded bg-zinc-850 hover:bg-zinc-800 text-xs font-mono text-zinc-200">
+          <button type="button" id="btn-modal-extract" class="btn-spring px-4 py-2 rounded-lg border text-xs font-mono font-medium" style="border-color: var(--border-color); background-color: var(--card-bg); color: var(--text-primary);">
             Extrair
           </button>
         </div>
-        <p id="modal-extract-feedback" class="text-[10px] font-mono text-zinc-500"></p>
+        <p id="modal-extract-feedback" class="text-xs font-mono text-zinc-500"></p>
       </div>
 
-      <form id="form-create-job" class="space-y-3 text-xs">
-        <div class="grid grid-cols-2 gap-3">
+      <form id="form-create-job" class="space-y-4 text-sm">
+        <div class="grid grid-cols-2 gap-3.5">
           <div>
-            <label class="block text-[10px] font-mono text-zinc-500 uppercase mb-1">Título do Cargo</label>
+            <label class="block text-xs font-mono text-zinc-400 uppercase font-semibold mb-1.5">Título do Cargo</label>
             <input type="text" id="modal-input-title" class="ui-input w-full" required>
           </div>
           <div>
-            <label class="block text-[10px] font-mono text-zinc-500 uppercase mb-1">Empresa</label>
+            <label class="block text-xs font-mono text-zinc-400 uppercase font-semibold mb-1.5">Empresa</label>
             <input type="text" id="modal-input-company" class="ui-input w-full" required>
           </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-2 gap-3.5">
           <div>
-            <label class="block text-[10px] font-mono text-zinc-500 uppercase mb-1">Status</label>
+            <label class="block text-xs font-mono text-zinc-400 uppercase font-semibold mb-1.5">Status</label>
             <select id="modal-input-status" class="ui-input w-full font-mono text-xs">
               <option value="SAVED">Salva</option>
               <option value="APPLIED">Aplicada</option>
@@ -557,26 +934,56 @@
             </select>
           </div>
           <div>
-            <label class="block text-[10px] font-mono text-zinc-500 uppercase mb-1">Anotações</label>
+            <label class="block text-xs font-mono text-zinc-400 uppercase font-semibold mb-1.5">Anotações</label>
             <input type="text" id="modal-input-notes" class="ui-input w-full">
           </div>
         </div>
 
         <div>
-          <label class="block text-[10px] font-mono text-zinc-500 uppercase mb-1">Requisitos da Vaga</label>
+          <label class="block text-xs font-mono text-zinc-400 uppercase font-semibold mb-1.5">Requisitos da Vaga</label>
           <textarea id="modal-input-description" rows="7" class="ui-input w-full font-mono text-xs leading-relaxed" required></textarea>
         </div>
 
-        <div class="pt-2 border-t border-zinc-800/80 flex justify-end gap-2">
-          <button type="button" id="btn-modal-cancel" class="px-3 py-1.5 rounded-md border border-zinc-800 text-zinc-400 hover:text-white text-xs">Cancelar</button>
-          <button type="submit" class="px-3.5 py-1.5 rounded-md bg-zinc-100 hover:bg-white text-zinc-950 font-medium text-xs">Cadastrar</button>
+        <div class="pt-3 border-t flex justify-end gap-2.5" style="border-color: var(--border-color);">
+          <button type="button" id="btn-modal-cancel" class="btn-spring px-4 py-2 rounded-lg border text-xs" style="border-color: var(--border-color); color: var(--text-secondary);">Cancelar</button>
+          <button type="submit" class="btn-spring px-5 py-2 rounded-lg text-xs font-semibold" style="background-color: var(--btn-primary-bg); color: var(--btn-primary-text);">Cadastrar Vaga</button>
         </div>
       </form>
     </div>
   </div>
 
+  <!-- MODAL: CONFIRMAR EXCLUSÃO DE VAGA -->
+  <div id="modal-confirm-delete-job" class="fixed inset-0 bg-black/60 backdrop-blur-[2px] z-50 hidden flex items-center justify-center p-4 select-none">
+    <div class="w-full max-w-md border rounded-xl p-6 space-y-4 shadow-2xl fade-slide-up" style="background-color: var(--bg-panel); border-color: var(--border-color);">
+      <div class="flex items-start gap-3.5">
+        <div class="p-2.5 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/20 shrink-0 mt-0.5">
+          <i data-lucide="trash-2" class="w-5 h-5"></i>
+        </div>
+        <div class="space-y-1.5 flex-1 min-w-0">
+          <h3 class="text-sm font-bold" style="color: var(--text-primary);">Excluir Vaga</h3>
+          <p class="text-xs leading-relaxed" style="color: var(--text-secondary);">
+            Tem certeza que deseja excluir a vaga <span id="modal-delete-job-title" class="font-bold underline decoration-rose-500/40 underline-offset-2 break-words" style="color: var(--text-primary);"></span>?
+          </p>
+          <p class="text-[11px] leading-relaxed" style="color: var(--text-muted);">
+            Esta ação é definitiva e removerá todos os dados da vaga, currículo otimizado e perguntas eliminatórias associadas.
+          </p>
+        </div>
+      </div>
+
+      <div class="pt-3 border-t flex justify-end gap-2.5" style="border-color: var(--border-color);">
+        <button type="button" id="btn-cancel-delete-job" class="btn-spring px-4 py-2 rounded-lg border text-xs font-medium cursor-pointer transition-colors" style="border-color: var(--border-color); color: var(--text-primary); background-color: var(--bg-subtle);">
+          Cancelar
+        </button>
+        <button type="button" id="btn-confirm-delete-job" class="btn-spring px-4 py-2 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white flex items-center gap-1.5 cursor-pointer shadow-md transition-colors">
+          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+          <span>Sim, Excluir Vaga</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- TOAST CONTAINER -->
-  <div id="toast-container" class="fixed bottom-4 right-4 z-50 space-y-1.5 pointer-events-none font-mono text-xs"></div>
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 space-y-2 pointer-events-none font-mono text-xs"></div>
 
   <script src="/app.js"></script>
 </body>

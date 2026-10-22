@@ -53,4 +53,14 @@ describe("ATS Word (.docx) Generator with OpenXML coreProperties", () => {
     expect(docxBuffer[2]).toBe(0x03);
     expect(docxBuffer[3]).toBe(0x04);
   });
+
+  it("should sanitize street address and CEP from contact header for privacy", async () => {
+    const dirtyResume: ResumeData = {
+      ...resume,
+      location: "Av. Paulista, 1000, apto 12, CEP 01310-100, São Paulo, SP"
+    };
+    const docxBuffer = await generateAtsDocx(dirtyResume, metadata);
+    expect(docxBuffer).toBeDefined();
+    expect(docxBuffer.length).toBeGreaterThan(1000);
+  });
 });

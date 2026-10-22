@@ -53,16 +53,21 @@ export function auditAtsScore(
     const term = kw.term.toLowerCase();
     const stem = kw.stem.toLowerCase();
 
-    // Check count in full document
+    // Check count in full document (handling symbols, dots and slashes safely)
     const escapedTerm = term.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&");
-    const regex = new RegExp(`\\b${escapedTerm}\\b`, "gi");
+    const regex = new RegExp(`(?<=\\b|\\s|^)${escapedTerm}(?=\\b|\\s|$)`, "gi");
     const matches = fullDocumentText.match(regex);
-    const count = matches ? matches.length : 0;
-    keywordDensity[term] = count;
+    let count = matches ? matches.length : 0;
 
     // Direct match or stem match
     const stemRegex = new RegExp(`\\b${stem}`, "gi");
     const hasStemMatch = stemRegex.test(fullDocumentText);
+    if (count === 0 && hasStemMatch) {
+      count = 1;
+    }
+
+    keywordDensity[term] = count;
+    keywordDensity[kw.term] = count;
 
     if (count > 0 || hasStemMatch) {
       matchedKeywords.push(kw.term);
@@ -145,6 +150,108 @@ export function auditAtsScore(
     entityScore += 2;
   }
 
+  // =========================================================================
+  // DUAL-SCORE ARCHITECTURE:
+  // 1. "Índice de Escaneabilidade & Impacto" (Métrica Principal / Humano 6s)
+  // 2. "Alinhamento Técnico TF-IDF" (Métrica Secundária / Robô ATS)
+  // =========================================================================
+
+  // --- MÉTRICA 1: Índice de Escaneabilidade & Impacto (0 - 100) ---
+  // A. Clareza de Estrutura (Max 30)
+  let structureClarity = 0;
+  if (resume.fullName && resume.fullName.trim().length > 2) structureClarity += 5;
+  if (resume.email && resume.email.includes("@")) structureClarity += 5;
+  if (resume.summary && resume.summary.trim().length >= 30) structureClarity += 5;
+  if (Array.isArray(resume.skills) && resume.skills.length >= 4) structureClarity += 5;
+  if (Array.isArray(resume.experiences) && resume.experiences.length > 0) structureClarity += 5;
+  if (Array.isArray(resume.education) && resume.education.length > 0) structureClarity += 5;
+
+  // B. Presença de Métricas Numéricas de Impacto & Resultados (Max 45)
+  // Recrutadores humanos buscam percentuais, números de escala, redução de tempo e resultados mensuráveis
+  const metricRegex = /\b(\d+(?:[.,]\d+)?%|(?:R\$|\$|€)\s*\d+(?:[.,]\d+)?|\d+(?:[.,]\d+)?\s*(?:milhões|milhao|mil|k|m|b|usd|reais)|\d+x|\d+(?:[.,]\d+)?\+?\s*(?:usuários|users|clientes|requisições|req\/s|rps|tps|transações|pedidos|pontos|nodes|servidores|serviços|downloads)|\d+\+?\s*(?:meses|anos|months|years)|\b\d+\s*(?:ms|min|minutos|horas|segundos|dias)\b|(?:\+\d{2,}|\d{2,}\+))/gi;
+  const metricsFound = Array.from(new Set(fullDocumentText.match(metricRegex) || []));
+  const metricsFoundCount = metricsFound.length;
+
+  let quantifiableMetrics = 0;
+  if (metricsFoundCount >= 4) {
+    quantifiableMetrics = 45;
+  } else if (metricsFoundCount === 3) {
+    quantifiableMetrics = 35;
+  } else if (metricsFoundCount === 2) {
+    quantifiableMetrics = 25;
+  } else if (metricsFoundCount === 1) {
+    quantifiableMetrics = 15;
+  } else {
+    quantifiableMetrics = 0;
+    recommendations.push("Adicione métricas numéricas de impacto (ex: % de melhoria, redução de tempo, escala de usuários) nas experiências.");
+  }
+
+  // C. Legibilidade Rápida (6-Second Scan) (Max 25)
+  let humanReadability = 0;
+  if (resume.summary && resume.summary.trim().length <= 650) {
+    humanReadability += 10;
+  } else if (resume.summary) {
+    humanReadability += 5;
+  }
+
+  let hasExcessiveBlock = false;
+  if (resume.experiences && resume.experiences.length > 0) {
+    for (const exp of resume.experiences) {
+      const lines = (exp.description || "").split("\n");
+      for (const line of lines) {
+        if (line.trim().length > 320) {
+          hasExcessiveBlock = true;
+          break;
+        }
+      }
+      if (hasExcessiveBlock) break;
+    }
+  }
+  if (!hasExcessiveBlock && resume.experiences && resume.experiences.length > 0) {
+    humanReadability += 15;
+  } else {
+    humanReadability += 5;
+  }
+
+  const scannabilityScore = Math.min(100, Math.round(structureClarity + quantifiableMetrics + humanReadability));
+
+  // --- MÉTRICA 2: Alinhamento Técnico TF-IDF (0 - 100) ---
+  // A. Cobertura Pura de Keywords TF-IDF (Max 55)
+  const techCoverage = Number((keywordCoverageRatio * 55).toFixed(1));
+
+  // B. Posicionamento Estratégico (Summary & 1ª Linha) (Max 30)
+  let techPositional = 0;
+  if (summaryMatches.length >= 3) {
+    techPositional += 15;
+  } else if (summaryMatches.length >= 1) {
+    techPositional += 8;
+  }
+
+  if (firstExp && firstExp.description) {
+    const firstLine = firstExp.description.split("\n")[0].toLowerCase();
+    const firstLineMatches = jobKeywords.filter(kw => firstLine.includes(kw.term.toLowerCase()) || (kw.stem && firstLine.includes(kw.stem)));
+    if (firstLineMatches.length >= 2) {
+      techPositional += 15;
+    } else if (firstLineMatches.length >= 1) {
+      techPositional += 8;
+    }
+  }
+
+  // C. Hard Skills e Conformidade Técnica (Max 15)
+  let techEntity = 0;
+  if (Array.isArray(resume.skills) && resume.skills.length >= 4) {
+    techEntity += 8;
+  } else if (Array.isArray(resume.skills) && resume.skills.length > 0) {
+    techEntity += 4;
+  }
+  if (acronymRegex.test(fullDocumentText)) {
+    techEntity += 7;
+  } else {
+    techEntity += 3;
+  }
+
+  const technicalScore = Math.min(100, Math.round(techCoverage + techPositional + techEntity));
+
   const overallScore = Math.min(
     100,
     Math.round(formattingScore + keywordScore + densityScore + entityScore)
@@ -152,6 +259,15 @@ export function auditAtsScore(
 
   return {
     overallScore,
+    scannabilityScore,
+    technicalScore,
+    scannabilityBreakdown: {
+      structureClarity,
+      quantifiableMetrics,
+      humanReadability,
+      metricsFoundCount,
+      metricsFound
+    },
     breakdown: {
       formatting: formattingScore,
       keywords: keywordScore,

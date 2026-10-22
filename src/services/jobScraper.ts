@@ -1,4 +1,5 @@
 import * as cheerio from "cheerio";
+import { sanitizeUtf8, stripJobBoilerplate } from "../utils/encoding.ts";
 
 export interface ScrapedJobData {
   title: string;
@@ -11,6 +12,9 @@ export function extractJobFromHtml(html: string, url?: string): ScrapedJobData {
 
   // Remove script, style, nav, footer, header and other non-content elements
   $("script, style, noscript, nav, footer, header, svg, iframe, form, button").remove();
+
+  // Add whitespace after every structural and inline tag so words NEVER get glued together (e.g. NestJS.Informações or Contratação6Contratação)
+  $("p, li, div, h1, h2, h3, h4, span, br, td, th, section, article").after(" \n ");
 
   // Extract Title
   let title = "";
@@ -59,16 +63,20 @@ export function extractJobFromHtml(html: string, url?: string): ScrapedJobData {
     rawText = $("body").text();
   }
 
-  // Clean whitespace and normalize line breaks
-  const cleanedDescription = rawText
-    .split("\n")
-    .map(line => line.trim())
-    .filter(line => line.length > 0)
-    .join("\n");
+  // Clean whitespace, unglue any remaining punctuation, normalize line breaks, and strip Gupy boilerplate
+  const cleanedDescription = stripJobBoilerplate(
+    sanitizeUtf8(
+      rawText
+        .split("\n")
+        .map(line => line.trim())
+        .filter(line => line.length > 0)
+        .join("\n")
+    )
+  );
 
   return {
-    title,
-    company,
+    title: sanitizeUtf8(title),
+    company: sanitizeUtf8(company),
     description: cleanedDescription || "Descrição não extraída automaticamente. Cole o texto da vaga manualmente."
   };
 }

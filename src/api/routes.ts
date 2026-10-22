@@ -1,16 +1,22 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { getDb } from "../db/index.ts";
-import { masterProfilesTable, jobsTable, tailoredResumesTable } from "../db/schema.ts";
+import { masterProfilesTable, jobsTable, tailoredResumesTable, knockoutQuestionsTable } from "../db/schema.ts";
 import { eq, desc } from "drizzle-orm";
 import { detectLanguage } from "../nlp/language.ts";
 import { extractKeywords } from "../nlp/tfidf.ts";
-import { tailorResume } from "../optimizer/tailor.ts";
+import { tailorResume, deduplicateSummary } from "../optimizer/tailor.ts";
+import { tailorResumeWithAiOption } from "../services/aiTailorService.ts";
 import { auditAtsScore } from "../optimizer/scorer.ts";
 import { generateAtsPdf } from "../documents/pdf.ts";
 import { generateAtsDocx } from "../documents/docx.ts";
+import { generateAtsPlainText } from "../documents/txt.ts";
+import { generateAtsMarkdown } from "../documents/markdown.ts";
+import { generateJsonResume } from "../documents/jsonResume.ts";
 import { extractTextFromPdf, parseMasterProfileText } from "../services/cvExtractor.ts";
 import { scrapeJobUrl } from "../services/jobScraper.ts";
+import { generateKnockoutAnswer, generateKnockoutAnswerWithMeta } from "../services/knockoutAnswerService.ts";
+import { sanitizeUtf8, sanitizeResumeUtf8, stripJobBoilerplate } from "../utils/encoding.ts";
 import type { ResumeData } from "../types/resume.ts";
 
 export function createApp() {
@@ -73,7 +79,7 @@ export function createApp() {
       experiences: JSON.stringify(body.experiences || []),
       education: JSON.stringify(body.education || []),
       certifications: JSON.stringify(body.certifications || []),
-      rawText: body.rawText || null,
+      rawText: body.rawText !== undefined ? body.rawText : (existing.length > 0 ? existing[0].rawText : null),
       updatedAt: Date.now()
     };
 
@@ -140,6 +146,45 @@ export function createApp() {
     return c.json({ success: true, profile: parsedProfile });
   });
 
+  // 3.1. Master Profile Reprocess (Re-runs clean parser on stored rawText)
+  app.post("/api/profile/reprocess", async (c) => {
+    const db = getDb();
+    const existing = await db.select().from(masterProfilesTable).limit(1);
+    if (existing.length === 0) {
+      return c.json({ error: "Nenhum Master CV cadastrado para reprocessar" }, 404);
+    }
+
+    const current = existing[0];
+    const rawText = current.rawText;
+    if (!rawText || rawText.trim().length === 0) {
+      return c.json({ error: "Texto original do CV não encontrado no banco de dados. Faça upload do PDF novamente." }, 400);
+    }
+
+    const parsedProfile = parseMasterProfileText(rawText);
+
+    const dataToSave = {
+      fullName: parsedProfile.fullName,
+      headline: parsedProfile.headline,
+      email: parsedProfile.email,
+      phone: parsedProfile.phone || null,
+      location: parsedProfile.location || null,
+      linkedin: parsedProfile.linkedin || null,
+      github: parsedProfile.github || null,
+      portfolio: parsedProfile.portfolio || null,
+      summary: parsedProfile.summary,
+      skills: JSON.stringify(parsedProfile.skills),
+      experiences: JSON.stringify(parsedProfile.experiences),
+      education: JSON.stringify(parsedProfile.education),
+      certifications: JSON.stringify(parsedProfile.certifications || []),
+      rawText,
+      updatedAt: Date.now()
+    };
+
+    await db.update(masterProfilesTable).set(dataToSave).where(eq(masterProfilesTable.id, current.id));
+
+    return c.json({ success: true, profile: parsedProfile });
+  });
+
   // 4. Jobs List GET
   app.get("/api/jobs", async (c) => {
     const db = getDb();
@@ -185,19 +230,22 @@ export function createApp() {
       return c.json({ error: "Título e descrição da vaga são obrigatórios" }, 400);
     }
 
-    const lang = detectLanguage(body.rawDescription);
-    const keywords = extractKeywords(body.rawDescription, { lang, topN: 15 });
+    const cleanDesc = stripJobBoilerplate(sanitizeUtf8(body.rawDescription));
+    const cleanTitle = sanitizeUtf8(body.title);
+    const cleanCompany = sanitizeUtf8(body.company || "Empresa Confidencial");
+    const lang = detectLanguage(cleanDesc);
+    const keywords = extractKeywords(cleanDesc, { lang, topN: 15 });
 
     const newJob = {
       id: `job-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-      title: body.title,
-      company: body.company || "Empresa Confidencial",
+      title: cleanTitle,
+      company: cleanCompany,
       jobUrl: body.jobUrl || null,
       status: body.status || "SAVED",
       language: lang,
-      rawDescription: body.rawDescription,
+      rawDescription: cleanDesc,
       topKeywords: JSON.stringify(keywords),
-      notes: body.notes || null,
+      notes: body.notes ? sanitizeUtf8(body.notes) : null,
       createdAt: Date.now(),
       updatedAt: Date.now()
     };
@@ -228,11 +276,16 @@ export function createApp() {
     let topKeywordsStr = existing[0].topKeywords;
     let language = existing[0].language;
 
-    if (body.rawDescription && body.rawDescription !== existing[0].rawDescription) {
-      language = detectLanguage(body.rawDescription);
-      const keywords = extractKeywords(body.rawDescription, { lang: language as any, topN: 15 });
+    if (body.rawDescription !== undefined) {
+      const cleanDesc = stripJobBoilerplate(sanitizeUtf8(body.rawDescription || ""));
+      language = detectLanguage(cleanDesc);
+      const keywords = extractKeywords(cleanDesc, { lang: language as any, topN: 15 });
       topKeywordsStr = JSON.stringify(keywords);
+      body.rawDescription = cleanDesc;
     }
+
+    if (body.title) body.title = sanitizeUtf8(body.title);
+    if (body.company) body.company = sanitizeUtf8(body.company);
 
     await db.update(jobsTable).set({
       ...body,
@@ -248,6 +301,8 @@ export function createApp() {
   app.delete("/api/jobs/:id", async (c) => {
     const id = c.req.param("id");
     const db = getDb();
+    await db.delete(knockoutQuestionsTable).where(eq(knockoutQuestionsTable.jobId, id));
+    await db.delete(tailoredResumesTable).where(eq(tailoredResumesTable.jobId, id));
     await db.delete(jobsTable).where(eq(jobsTable.id, id));
     return c.json({ success: true });
   });
@@ -315,14 +370,22 @@ export function createApp() {
 
     const keywords = JSON.parse(job.topKeywords || "[]");
 
-    // Run 7-layer optimization
-    const tailored = await tailorResume(masterResume, {
+    let useAi = false;
+    try {
+      const body = await c.req.json();
+      if (body && typeof body.useAi === "boolean") {
+        useAi = body.useAi;
+      }
+    } catch {}
+
+    // Run optimization (Gemini AI if useAi is true and available, else local deterministic 7-layer engine)
+    const tailored = await tailorResumeWithAiOption(masterResume, {
       title: job.title,
       company: job.company,
       rawDescription: job.rawDescription,
       keywords,
       language: job.language as any
-    });
+    }, useAi);
 
     // Save in DB
     const existingTailored = await db
@@ -370,17 +433,22 @@ export function createApp() {
     if (jobs.length === 0) return c.json({ error: "Vaga não encontrada" }, 404);
     const job = jobs[0];
 
+    const sanitizedResume = sanitizeResumeUtf8({
+      ...body.tailoredResume,
+      summary: deduplicateSummary(body.tailoredResume.summary || "")
+    });
+
     const keywords = JSON.parse(job.topKeywords || "[]");
-    const audit = auditAtsScore(body.tailoredResume, keywords, job.language as any);
+    const audit = auditAtsScore(sanitizedResume, keywords, job.language as any);
 
     const existing = await db.select().from(tailoredResumesTable).where(eq(tailoredResumesTable.jobId, id)).limit(1);
     if (existing.length > 0) {
       await db.update(tailoredResumesTable).set({
-        tailoredTitle: body.tailoredResume.headline,
-        tailoredSummary: body.tailoredResume.summary,
-        tailoredSkills: JSON.stringify(body.tailoredResume.skills),
-        tailoredExperiences: JSON.stringify(body.tailoredResume.experiences),
-        tailoredEducation: JSON.stringify(body.tailoredResume.education),
+        tailoredTitle: sanitizedResume.headline,
+        tailoredSummary: sanitizedResume.summary,
+        tailoredSkills: JSON.stringify(sanitizedResume.skills),
+        tailoredExperiences: JSON.stringify(sanitizedResume.experiences),
+        tailoredEducation: JSON.stringify(sanitizedResume.education),
         scoreAfter: audit.overallScore,
         keywordsAchieved: JSON.stringify(audit.matchedKeywords),
         keywordsMissing: JSON.stringify(audit.missingKeywords),
@@ -391,107 +459,197 @@ export function createApp() {
     return c.json({ success: true, scoreAfter: audit.overallScore, auditAfter: audit });
   });
 
-  // 11. Download Tailored PDF
-  app.get("/api/jobs/:id/download/pdf", async (c) => {
-    const id = c.req.param("id");
+  // 11. Knockout Questions GET
+  app.get("/api/jobs/:id/knockout", async (c) => {
+    const jobId = c.req.param("id");
     const db = getDb();
-
-    const jobs = await db.select().from(jobsTable).where(eq(jobsTable.id, id)).limit(1);
-    if (jobs.length === 0) return c.text("Vaga não encontrada", 404);
-    const job = jobs[0];
-
-    const profiles = await db.select().from(masterProfilesTable).limit(1);
-    if (profiles.length === 0) return c.text("Perfil não encontrado", 404);
-    const p = profiles[0];
-
-    const tailoredList = await db.select().from(tailoredResumesTable).where(eq(tailoredResumesTable.jobId, id)).limit(1);
-
-    let resumeToRender: ResumeData;
-    if (tailoredList.length > 0) {
-      const t = tailoredList[0];
-      resumeToRender = {
-        fullName: p.fullName,
-        headline: t.tailoredTitle,
-        email: p.email,
-        phone: p.phone || undefined,
-        location: p.location || undefined,
-        linkedin: p.linkedin || undefined,
-        github: p.github || undefined,
-        portfolio: p.portfolio || undefined,
-        summary: t.tailoredSummary,
-        skills: JSON.parse(t.tailoredSkills),
-        experiences: JSON.parse(t.tailoredExperiences),
-        education: JSON.parse(t.tailoredEducation),
-        certifications: JSON.parse(p.certifications || "[]")
-      };
-    } else {
-      // Tailor now
-      const keywords = JSON.parse(job.topKeywords || "[]");
-      const baseResume: ResumeData = {
-        fullName: p.fullName,
-        headline: p.headline,
-        email: p.email,
-        phone: p.phone || undefined,
-        location: p.location || undefined,
-        linkedin: p.linkedin || undefined,
-        github: p.github || undefined,
-        portfolio: p.portfolio || undefined,
-        summary: p.summary,
-        skills: JSON.parse(p.skills || "[]"),
-        experiences: JSON.parse(p.experiences || "[]"),
-        education: JSON.parse(p.education || "[]"),
-        certifications: JSON.parse(p.certifications || "[]")
-      };
-      const tailoredResult = await tailorResume(baseResume, {
-        title: job.title,
-        company: job.company,
-        rawDescription: job.rawDescription,
-        keywords,
-        language: job.language as any
-      });
-      resumeToRender = tailoredResult.tailoredResume;
-    }
-
-    const keywords = JSON.parse(job.topKeywords || "[]");
-    const metadata = {
-      title: job.title,
-      author: p.fullName,
-      keywords: keywords.map((k: any) => k.term),
-      subject: `Currículo otimizado para ${job.title} na ${job.company}`,
-      creator: "Currículo",
-      category: "Currículo"
-    };
-
-    const pdfBytes = await generateAtsPdf(resumeToRender, metadata);
-    const sanitizedName = p.fullName.replace(/\s+/g, "_");
-
-    return new Response(pdfBytes as any, {
-      headers: {
-        "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${sanitizedName}_Curriculo_ATS.pdf"`
-      }
-    });
+    const questions = await db
+      .select()
+      .from(knockoutQuestionsTable)
+      .where(eq(knockoutQuestionsTable.jobId, jobId))
+      .orderBy(knockoutQuestionsTable.createdAt);
+    return c.json({ questions });
   });
 
-  // 12. Download Tailored DOCX
-  app.get("/api/jobs/:id/download/docx", async (c) => {
-    const id = c.req.param("id");
+  // 12. Knockout Questions POST
+  app.post("/api/jobs/:id/knockout", async (c) => {
+    const jobId = c.req.param("id");
+    const body = await c.req.json<{ questionText: string }>();
+    if (!body.questionText || !body.questionText.trim()) {
+      return c.json({ error: "O texto da pergunta é obrigatório" }, 400);
+    }
+    const db = getDb();
+    const newId = `kq-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const newRow = {
+      id: newId,
+      jobId,
+      questionText: body.questionText.trim(),
+      candidateAnswer: null,
+      aiSuggestedAnswer: null,
+      status: "Pendente",
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+    await db.insert(knockoutQuestionsTable).values(newRow);
+    return c.json({ success: true, question: newRow }, 201);
+  });
+
+  // 13. Knockout Questions PUT
+  app.put("/api/jobs/:id/knockout/:qid", async (c) => {
+    const qid = c.req.param("qid");
+    const body = await c.req.json<Partial<typeof knockoutQuestionsTable.$inferInsert>>();
+    const db = getDb();
+    const existing = await db
+      .select()
+      .from(knockoutQuestionsTable)
+      .where(eq(knockoutQuestionsTable.id, qid))
+      .limit(1);
+    if (existing.length === 0) {
+      return c.json({ error: "Pergunta não encontrada" }, 404);
+    }
+    await db
+      .update(knockoutQuestionsTable)
+      .set({
+        ...body,
+        updatedAt: Date.now()
+      })
+      .where(eq(knockoutQuestionsTable.id, qid));
+    const updated = await db
+      .select()
+      .from(knockoutQuestionsTable)
+      .where(eq(knockoutQuestionsTable.id, qid))
+      .limit(1);
+    return c.json({ success: true, question: updated[0] });
+  });
+
+  // 14. Knockout Questions DELETE
+  app.delete("/api/jobs/:id/knockout/:qid", async (c) => {
+    const qid = c.req.param("qid");
+    const db = getDb();
+    await db.delete(knockoutQuestionsTable).where(eq(knockoutQuestionsTable.id, qid));
+    return c.json({ success: true });
+  });
+
+  // 15. Knockout Questions Generate Answer POST
+  app.post("/api/jobs/:id/knockout/:qid/generate", async (c) => {
+    const jobId = c.req.param("id");
+    const qid = c.req.param("qid");
     const db = getDb();
 
-    const jobs = await db.select().from(jobsTable).where(eq(jobsTable.id, id)).limit(1);
-    if (jobs.length === 0) return c.text("Vaga não encontrada", 404);
+    const qList = await db
+      .select()
+      .from(knockoutQuestionsTable)
+      .where(eq(knockoutQuestionsTable.id, qid))
+      .limit(1);
+    if (qList.length === 0) return c.json({ error: "Pergunta não encontrada" }, 404);
+    const question = qList[0];
+
+    const jList = await db.select().from(jobsTable).where(eq(jobsTable.id, jobId)).limit(1);
+    if (jList.length === 0) return c.json({ error: "Vaga não encontrada" }, 404);
+    const job = jList[0];
+
+    const pList = await db.select().from(masterProfilesTable).limit(1);
+    if (pList.length === 0) return c.json({ error: "Master CV não encontrado" }, 400);
+    const p = pList[0];
+
+    const masterProfile: ResumeData = {
+      fullName: p.fullName,
+      headline: p.headline,
+      email: p.email,
+      phone: p.phone || undefined,
+      location: p.location || undefined,
+      linkedin: p.linkedin || undefined,
+      github: p.github || undefined,
+      portfolio: p.portfolio || undefined,
+      summary: p.summary,
+      skills: JSON.parse(p.skills || "[]"),
+      experiences: JSON.parse(p.experiences || "[]"),
+      education: JSON.parse(p.education || "[]"),
+      certifications: JSON.parse(p.certifications || "[]")
+    };
+
+    const keywords = JSON.parse(job.topKeywords || "[]");
+
+    const genResult = await generateKnockoutAnswerWithMeta({
+      questionText: question.questionText,
+      job: {
+        title: job.title,
+        company: job.company,
+        rawDescription: job.rawDescription,
+        topKeywords: keywords,
+        language: job.language
+      },
+      profile: masterProfile
+    });
+
+    const finalAnswer = genResult.answer;
+
+    await db
+      .update(knockoutQuestionsTable)
+      .set({
+        aiSuggestedAnswer: finalAnswer,
+        candidateAnswer: finalAnswer,
+        updatedAt: Date.now()
+      })
+      .where(eq(knockoutQuestionsTable.id, qid));
+
+    const updated = await db
+      .select()
+      .from(knockoutQuestionsTable)
+      .where(eq(knockoutQuestionsTable.id, qid))
+      .limit(1);
+
+    return c.json({ success: true, question: updated[0], engineSource: genResult.source });
+  });
+
+  // Helper to build robust RFC 5987 UTF-8 Content-Disposition
+  function buildContentDisposition(rawFilename: string): string {
+    const cleanFilename = sanitizeUtf8(rawFilename);
+    const asciiFallback = cleanFilename
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^\x20-\x7E]/g, "_");
+    const encoded = encodeURIComponent(cleanFilename);
+    return `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encoded}`;
+  }
+
+  // Helper to resolve tailored resume data cleanly
+  async function resolveResumeForExport(jobId: string): Promise<{ resume: ResumeData; job: any; profile: any } | null> {
+    const db = getDb();
+    const jobs = await db.select().from(jobsTable).where(eq(jobsTable.id, jobId)).limit(1);
+    if (jobs.length === 0) return null;
     const job = jobs[0];
 
     const profiles = await db.select().from(masterProfilesTable).limit(1);
-    if (profiles.length === 0) return c.text("Perfil não encontrado", 404);
+    if (profiles.length === 0) return null;
     const p = profiles[0];
 
-    const tailoredList = await db.select().from(tailoredResumesTable).where(eq(tailoredResumesTable.jobId, id)).limit(1);
+    const tailoredList = await db.select().from(tailoredResumesTable).where(eq(tailoredResumesTable.jobId, jobId)).limit(1);
 
     let resumeToRender: ResumeData;
     if (tailoredList.length > 0) {
       const t = tailoredList[0];
-      resumeToRender = {
+      const cleanSummary = deduplicateSummary(
+        (t.tailoredSummary || "")
+          .replace(/\n*Core Stack & Especialidades:.*$/is, "")
+          .replace(/\n*Core Stack & Specialties:.*$/is, "")
+          .trim()
+      );
+
+      const rawExps = JSON.parse(t.tailoredExperiences || "[]");
+      const cleanExperiences = rawExps.map((exp: any) => ({
+        ...exp,
+        description: (exp.description || "")
+          .split("\n")
+          .filter((l: string) => 
+            !l.toLowerCase().includes("stack técnica & práticas") &&
+            !l.toLowerCase().includes("tecnologias e práticas aplicadas") &&
+            !l.toLowerCase().includes("core stack &")
+          )
+          .join("\n")
+      }));
+
+      resumeToRender = sanitizeResumeUtf8({
         fullName: p.fullName,
         headline: t.tailoredTitle,
         email: p.email,
@@ -500,12 +658,12 @@ export function createApp() {
         linkedin: p.linkedin || undefined,
         github: p.github || undefined,
         portfolio: p.portfolio || undefined,
-        summary: t.tailoredSummary,
+        summary: cleanSummary,
         skills: JSON.parse(t.tailoredSkills),
-        experiences: JSON.parse(t.tailoredExperiences),
+        experiences: cleanExperiences,
         education: JSON.parse(t.tailoredEducation),
         certifications: JSON.parse(p.certifications || "[]")
-      };
+      });
     } else {
       const keywords = JSON.parse(job.topKeywords || "[]");
       const baseResume: ResumeData = {
@@ -530,26 +688,118 @@ export function createApp() {
         keywords,
         language: job.language as any
       });
-      resumeToRender = tailoredResult.tailoredResume;
+      resumeToRender = sanitizeResumeUtf8(tailoredResult.tailoredResume);
     }
 
+    return { resume: resumeToRender, job, profile: p };
+  }
+
+  // 11. Download Tailored DOCX (Word - OpenXML ATS Recomendado ⭐)
+  app.get("/api/jobs/:id/download/docx", async (c) => {
+    const id = c.req.param("id");
+    const data = await resolveResumeForExport(id);
+    if (!data) return c.text("Vaga ou perfil não encontrado", 404);
+
+    const { resume, job, profile } = data;
     const keywords = JSON.parse(job.topKeywords || "[]");
     const metadata = {
       title: job.title,
-      author: p.fullName,
+      author: profile.fullName,
       keywords: keywords.map((k: any) => k.term),
       subject: `Currículo otimizado para ${job.title} na ${job.company}`,
       creator: "Currículo",
       category: "Currículo"
     };
 
-    const docxBuffer = await generateAtsDocx(resumeToRender, metadata);
-    const sanitizedName = p.fullName.replace(/\s+/g, "_");
+    const docxBuffer = await generateAtsDocx(resume, metadata);
+    const sanitizedName = sanitizeUtf8(profile.fullName).replace(/\s+/g, "_");
 
     return new Response(docxBuffer as any, {
       headers: {
         "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "Content-Disposition": `attachment; filename="${sanitizedName}_Curriculo_ATS.docx"`
+        "Content-Disposition": buildContentDisposition(`${sanitizedName}_Curriculo_ATS.docx`)
+      }
+    });
+  });
+
+  // 12. Download Tailored PDF (Linear com Metadados XMP)
+  app.get("/api/jobs/:id/download/pdf", async (c) => {
+    const id = c.req.param("id");
+    const data = await resolveResumeForExport(id);
+    if (!data) return c.text("Vaga ou perfil não encontrado", 404);
+
+    const { resume, job, profile } = data;
+    const keywords = JSON.parse(job.topKeywords || "[]");
+    const metadata = {
+      title: job.title,
+      author: profile.fullName,
+      keywords: keywords.map((k: any) => k.term),
+      subject: `Currículo otimizado para ${job.title} na ${job.company}`,
+      creator: "Currículo",
+      category: "Currículo"
+    };
+
+    const pdfBytes = await generateAtsPdf(resume, metadata);
+    const sanitizedName = sanitizeUtf8(profile.fullName).replace(/\s+/g, "_");
+
+    return new Response(pdfBytes as any, {
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": buildContentDisposition(`${sanitizedName}_Curriculo_ATS.pdf`)
+      }
+    });
+  });
+
+  // 13. Download Tailored Plain Text (.txt UTF-8)
+  app.get("/api/jobs/:id/download/txt", async (c) => {
+    const id = c.req.param("id");
+    const data = await resolveResumeForExport(id);
+    if (!data) return c.text("Vaga ou perfil não encontrado", 404);
+
+    const { resume, profile } = data;
+    const txtContent = generateAtsPlainText(resume);
+    const sanitizedName = sanitizeUtf8(profile.fullName).replace(/\s+/g, "_");
+
+    return new Response(txtContent, {
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Content-Disposition": buildContentDisposition(`${sanitizedName}_Curriculo_ATS.txt`)
+      }
+    });
+  });
+
+  // 14. Download Tailored Markdown (.md)
+  app.get("/api/jobs/:id/download/md", async (c) => {
+    const id = c.req.param("id");
+    const data = await resolveResumeForExport(id);
+    if (!data) return c.text("Vaga ou perfil não encontrado", 404);
+
+    const { resume, profile } = data;
+    const mdContent = generateAtsMarkdown(resume);
+    const sanitizedName = sanitizeUtf8(profile.fullName).replace(/\s+/g, "_");
+
+    return new Response(mdContent, {
+      headers: {
+        "Content-Type": "text/markdown; charset=utf-8",
+        "Content-Disposition": buildContentDisposition(`${sanitizedName}_Curriculo_ATS.md`)
+      }
+    });
+  });
+
+  // 15. Download Tailored JSON Resume (.json)
+  app.get("/api/jobs/:id/download/json", async (c) => {
+    const id = c.req.param("id");
+    const data = await resolveResumeForExport(id);
+    if (!data) return c.text("Vaga ou perfil não encontrado", 404);
+
+    const { resume, profile } = data;
+    const jsonResumeObj = generateJsonResume(resume);
+    const sanitizedName = sanitizeUtf8(profile.fullName).replace(/\s+/g, "_");
+
+    return new Response(JSON.stringify(jsonResumeObj, null, 2), {
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        "Content-Disposition": buildContentDisposition(`${sanitizedName}_Curriculo_ATS.json`)
       }
     });
   });

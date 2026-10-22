@@ -32,6 +32,15 @@ export interface ResumeData {
 
 export interface AtsAuditResult {
   overallScore: number; // 0 - 100
+  scannabilityScore: number; // 0 - 100: "Índice de Escaneabilidade & Impacto" (Humano / 6s Scan)
+  technicalScore: number; // 0 - 100: "Alinhamento Técnico TF-IDF" (Robô ATS / Hard skills)
+  scannabilityBreakdown: {
+    structureClarity: number; // Max 30
+    quantifiableMetrics: number; // Max 45
+    humanReadability: number; // Max 25
+    metricsFoundCount: number;
+    metricsFound: string[];
+  };
   breakdown: {
     formatting: number; // Max 30
     keywords: number; // Max 35
@@ -43,3 +52,4 @@ export interface AtsAuditResult {
   keywordDensity: Record<string, number>;
   recommendations: string[];
 }
+

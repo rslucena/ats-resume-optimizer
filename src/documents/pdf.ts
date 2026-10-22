@@ -1,6 +1,9 @@
 import PDFKitDoc from "pdfkit";
 import { PDFDocument } from "pdf-lib";
 import type { ResumeData } from "../types/resume.ts";
+import { sanitizeLocation } from "../services/cvExtractor.ts";
+import { formatDateRange } from "../utils/dateFormat.ts";
+import { sanitizeResumeUtf8, sanitizeUtf8 } from "../utils/encoding.ts";
 
 export interface DocumentMetadata {
   title: string;
@@ -12,20 +15,23 @@ export interface DocumentMetadata {
 }
 
 export async function generateAtsPdf(
-  resume: ResumeData,
-  metadata: DocumentMetadata
+  rawResume: ResumeData,
+  rawMetadata: DocumentMetadata
 ): Promise<Uint8Array> {
+  const resume = sanitizeResumeUtf8(rawResume);
+  const metadata = sanitizeResumeUtf8(rawMetadata);
+
   // Step 1: Render ATS-friendly single-column layout using PDFKit
   const rawPdfBuffer = await new Promise<Buffer>((resolve, reject) => {
     const doc = new PDFKitDoc({
       size: "A4",
-      margins: { top: 40, bottom: 40, left: 45, right: 45 },
+      margins: { top: 36, bottom: 36, left: 45, right: 45 },
       info: {
-        Title: metadata.title,
-        Author: metadata.author,
-        Subject: metadata.subject,
-        Keywords: metadata.keywords.join(", "),
-        Creator: metadata.creator
+        Title: sanitizeUtf8(metadata.title),
+        Author: sanitizeUtf8(metadata.author),
+        Subject: sanitizeUtf8(metadata.subject),
+        Keywords: (metadata.keywords || []).map(k => sanitizeUtf8(k)).join(", "),
+        Creator: sanitizeUtf8(metadata.creator)
       }
     });
 
@@ -43,10 +49,11 @@ export async function generateAtsPdf(
       doc.moveDown(0.2);
     }
 
+    const cleanLocation = sanitizeLocation(resume.location);
     const contactParts = [
       resume.email,
       resume.phone,
-      resume.location,
+      cleanLocation,
       resume.linkedin,
       resume.github
     ].filter(Boolean);
@@ -82,7 +89,8 @@ export async function generateAtsPdf(
         doc.font("Helvetica-Bold").fontSize(10.5).fillColor("#000000").text(exp.role, { continued: true });
         doc.font("Helvetica").fontSize(9.5).fillColor("#444444").text(` — ${exp.company}`);
         
-        doc.font("Helvetica-Oblique").fontSize(8.5).fillColor("#666666").text(`${exp.startDate} - ${exp.endDate}`);
+        const dateRange = formatDateRange(exp.startDate, exp.endDate);
+        doc.font("Helvetica-Oblique").fontSize(8.5).fillColor("#666666").text(dateRange);
         doc.moveDown(0.25);
 
         // Bullets
@@ -99,7 +107,7 @@ export async function generateAtsPdf(
             align: "left"
           });
         }
-        doc.moveDown(0.6);
+        doc.moveDown(0.4);
       }
     }
 
@@ -109,7 +117,9 @@ export async function generateAtsPdf(
 
       for (const edu of resume.education) {
         doc.font("Helvetica-Bold").fontSize(10).fillColor("#000000").text(edu.degree);
-        doc.font("Helvetica").fontSize(9).fillColor("#444444").text(`${edu.institution}  (${edu.startDate} - ${edu.endDate})`);
+        const eduDates = formatDateRange(edu.startDate, edu.endDate);
+        const eduSubtitle = eduDates ? `${edu.institution}  (${eduDates})` : edu.institution;
+        doc.font("Helvetica").fontSize(9).fillColor("#444444").text(eduSubtitle);
         doc.moveDown(0.4);
       }
       doc.moveDown(0.4);

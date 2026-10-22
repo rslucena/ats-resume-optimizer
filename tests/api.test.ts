@@ -64,6 +64,19 @@ describe("Hono REST API Routes", () => {
     const getRes2 = await app.request("/api/profile");
     const getJson2 = await getRes2.json();
     expect(getJson2.profile.fullName).toBe("Carlos Silva");
+
+    // 4. POST /api/profile/reprocess should reprocess saved rawText
+    const db = getDb();
+    await db.update(masterProfilesTable).set({
+      rawText: "Page 1 of 6\nCarlos Silva\nSenior Engineer\ncarlos@test.com\n\nResumo\nDev com 5 anos.\n\nExperiência\nTech Corp\nEngineer\n2021 - Atual\nCoding\n\nFormação acadêmica\nUSP\nCiência da Computação (2016 - 2020)"
+    });
+
+    const reprocessRes = await app.request("/api/profile/reprocess", { method: "POST" });
+    expect(reprocessRes.status).toBe(200);
+    const reprocessJson = await reprocessRes.json();
+    expect(reprocessJson.success).toBe(true);
+    expect(reprocessJson.profile.fullName).toBe("Carlos Silva");
+    expect(JSON.stringify(reprocessJson.profile)).not.toContain("Page 1 of 6");
   });
 
   it("should create, list, and tailor a job", async () => {
@@ -139,5 +152,80 @@ describe("Hono REST API Routes", () => {
     expect(docxRes.headers.get("Content-Type")).toContain("wordprocessingml");
     const docxBlob = await docxRes.arrayBuffer();
     expect(docxBlob.byteLength).toBeGreaterThan(1000);
+
+    // 5. GET /api/jobs/:id/download/txt
+    const txtRes = await app.request(`/api/jobs/${jobId}/download/txt`);
+    expect(txtRes.status).toBe(200);
+    expect(txtRes.headers.get("Content-Type")).toContain("text/plain");
+    const txtText = await txtRes.text();
+    expect(txtText).toContain("CARLOS SILVA");
+    expect(txtText).toContain("RESUMO PROFISSIONAL");
+    expect(txtText).toContain("EXPERIÊNCIA PROFISSIONAL");
+
+    // 6. GET /api/jobs/:id/download/md
+    const mdRes = await app.request(`/api/jobs/${jobId}/download/md`);
+    expect(mdRes.status).toBe(200);
+    expect(mdRes.headers.get("Content-Type")).toContain("text/markdown");
+    const mdText = await mdRes.text();
+    expect(mdText).toContain("# Carlos Silva");
+    expect(mdText).toContain("## Resumo Profissional");
+
+    // 7. GET /api/jobs/:id/download/json
+    const jsonRes = await app.request(`/api/jobs/${jobId}/download/json`);
+    expect(jsonRes.status).toBe(200);
+    expect(jsonRes.headers.get("Content-Type")).toContain("application/json");
+    const jsonResumeData = await jsonRes.json();
+    expect(jsonResumeData.basics.name).toBe("Carlos Silva");
+    expect(jsonResumeData.work.length).toBeGreaterThan(0);
+  });
+
+  it("should delete a job and its associated tailored resume and knockout questions", async () => {
+    // 1. Create a job
+    const createRes = await app.request("/api/jobs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: "Frontend Engineer",
+        company: "Vercel",
+        jobUrl: "https://vercel.com/jobs/fe",
+        status: "SAVED",
+        rawDescription: "Looking for a React and Next.js frontend engineer."
+      })
+    });
+    expect(createRes.status).toBe(201);
+    const { job } = await createRes.json();
+
+    // 2. Add a knockout question
+    const kqRes = await app.request(`/api/jobs/${job.id}/knockout`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        questionText: "Você possui experiência com Next.js?"
+      })
+    });
+    expect(kqRes.status).toBe(201);
+
+    // Verify job exists in GET /api/jobs
+    const listRes = await app.request("/api/jobs");
+    const listData = await listRes.json();
+    expect(listData.jobs.some((j: any) => j.id === job.id)).toBe(true);
+
+    // 3. DELETE /api/jobs/:id
+    const delRes = await app.request(`/api/jobs/${job.id}`, {
+      method: "DELETE"
+    });
+    expect(delRes.status).toBe(200);
+    const delData = await delRes.json();
+    expect(delData.success).toBe(true);
+
+    // 4. Verify job is removed
+    const listResAfter = await app.request("/api/jobs");
+    const listDataAfter = await listResAfter.json();
+    expect(listDataAfter.jobs.some((j: any) => j.id === job.id)).toBe(false);
+
+    // 5. Knockout questions should also be removed
+    const kqListRes = await app.request(`/api/jobs/${job.id}/knockout`);
+    const kqListData = await kqListRes.json();
+    expect(kqListData.questions.length).toBe(0);
   });
 });
