@@ -2,6 +2,8 @@
 
 Aplicação Full-Stack **local-first** desenvolvida para **Controle de Candidaturas** e **Otimização Algorítmica de Currículos**, aplicando engenharia reversa nas regras de parsers e extratores de ATS corporativos (*Workday, Taleo, Greenhouse, Lever, Gupy, SAP SuccessFactors*).
 
+![ATS Resume Optimizer & Job Tracker - Workbench](screenshot_demo.png)
+
 ---
 
 ## 🚀 Destaques da Arquitetura & Tech Stack
@@ -89,10 +91,8 @@ Acesse no seu navegador: **`http://localhost:3000`**
 ## 📁 Estrutura de Arquivos
 
 ```
-├── client/ & public/       # Interface SPA Dark Mode (HTML, CSS e JS modular)
-├── docs/superpowers/       # Especificação do Design e Plano de Implementação (Superpower Skills)
-│   ├── plans/
-│   └── specs/
+├── public/                 # Interface SPA Dark Mode (HTML, CSS e JS modular)
+├── screenshot_demo.png     # Screenshot da bancada de trabalho
 ├── src/
 │   ├── api/
 │   │   └── routes.ts       # Rotas REST Hono (Upload, Jobs, Tailoring, Download)

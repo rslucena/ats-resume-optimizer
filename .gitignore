@@ -11,3 +11,6 @@ dist/
 .taste-skill/
 output_*
 *.log
+docs/
+scratch/
+
