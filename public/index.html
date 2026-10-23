@@ -204,6 +204,40 @@
                 </div>
               </button>
 
+              <!-- 2. Claude 3.5 Sonnet (Anthropic IA) -->
+              <button id="btn-engine-claude" class="tailor-engine-option-btn w-full text-left p-2 rounded-lg flex items-start gap-2.5 transition-colors group cursor-pointer" data-engine="claude">
+                <div class="p-1.5 rounded-md bg-purple-500/10 text-purple-400 mt-0.5 border border-purple-500/25 shrink-0" id="icon-container-engine-claude">
+                  <i data-lucide="brain" class="w-4 h-4 text-purple-400"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                      <span class="text-xs font-semibold" style="color: var(--text-primary);">Claude 3.5 Sonnet (IA)</span>
+                      <span id="badge-engine-claude" class="hidden text-[9px] px-1 py-0.2 rounded bg-zinc-800 text-rose-300 border border-rose-500/30 font-medium">Indisponível</span>
+                    </div>
+                    <i data-lucide="check" id="check-engine-claude" class="w-3.5 h-3.5 text-emerald-500 font-bold hidden"></i>
+                  </div>
+                  <p class="text-[11px] text-zinc-400 leading-tight mt-0.5" id="engine-claude-desc">Raciocínio avançado e redação executiva</p>
+                </div>
+              </button>
+
+              <!-- 3. OpenRouter (Multi-LLM) -->
+              <button id="btn-engine-openrouter" class="tailor-engine-option-btn w-full text-left p-2 rounded-lg flex items-start gap-2.5 transition-colors group cursor-pointer" data-engine="openrouter">
+                <div class="p-1.5 rounded-md bg-sky-500/10 text-sky-400 mt-0.5 border border-sky-500/25 shrink-0" id="icon-container-engine-openrouter">
+                  <i data-lucide="globe" class="w-4 h-4 text-sky-400"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                      <span class="text-xs font-semibold" style="color: var(--text-primary);">OpenRouter (Multi-LLM)</span>
+                      <span id="badge-engine-openrouter" class="hidden text-[9px] px-1 py-0.2 rounded bg-zinc-800 text-rose-300 border border-rose-500/30 font-medium">Indisponível</span>
+                    </div>
+                    <i data-lucide="check" id="check-engine-openrouter" class="w-3.5 h-3.5 text-emerald-500 font-bold hidden"></i>
+                  </div>
+                  <p class="text-[11px] text-zinc-400 leading-tight mt-0.5" id="engine-openrouter-desc">Acesso unificado a modelos de ponta</p>
+                </div>
+              </button>
+
               <!-- 2. Ollama Local LLM (100% Offline IA) -->
               <button id="btn-engine-ollama" class="tailor-engine-option-btn w-full text-left p-2 rounded-lg flex items-start gap-2.5 transition-colors group cursor-pointer" data-engine="ollama">
                 <div class="p-1.5 rounded-md bg-emerald-500/10 text-emerald-400 mt-0.5 border border-emerald-500/25 shrink-0" id="icon-container-engine-ollama">
@@ -629,6 +663,40 @@
                         <i data-lucide="check" id="check-cl-engine-gemini" class="w-3.5 h-3.5 text-emerald-500 font-bold hidden"></i>
                       </div>
                       <p class="text-[11px] text-zinc-400 leading-tight mt-0.5" id="cl-engine-gemini-desc">Reescrita contextual com IA em nuvem</p>
+                    </div>
+                  </button>
+
+                  <!-- 2. Claude 3.5 Sonnet (Anthropic IA) -->
+                  <button id="btn-cl-engine-claude" class="cl-engine-option-btn w-full text-left p-2 rounded-lg flex items-start gap-2.5 transition-colors group cursor-pointer" data-engine="claude">
+                    <div class="p-1.5 rounded-md bg-purple-500/10 text-purple-400 mt-0.5 border border-purple-500/25 shrink-0" id="icon-container-cl-claude">
+                      <i data-lucide="brain" class="w-4 h-4 text-purple-400"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                          <span class="text-xs font-semibold" style="color: var(--text-primary);">Claude 3.5 Sonnet (IA)</span>
+                          <span id="badge-cl-engine-claude" class="hidden text-[9px] px-1 py-0.2 rounded bg-zinc-800 text-rose-300 border border-rose-500/30 font-medium">Indisponível</span>
+                        </div>
+                        <i data-lucide="check" id="check-cl-engine-claude" class="w-3.5 h-3.5 text-emerald-500 font-bold hidden"></i>
+                      </div>
+                      <p class="text-[11px] text-zinc-400 leading-tight mt-0.5" id="cl-engine-claude-desc">Raciocínio avançado e redação executiva</p>
+                    </div>
+                  </button>
+
+                  <!-- 3. OpenRouter (Multi-LLM) -->
+                  <button id="btn-cl-engine-openrouter" class="cl-engine-option-btn w-full text-left p-2 rounded-lg flex items-start gap-2.5 transition-colors group cursor-pointer" data-engine="openrouter">
+                    <div class="p-1.5 rounded-md bg-sky-500/10 text-sky-400 mt-0.5 border border-sky-500/25 shrink-0" id="icon-container-cl-openrouter">
+                      <i data-lucide="globe" class="w-4 h-4 text-sky-400"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                          <span class="text-xs font-semibold" style="color: var(--text-primary);">OpenRouter (Multi-LLM)</span>
+                          <span id="badge-cl-engine-openrouter" class="hidden text-[9px] px-1 py-0.2 rounded bg-zinc-800 text-rose-300 border border-rose-500/30 font-medium">Indisponível</span>
+                        </div>
+                        <i data-lucide="check" id="check-cl-engine-openrouter" class="w-3.5 h-3.5 text-emerald-500 font-bold hidden"></i>
+                      </div>
+                      <p class="text-[11px] text-zinc-400 leading-tight mt-0.5" id="cl-engine-openrouter-desc">Acesso unificado a modelos de ponta</p>
                     </div>
                   </button>
 

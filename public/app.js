@@ -14,8 +14,12 @@ let currentScannabilityDisplay = 0;
 let currentTechnicalDisplay = 0;
 let currentKnockoutQuestions = [];
 let hasGeminiKey = false;
+let hasClaudeKey = false;
+let hasOpenRouterKey = false;
 let hasOllama = false;
 let ollamaInfo = null;
+let claudeInfo = null;
+let openRouterInfo = null;
 let currentTailorEngine = "local";
 
 // On DOM Loaded
@@ -1685,17 +1689,29 @@ async function checkSystemConfig() {
     if (res.ok) {
       const data = await res.json();
       hasGeminiKey = !!data.hasGeminiKey;
+      hasClaudeKey = !!data.hasClaudeKey;
+      hasOpenRouterKey = !!data.hasOpenRouterKey;
+      claudeInfo = data.claude || null;
+      openRouterInfo = data.openrouter || null;
       hasOllama = !!(data.ollama?.available && data.ollama?.configured);
       ollamaInfo = data.ollama || null;
     } else {
       hasGeminiKey = false;
+      hasClaudeKey = false;
+      hasOpenRouterKey = false;
       hasOllama = false;
       ollamaInfo = null;
+      claudeInfo = null;
+      openRouterInfo = null;
     }
   } catch {
     hasGeminiKey = false;
+    hasClaudeKey = false;
+    hasOpenRouterKey = false;
     hasOllama = false;
     ollamaInfo = null;
+    claudeInfo = null;
+    openRouterInfo = null;
   }
 
   // Restore saved choice only if available and configured
@@ -1703,8 +1719,16 @@ async function checkSystemConfig() {
 
   if (savedEngine === "gemini" && hasGeminiKey) {
     currentTailorEngine = "gemini";
+  } else if (savedEngine === "claude" && hasClaudeKey) {
+    currentTailorEngine = "claude";
+  } else if (savedEngine === "openrouter" && hasOpenRouterKey) {
+    currentTailorEngine = "openrouter";
   } else if (savedEngine === "ollama" && hasOllama) {
     currentTailorEngine = "ollama";
+  } else if (hasClaudeKey && !savedEngine) {
+    currentTailorEngine = "claude";
+  } else if (hasOpenRouterKey && !savedEngine) {
+    currentTailorEngine = "openrouter";
   } else if (hasGeminiKey && !savedEngine) {
     currentTailorEngine = "gemini";
   } else {
@@ -1777,6 +1801,134 @@ function applyEngineAvailability() {
       descClGemini.textContent = "Reescrita contextual com IA em nuvem";
       descClGemini.classList.remove("text-rose-400");
       descClGemini.classList.add("text-zinc-400");
+    }
+  }
+
+  // 2. Claude (Anthropic)
+  const btnEngineClaude = document.getElementById("btn-engine-claude");
+  const badgeClaude = document.getElementById("badge-engine-claude");
+  const descClaude = document.getElementById("engine-claude-desc");
+
+  const btnClClaude = document.getElementById("btn-cl-engine-claude");
+  const badgeClClaude = document.getElementById("badge-cl-engine-claude");
+  const descClClaude = document.getElementById("cl-engine-claude-desc");
+
+  if (!hasClaudeKey) {
+    [btnEngineClaude, btnClClaude].forEach((btn) => {
+      if (btn) {
+        btn.disabled = true;
+        btn.setAttribute("disabled", "true");
+        btn.classList.add("opacity-40", "cursor-not-allowed");
+        btn.classList.remove("cursor-pointer", "hover:bg-zinc-500/10");
+        btn.title = "Claude indisponível";
+      }
+    });
+    [badgeClaude, badgeClClaude].forEach((b) => {
+      if (b) {
+        b.textContent = "Indisponível";
+        b.classList.remove("hidden");
+      }
+    });
+    if (descClaude) {
+      descClaude.textContent = "Raciocínio avançado e redação executiva";
+      descClaude.classList.remove("text-rose-400");
+      descClaude.classList.add("text-zinc-400");
+    }
+    if (descClClaude) {
+      descClClaude.textContent = "Raciocínio avançado e redação executiva";
+      descClClaude.classList.remove("text-rose-400");
+      descClClaude.classList.add("text-zinc-400");
+    }
+    if (currentTailorEngine === "claude") {
+      updateTailorEngineUI("local");
+    }
+  } else {
+    [btnEngineClaude, btnClClaude].forEach((btn) => {
+      if (btn) {
+        btn.disabled = false;
+        btn.removeAttribute("disabled");
+        btn.classList.remove("opacity-40", "cursor-not-allowed");
+        btn.classList.add("cursor-pointer", "hover:bg-zinc-500/10");
+        btn.title = `Claude ativo (${claudeInfo?.model || "Sonnet 3.5"})`;
+      }
+    });
+    [badgeClaude, badgeClClaude].forEach((b) => {
+      b?.classList.add("hidden");
+    });
+    if (descClaude) {
+      descClaude.textContent = "Raciocínio avançado e redação executiva";
+      descClaude.classList.remove("text-rose-400");
+      descClaude.classList.add("text-zinc-400");
+    }
+    if (descClClaude) {
+      descClClaude.textContent = "Raciocínio avançado e redação executiva";
+      descClClaude.classList.remove("text-rose-400");
+      descClClaude.classList.add("text-zinc-400");
+    }
+  }
+
+  // 3. OpenRouter (Multi-LLM)
+  const btnEngineOpenRouter = document.getElementById("btn-engine-openrouter");
+  const badgeOpenRouter = document.getElementById("badge-engine-openrouter");
+  const descOpenRouter = document.getElementById("engine-openrouter-desc");
+
+  const btnClOpenRouter = document.getElementById("btn-cl-engine-openrouter");
+  const badgeClOpenRouter = document.getElementById(
+    "badge-cl-engine-openrouter",
+  );
+  const descClOpenRouter = document.getElementById("cl-engine-openrouter-desc");
+
+  if (!hasOpenRouterKey) {
+    [btnEngineOpenRouter, btnClOpenRouter].forEach((btn) => {
+      if (btn) {
+        btn.disabled = true;
+        btn.setAttribute("disabled", "true");
+        btn.classList.add("opacity-40", "cursor-not-allowed");
+        btn.classList.remove("cursor-pointer", "hover:bg-zinc-500/10");
+        btn.title = "OpenRouter indisponível";
+      }
+    });
+    [badgeOpenRouter, badgeClOpenRouter].forEach((b) => {
+      if (b) {
+        b.textContent = "Indisponível";
+        b.classList.remove("hidden");
+      }
+    });
+    if (descOpenRouter) {
+      descOpenRouter.textContent = "Acesso unificado a modelos de ponta";
+      descOpenRouter.classList.remove("text-rose-400");
+      descOpenRouter.classList.add("text-zinc-400");
+    }
+    if (descClOpenRouter) {
+      descClOpenRouter.textContent = "Acesso unificado a modelos de ponta";
+      descClOpenRouter.classList.remove("text-rose-400");
+      descClOpenRouter.classList.add("text-zinc-400");
+    }
+    if (currentTailorEngine === "openrouter") {
+      updateTailorEngineUI("local");
+    }
+  } else {
+    [btnEngineOpenRouter, btnClOpenRouter].forEach((btn) => {
+      if (btn) {
+        btn.disabled = false;
+        btn.removeAttribute("disabled");
+        btn.classList.remove("opacity-40", "cursor-not-allowed");
+        btn.classList.add("cursor-pointer", "hover:bg-zinc-500/10");
+        btn.title = `OpenRouter ativo (${openRouterInfo?.model || "Multi-LLM"})`;
+      }
+    });
+    [badgeOpenRouter, badgeClOpenRouter].forEach((b) => {
+      b?.classList.add("hidden");
+    });
+    if (descOpenRouter) {
+      descOpenRouter.textContent = "Acesso unificado a modelos de ponta";
+      descOpenRouter.classList.remove("text-rose-400");
+      descOpenRouter.classList.add("text-zinc-400");
+    }
+    if (descClOpenRouter) {
+      descClOpenRouter.textContent = "Acesso unificado a modelos de ponta";
+      descClOpenRouter.classList.remove("text-rose-400");
+      descClOpenRouter.classList.add("text-zinc-400");
     }
   }
 
@@ -1853,6 +2005,12 @@ function updateTailorEngineUI(engine) {
   if (engine === "gemini" && !hasGeminiKey) {
     engine = "local";
   }
+  if (engine === "claude" && !hasClaudeKey) {
+    engine = "local";
+  }
+  if (engine === "openrouter" && !hasOpenRouterKey) {
+    engine = "local";
+  }
   if (engine === "ollama" && !hasOllama) {
     engine = "local";
   }
@@ -1868,18 +2026,35 @@ function updateTailorEngineUI(engine) {
   const label = document.getElementById("tailor-btn-label");
   const icon = document.getElementById("tailor-btn-icon");
   const checkGemini = document.getElementById("check-engine-gemini");
+  const checkClaude = document.getElementById("check-engine-claude");
+  const checkOpenRouter = document.getElementById("check-engine-openrouter");
   const checkOllama = document.getElementById("check-engine-ollama");
   const checkLocal = document.getElementById("check-engine-local");
 
   if (checkGemini) checkGemini.classList.toggle("hidden", engine !== "gemini");
+  if (checkClaude) checkClaude.classList.toggle("hidden", engine !== "claude");
+  if (checkOpenRouter)
+    checkOpenRouter.classList.toggle("hidden", engine !== "openrouter");
   if (checkOllama) checkOllama.classList.toggle("hidden", engine !== "ollama");
   if (checkLocal) checkLocal.classList.toggle("hidden", engine !== "local");
 
   if (engine === "gemini") {
-    if (label) label.textContent = "Otimizar com IA";
+    if (label) label.textContent = "Otimizar (Gemini)";
     if (icon) {
       icon.setAttribute("data-lucide", "sparkles");
       icon.className = "w-3.5 h-3.5 fill-current text-amber-300";
+    }
+  } else if (engine === "claude") {
+    if (label) label.textContent = "Otimizar (Claude)";
+    if (icon) {
+      icon.setAttribute("data-lucide", "brain");
+      icon.className = "w-3.5 h-3.5 text-purple-400";
+    }
+  } else if (engine === "openrouter") {
+    if (label) label.textContent = "Otimizar (OpenRouter)";
+    if (icon) {
+      icon.setAttribute("data-lucide", "globe");
+      icon.className = "w-3.5 h-3.5 text-sky-400";
     }
   } else if (engine === "ollama") {
     const modelShort = ollamaInfo?.model
@@ -1902,11 +2077,19 @@ function updateTailorEngineUI(engine) {
   const clLabel = document.getElementById("cl-generate-label");
   const clIcon = document.getElementById("cl-generate-icon");
   const checkClGemini = document.getElementById("check-cl-engine-gemini");
+  const checkClClaude = document.getElementById("check-cl-engine-claude");
+  const checkClOpenRouter = document.getElementById(
+    "check-cl-engine-openrouter",
+  );
   const checkClOllama = document.getElementById("check-cl-engine-ollama");
   const checkClLocal = document.getElementById("check-cl-engine-local");
 
   if (checkClGemini)
     checkClGemini.classList.toggle("hidden", engine !== "gemini");
+  if (checkClClaude)
+    checkClClaude.classList.toggle("hidden", engine !== "claude");
+  if (checkClOpenRouter)
+    checkClOpenRouter.classList.toggle("hidden", engine !== "openrouter");
   if (checkClOllama)
     checkClOllama.classList.toggle("hidden", engine !== "ollama");
   if (checkClLocal) checkClLocal.classList.toggle("hidden", engine !== "local");
@@ -1917,6 +2100,18 @@ function updateTailorEngineUI(engine) {
       if (clIcon) {
         clIcon.setAttribute("data-lucide", "sparkles");
         clIcon.className = "w-3.5 h-3.5 fill-amber-400 text-amber-400 shrink-0";
+      }
+    } else if (engine === "claude") {
+      clLabel.textContent = "Redigir (Claude)";
+      if (clIcon) {
+        clIcon.setAttribute("data-lucide", "brain");
+        clIcon.className = "w-3.5 h-3.5 text-purple-400 shrink-0";
+      }
+    } else if (engine === "openrouter") {
+      clLabel.textContent = "Redigir (OpenRouter)";
+      if (clIcon) {
+        clIcon.setAttribute("data-lucide", "globe");
+        clIcon.className = "w-3.5 h-3.5 text-sky-400 shrink-0";
       }
     } else if (engine === "ollama") {
       const modelShort = ollamaInfo?.model
@@ -1979,6 +2174,14 @@ function setupWorkbenchActions() {
           showToast("Gemini indisponível no momento.", "warning");
           return;
         }
+        if (selectedEngine === "claude" && !hasClaudeKey) {
+          showToast("Claude indisponível no momento.", "warning");
+          return;
+        }
+        if (selectedEngine === "openrouter" && !hasOpenRouterKey) {
+          showToast("OpenRouter indisponível no momento.", "warning");
+          return;
+        }
         if (selectedEngine === "ollama" && !hasOllama) {
           showToast("Ollama indisponível no momento.", "warning");
           return;
@@ -1987,6 +2190,8 @@ function setupWorkbenchActions() {
           updateTailorEngineUI(selectedEngine);
           const labels = {
             gemini: "Gemini 1.5 Flash (IA)",
+            claude: `Claude (${claudeInfo?.model || "Sonnet 3.5"})`,
+            openrouter: `OpenRouter (${openRouterInfo?.model || "Multi-LLM"})`,
             ollama: `Ollama (${ollamaInfo?.model || "Local"})`,
             local: "Motor ATS Local",
           };
@@ -2029,6 +2234,26 @@ function setupWorkbenchActions() {
         if (label) label.textContent = "Otimizando com IA...";
         showToast(
           "Conectando ao Gemini 1.5 Flash para otimização contextual...",
+          "info",
+        );
+      } else if (currentTailorEngine === "claude" && hasClaudeKey) {
+        if (icon) {
+          icon.setAttribute("data-lucide", "loader-2");
+          icon.className = "w-4 h-4 animate-spin text-purple-400";
+        }
+        if (label) label.textContent = "Otimizando (Claude)...";
+        showToast(
+          `Conectando ao Anthropic Claude (${claudeInfo?.model || "Sonnet 3.5"})...`,
+          "info",
+        );
+      } else if (currentTailorEngine === "openrouter" && hasOpenRouterKey) {
+        if (icon) {
+          icon.setAttribute("data-lucide", "loader-2");
+          icon.className = "w-4 h-4 animate-spin text-sky-400";
+        }
+        if (label) label.textContent = "Otimizando (OpenRouter)...";
+        showToast(
+          `Conectando ao OpenRouter (${openRouterInfo?.model || "Multi-LLM"})...`,
           "info",
         );
       } else if (currentTailorEngine === "ollama" && hasOllama) {
@@ -2076,6 +2301,8 @@ function setupWorkbenchActions() {
         if (res.ok) {
           const engineLabels = {
             gemini: "Gemini IA",
+            claude: "Claude IA",
+            openrouter: "OpenRouter IA",
             ollama: "Ollama Local",
             local: "Motor ATS",
           };
@@ -3112,9 +3339,13 @@ async function generateCoverLetter(jobId) {
   // Determine actual engine
   let engineToUse = currentTailorEngine;
   if (engineToUse === "gemini" && !hasGeminiKey) {
-    engineToUse = hasOllama ? "ollama" : "local";
+    engineToUse = "local";
+  } else if (engineToUse === "claude" && !hasClaudeKey) {
+    engineToUse = "local";
+  } else if (engineToUse === "openrouter" && !hasOpenRouterKey) {
+    engineToUse = "local";
   } else if (engineToUse === "ollama" && !hasOllama) {
-    engineToUse = hasGeminiKey ? "gemini" : "local";
+    engineToUse = "local";
   }
 
   if (btnGen) btnGen.disabled = true;
@@ -3129,9 +3360,13 @@ async function generateCoverLetter(jobId) {
   const engineFeedback =
     engineToUse === "ollama"
       ? `Ollama (${ollamaInfo?.model || "local"})`
-      : engineToUse === "gemini"
-        ? "Gemini 1.5 Flash"
-        : "Motor ATS Determinístico";
+      : engineToUse === "claude"
+        ? `Claude (${claudeInfo?.model || "Sonnet 3.5"})`
+        : engineToUse === "openrouter"
+          ? `OpenRouter (${openRouterInfo?.model || "Multi-LLM"})`
+          : engineToUse === "gemini"
+            ? "Gemini 1.5 Flash"
+            : "Motor ATS Determinístico";
   showToast(`Redigindo carta personalizada com ${engineFeedback}...`, "info");
 
   try {
@@ -3282,6 +3517,14 @@ function setupCoverLetterStudio() {
           showToast("Gemini indisponível no momento.", "warning");
           return;
         }
+        if (selectedEngine === "claude" && !hasClaudeKey) {
+          showToast("Claude indisponível no momento.", "warning");
+          return;
+        }
+        if (selectedEngine === "openrouter" && !hasOpenRouterKey) {
+          showToast("OpenRouter indisponível no momento.", "warning");
+          return;
+        }
         if (selectedEngine === "ollama" && !hasOllama) {
           showToast("Ollama indisponível no momento.", "warning");
           return;
@@ -3290,6 +3533,8 @@ function setupCoverLetterStudio() {
           updateTailorEngineUI(selectedEngine);
           const labels = {
             gemini: "Gemini 1.5 Flash (IA)",
+            claude: `Claude (${claudeInfo?.model || "Sonnet 3.5"})`,
+            openrouter: `OpenRouter (${openRouterInfo?.model || "Multi-LLM"})`,
             ollama: `Ollama (${ollamaInfo?.model || "Local"})`,
             local: "Motor ATS Local",
           };
