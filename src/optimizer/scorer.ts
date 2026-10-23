@@ -1,35 +1,41 @@
-import type { ResumeData, AtsAuditResult } from "../types/resume.ts";
-import type { ExtractedKeyword } from "../nlp/tfidf.ts";
 import type { SupportedLanguage } from "../nlp/language.ts";
-import { stemWord } from "../nlp/stemmer.ts";
+import type { ExtractedKeyword } from "../nlp/tfidf.ts";
+import type { AtsAuditResult, ResumeData } from "../types/resume.ts";
 
 export function auditAtsScore(
   resume: ResumeData,
   jobKeywords: ExtractedKeyword[],
-  lang: SupportedLanguage = "pt"
+  _lang: SupportedLanguage = "pt",
 ): AtsAuditResult {
   const recommendations: string[] = [];
 
   // 1. Formatting & Structure Score (Max 30)
   let formattingScore = 0;
-  if (resume.fullName && resume.fullName.trim().length > 2) formattingScore += 5;
-  if (resume.email && resume.email.includes("@")) formattingScore += 5;
+  if (resume.fullName && resume.fullName.trim().length > 2)
+    formattingScore += 5;
+  if (resume.email?.includes("@")) formattingScore += 5;
   if (resume.summary && resume.summary.trim().length > 30) {
     formattingScore += 5;
   } else {
-    recommendations.push("Amplie o resumo profissional para ao menos 3 a 4 sentenças densas.");
+    recommendations.push(
+      "Amplie o resumo profissional para ao menos 3 a 4 sentenças densas.",
+    );
   }
 
   if (Array.isArray(resume.skills) && resume.skills.length >= 4) {
     formattingScore += 5;
   } else {
-    recommendations.push("Adicione ao menos 5 hard skills relevantes na seção de Habilidades.");
+    recommendations.push(
+      "Adicione ao menos 5 hard skills relevantes na seção de Habilidades.",
+    );
   }
 
   if (Array.isArray(resume.experiences) && resume.experiences.length > 0) {
     formattingScore += 5;
   } else {
-    recommendations.push("Inclua experiências profissionais com cargo, empresa e período.");
+    recommendations.push(
+      "Inclua experiências profissionais com cargo, empresa e período.",
+    );
   }
 
   if (Array.isArray(resume.education) && resume.education.length > 0) {
@@ -39,10 +45,15 @@ export function auditAtsScore(
   }
 
   // Combine entire text for full document analysis
-  const expText = resume.experiences.map(e => `${e.role} ${e.company} ${e.description}`).join(" ");
-  const eduText = resume.education.map(e => `${e.degree} ${e.institution}`).join(" ");
+  const expText = resume.experiences
+    .map((e) => `${e.role} ${e.company} ${e.description}`)
+    .join(" ");
+  const eduText = resume.education
+    .map((e) => `${e.degree} ${e.institution}`)
+    .join(" ");
   const skillsText = resume.skills.join(" ");
-  const fullDocumentText = `${resume.fullName} ${resume.headline} ${resume.summary} ${skillsText} ${expText} ${eduText}`.toLowerCase();
+  const fullDocumentText =
+    `${resume.fullName} ${resume.headline} ${resume.summary} ${skillsText} ${expText} ${eduText}`.toLowerCase();
 
   // 2. Keyword Match Analysis (Max 35)
   const matchedKeywords: string[] = [];
@@ -76,11 +87,14 @@ export function auditAtsScore(
     }
   }
 
-  const keywordCoverageRatio = jobKeywords.length > 0 ? matchedKeywords.length / jobKeywords.length : 1;
+  const keywordCoverageRatio =
+    jobKeywords.length > 0 ? matchedKeywords.length / jobKeywords.length : 1;
   const keywordScore = Number((keywordCoverageRatio * 35).toFixed(1));
 
   if (missingKeywords.length > 0) {
-    recommendations.push(`Palavras-chave ausentes da vaga: ${missingKeywords.slice(0, 5).join(", ")}`);
+    recommendations.push(
+      `Palavras-chave ausentes da vaga: ${missingKeywords.slice(0, 5).join(", ")}`,
+    );
   }
 
   // 3. Density & Positional Weights (Max 20)
@@ -88,31 +102,45 @@ export function auditAtsScore(
   const summaryLower = (resume.summary || "").toLowerCase();
 
   // Weight 3 (Summary): Check if at least 2 top keywords appear in summary
-  const summaryMatches = jobKeywords.filter(kw => {
+  const summaryMatches = jobKeywords.filter((kw) => {
     const term = kw.term.toLowerCase();
-    return summaryLower.includes(term) || (kw.stem && summaryLower.includes(kw.stem));
+    return (
+      summaryLower.includes(term) || (kw.stem && summaryLower.includes(kw.stem))
+    );
   });
   if (summaryMatches.length >= 3) {
     densityScore += 7;
   } else if (summaryMatches.length >= 1) {
     densityScore += 4;
-    recommendations.push("Inclua mais das top keywords diretamente no Resumo Profissional (peso 3 do ATS).");
+    recommendations.push(
+      "Inclua mais das top keywords diretamente no Resumo Profissional (peso 3 do ATS).",
+    );
   } else {
-    recommendations.push("O Resumo Profissional não possui as palavras-chave principais da vaga.");
+    recommendations.push(
+      "O Resumo Profissional não possui as palavras-chave principais da vaga.",
+    );
   }
 
   // Weight 2 (First Line Rule in Experiences)
   const firstExp = resume.experiences[0];
-  if (firstExp && firstExp.description) {
+  if (firstExp?.description) {
     const firstLine = firstExp.description.split("\n")[0].toLowerCase();
-    const firstLineMatches = jobKeywords.filter(kw => firstLine.includes(kw.term.toLowerCase()) || firstLine.includes(kw.stem));
+    const firstLineMatches = jobKeywords.filter(
+      (kw) =>
+        firstLine.includes(kw.term.toLowerCase()) ||
+        firstLine.includes(kw.stem),
+    );
     if (firstLineMatches.length >= 2) {
       densityScore += 7;
     } else if (firstLineMatches.length >= 1) {
       densityScore += 4;
-      recommendations.push("Reforce a primeira linha da sua experiência mais recente com a tecnologia principal e cargo da vaga.");
+      recommendations.push(
+        "Reforce a primeira linha da sua experiência mais recente com a tecnologia principal e cargo da vaga.",
+      );
     } else {
-      recommendations.push("Regra da Primeira Linha: abra sua experiência principal com um resumo executivo citando as tecnologias da vaga.");
+      recommendations.push(
+        "Regra da Primeira Linha: abra sua experiência principal com um resumo executivo citando as tecnologias da vaga.",
+      );
     }
   }
 
@@ -127,19 +155,25 @@ export function auditAtsScore(
   let entityScore = 0;
 
   // Experience variation (e.g., "5 anos ... 60+ meses" or explicit duration)
-  const expDurationRegex = /(\d+\s*(anos|ano|years|year))|(\d+\+?\s*(meses|months))/i;
+  const expDurationRegex =
+    /(\d+\s*(anos|ano|years|year))|(\d+\+?\s*(meses|months))/i;
   if (expDurationRegex.test(fullDocumentText)) {
     entityScore += 5;
   } else {
-    recommendations.push("Adicione tempo explícito de atuação (ex: '5 anos de experiência (60+ meses de atuação)').");
+    recommendations.push(
+      "Adicione tempo explícito de atuação (ex: '5 anos de experiência (60+ meses de atuação)').",
+    );
   }
 
   // Degree variations
-  const degreeRegex = /(gradua[çc][ãa]o|bacharelado|ensino\s+superior|bachelor|degree|licenciatura|p[óo]s-gradua[çc][ãa]o)/i;
+  const degreeRegex =
+    /(gradua[çc][ãa]o|bacharelado|ensino\s+superior|bachelor|degree|licenciatura|p[óo]s-gradua[çc][ãa]o)/i;
   if (degreeRegex.test(eduText) || degreeRegex.test(fullDocumentText)) {
     entityScore += 5;
   } else {
-    recommendations.push("Padronize a formação acadêmica usando variações reconhecidas pelo regex do ATS (Graduação / Bacharelado).");
+    recommendations.push(
+      "Padronize a formação acadêmica usando variações reconhecidas pelo regex do ATS (Graduação / Bacharelado).",
+    );
   }
 
   // Acronym + spelled out variations (e.g. Node.js (NodeJS), TypeScript (TS), CI/CD)
@@ -159,17 +193,25 @@ export function auditAtsScore(
   // --- MÉTRICA 1: Índice de Escaneabilidade & Impacto (0 - 100) ---
   // A. Clareza de Estrutura (Max 30)
   let structureClarity = 0;
-  if (resume.fullName && resume.fullName.trim().length > 2) structureClarity += 5;
-  if (resume.email && resume.email.includes("@")) structureClarity += 5;
-  if (resume.summary && resume.summary.trim().length >= 30) structureClarity += 5;
-  if (Array.isArray(resume.skills) && resume.skills.length >= 4) structureClarity += 5;
-  if (Array.isArray(resume.experiences) && resume.experiences.length > 0) structureClarity += 5;
-  if (Array.isArray(resume.education) && resume.education.length > 0) structureClarity += 5;
+  if (resume.fullName && resume.fullName.trim().length > 2)
+    structureClarity += 5;
+  if (resume.email?.includes("@")) structureClarity += 5;
+  if (resume.summary && resume.summary.trim().length >= 30)
+    structureClarity += 5;
+  if (Array.isArray(resume.skills) && resume.skills.length >= 4)
+    structureClarity += 5;
+  if (Array.isArray(resume.experiences) && resume.experiences.length > 0)
+    structureClarity += 5;
+  if (Array.isArray(resume.education) && resume.education.length > 0)
+    structureClarity += 5;
 
   // B. Presença de Métricas Numéricas de Impacto & Resultados (Max 45)
   // Recrutadores humanos buscam percentuais, números de escala, redução de tempo e resultados mensuráveis
-  const metricRegex = /\b(\d+(?:[.,]\d+)?%|(?:R\$|\$|€)\s*\d+(?:[.,]\d+)?|\d+(?:[.,]\d+)?\s*(?:milhões|milhao|mil|k|m|b|usd|reais)|\d+x|\d+(?:[.,]\d+)?\+?\s*(?:usuários|users|clientes|requisições|req\/s|rps|tps|transações|pedidos|pontos|nodes|servidores|serviços|downloads)|\d+\+?\s*(?:meses|anos|months|years)|\b\d+\s*(?:ms|min|minutos|horas|segundos|dias)\b|(?:\+\d{2,}|\d{2,}\+))/gi;
-  const metricsFound = Array.from(new Set(fullDocumentText.match(metricRegex) || []));
+  const metricRegex =
+    /\b(\d+(?:[.,]\d+)?%|(?:R\$|\$|€)\s*\d+(?:[.,]\d+)?|\d+(?:[.,]\d+)?\s*(?:milhões|milhao|mil|k|m|b|usd|reais)|\d+x|\d+(?:[.,]\d+)?\+?\s*(?:usuários|users|clientes|requisições|req\/s|rps|tps|transações|pedidos|pontos|nodes|servidores|serviços|downloads)|\d+\+?\s*(?:meses|anos|months|years)|\b\d+\s*(?:ms|min|minutos|horas|segundos|dias)\b|(?:\+\d{2,}|\d{2,}\+))/gi;
+  const metricsFound = Array.from(
+    new Set(fullDocumentText.match(metricRegex) || []),
+  );
   const metricsFoundCount = metricsFound.length;
 
   let quantifiableMetrics = 0;
@@ -183,7 +225,9 @@ export function auditAtsScore(
     quantifiableMetrics = 15;
   } else {
     quantifiableMetrics = 0;
-    recommendations.push("Adicione métricas numéricas de impacto (ex: % de melhoria, redução de tempo, escala de usuários) nas experiências.");
+    recommendations.push(
+      "Adicione métricas numéricas de impacto (ex: % de melhoria, redução de tempo, escala de usuários) nas experiências.",
+    );
   }
 
   // C. Legibilidade Rápida (6-Second Scan) (Max 25)
@@ -207,13 +251,20 @@ export function auditAtsScore(
       if (hasExcessiveBlock) break;
     }
   }
-  if (!hasExcessiveBlock && resume.experiences && resume.experiences.length > 0) {
+  if (
+    !hasExcessiveBlock &&
+    resume.experiences &&
+    resume.experiences.length > 0
+  ) {
     humanReadability += 15;
   } else {
     humanReadability += 5;
   }
 
-  const scannabilityScore = Math.min(100, Math.round(structureClarity + quantifiableMetrics + humanReadability));
+  const scannabilityScore = Math.min(
+    100,
+    Math.round(structureClarity + quantifiableMetrics + humanReadability),
+  );
 
   // --- MÉTRICA 2: Alinhamento Técnico TF-IDF (0 - 100) ---
   // A. Cobertura Pura de Keywords TF-IDF (Max 55)
@@ -227,9 +278,13 @@ export function auditAtsScore(
     techPositional += 8;
   }
 
-  if (firstExp && firstExp.description) {
+  if (firstExp?.description) {
     const firstLine = firstExp.description.split("\n")[0].toLowerCase();
-    const firstLineMatches = jobKeywords.filter(kw => firstLine.includes(kw.term.toLowerCase()) || (kw.stem && firstLine.includes(kw.stem)));
+    const firstLineMatches = jobKeywords.filter(
+      (kw) =>
+        firstLine.includes(kw.term.toLowerCase()) ||
+        (kw.stem && firstLine.includes(kw.stem)),
+    );
     if (firstLineMatches.length >= 2) {
       techPositional += 15;
     } else if (firstLineMatches.length >= 1) {
@@ -250,11 +305,14 @@ export function auditAtsScore(
     techEntity += 3;
   }
 
-  const technicalScore = Math.min(100, Math.round(techCoverage + techPositional + techEntity));
+  const technicalScore = Math.min(
+    100,
+    Math.round(techCoverage + techPositional + techEntity),
+  );
 
   const overallScore = Math.min(
     100,
-    Math.round(formattingScore + keywordScore + densityScore + entityScore)
+    Math.round(formattingScore + keywordScore + densityScore + entityScore),
   );
 
   return {
@@ -266,17 +324,17 @@ export function auditAtsScore(
       quantifiableMetrics,
       humanReadability,
       metricsFoundCount,
-      metricsFound
+      metricsFound,
     },
     breakdown: {
       formatting: formattingScore,
       keywords: keywordScore,
       density: densityScore,
-      entityCompliance: entityScore
+      entityCompliance: entityScore,
     },
     matchedKeywords,
     missingKeywords,
     keywordDensity,
-    recommendations
+    recommendations,
   };
 }

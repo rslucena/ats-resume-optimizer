@@ -1,9 +1,12 @@
 import { describe, expect, it } from "bun:test";
-import { extractKeywords, isRecognizedTechEntity } from "../src/nlp/tfidf.ts";
-import { stripJobBoilerplate, ungluePunctuation } from "../src/utils/encoding.ts";
-import { reflowExperienceLines, parseMasterProfileText } from "../src/services/cvExtractor.ts";
+import { extractKeywords } from "../src/nlp/tfidf.ts";
 import { tailorResume } from "../src/optimizer/tailor.ts";
+import { reflowExperienceLines } from "../src/services/cvExtractor.ts";
 import type { ResumeData } from "../src/types/resume.ts";
+import {
+  stripJobBoilerplate,
+  ungluePunctuation,
+} from "../src/utils/encoding.ts";
 
 describe("Root-Cause Fix Validation: Deliver IT (Gupy) Real Job & Paragraph Reflow", () => {
   const rawDeliverItJobText = `
@@ -57,7 +60,8 @@ describe("Root-Cause Fix Validation: Deliver IT (Gupy) Real Job & Paragraph Refl
   });
 
   it("2. should unglue glued punctuation without breaking technology extensions", () => {
-    const glued = "Experiência com NestJS.Informações adicionais e Node.js em produção com Socket.io e ASP.NET";
+    const glued =
+      "Experiência com NestJS.Informações adicionais e Node.js em produção com Socket.io e ASP.NET";
     const unglued = ungluePunctuation(glued);
 
     expect(unglued).toContain("NestJS. Informações adicionais");
@@ -67,23 +71,28 @@ describe("Root-Cause Fix Validation: Deliver IT (Gupy) Real Job & Paragraph Refl
   });
 
   it("3. should extract genuine technical keywords and reject common Portuguese nouns and Gupy junk", () => {
-    const keywords = extractKeywords(rawDeliverItJobText, { lang: "pt", topN: 15 });
-    const extractedTerms = keywords.map(k => k.term);
-    const extractedLower = extractedTerms.map(t => t.toLowerCase());
+    const keywords = extractKeywords(rawDeliverItJobText, {
+      lang: "pt",
+      topN: 15,
+    });
+    const extractedTerms = keywords.map((k) => k.term);
+    const extractedLower = extractedTerms.map((t) => t.toLowerCase());
 
     // 1. MUST INCLUDE real hard technologies from Deliver IT JD
-    expect(extractedTerms.some(t => t === "Node.js" || t.includes("Node"))).toBe(true);
-    expect(extractedTerms.some(t => t === "Java")).toBe(true);
-    expect(extractedTerms.some(t => t === "Python")).toBe(true);
-    expect(extractedTerms.some(t => t === "Terraform")).toBe(true);
-    expect(extractedTerms.some(t => t === "Kafka")).toBe(true);
-    expect(extractedTerms.some(t => t === "AWS")).toBe(true);
-    expect(extractedTerms.some(t => t === "Docker")).toBe(true);
-    expect(extractedTerms.some(t => t === "Kubernetes")).toBe(true);
-    expect(extractedTerms.some(t => t === "GraphQL")).toBe(true);
-    expect(extractedTerms.some(t => t === "NestJS")).toBe(true);
-    expect(extractedTerms.some(t => t === "TDD")).toBe(true);
-    expect(extractedTerms.some(t => t === "Microsserviços")).toBe(true);
+    expect(
+      extractedTerms.some((t) => t === "Node.js" || t.includes("Node")),
+    ).toBe(true);
+    expect(extractedTerms.some((t) => t === "Java")).toBe(true);
+    expect(extractedTerms.some((t) => t === "Python")).toBe(true);
+    expect(extractedTerms.some((t) => t === "Terraform")).toBe(true);
+    expect(extractedTerms.some((t) => t === "Kafka")).toBe(true);
+    expect(extractedTerms.some((t) => t === "AWS")).toBe(true);
+    expect(extractedTerms.some((t) => t === "Docker")).toBe(true);
+    expect(extractedTerms.some((t) => t === "Kubernetes")).toBe(true);
+    expect(extractedTerms.some((t) => t === "GraphQL")).toBe(true);
+    expect(extractedTerms.some((t) => t === "NestJS")).toBe(true);
+    expect(extractedTerms.some((t) => t === "TDD")).toBe(true);
+    expect(extractedTerms.some((t) => t === "Microsserviços")).toBe(true);
 
     // 2. MUST NEVER INCLUDE corporate noise, common Portuguese nouns or Gupy junk
     expect(extractedLower).not.toContain("saúde");
@@ -107,7 +116,7 @@ describe("Root-Cause Fix Validation: Deliver IT (Gupy) Real Job & Paragraph Refl
       "produção — sem enrolação.",
       "• Implementação de microsserviços em Node.js e NestJS com banco",
       "- MySQL.",
-      "• Implementação de mensageria com Apache Kafka para processamento assíncrono."
+      "• Implementação de mensageria com Apache Kafka para processamento assíncrono.",
     ];
 
     const reflowed = reflowExperienceLines(brokenPdfLines);
@@ -117,17 +126,17 @@ describe("Root-Cause Fix Validation: Deliver IT (Gupy) Real Job & Paragraph Refl
 
     // The first bullet must be fully united without sentence cuts
     expect(reflowed[0]).toBe(
-      "• Liderança técnica na equipe de engenharia do Grupo FCamara, atuando na arquitetura de microsserviços e escrevendo código que precisa funcionar em produção — sem enrolação."
+      "• Liderança técnica na equipe de engenharia do Grupo FCamara, atuando na arquitetura de microsserviços e escrevendo código que precisa funcionar em produção — sem enrolação.",
     );
 
     // The second bullet unites the continuation line with MySQL
     expect(reflowed[1]).toBe(
-      "• Implementação de microsserviços em Node.js e NestJS com banco MySQL."
+      "• Implementação de microsserviços em Node.js e NestJS com banco MySQL.",
     );
 
     // Third bullet remains intact
     expect(reflowed[2]).toBe(
-      "• Implementação de mensageria com Apache Kafka para processamento assíncrono."
+      "• Implementação de mensageria com Apache Kafka para processamento assíncrono.",
     );
   });
 
@@ -136,7 +145,8 @@ describe("Root-Cause Fix Validation: Deliver IT (Gupy) Real Job & Paragraph Refl
       fullName: "Rodrigo Silva",
       headline: "Desenvolvedor Backend Sênior",
       email: "rodrigo@example.com",
-      summary: "Desenvolvedor backend sênior com vasta experiência em engenharia de software.",
+      summary:
+        "Desenvolvedor backend sênior com vasta experiência em engenharia de software.",
       skills: ["Node.js", "Java", "Docker", "SQL"],
       experiences: [
         {
@@ -144,27 +154,31 @@ describe("Root-Cause Fix Validation: Deliver IT (Gupy) Real Job & Paragraph Refl
           role: "Desenvolvedor Backend Sênior",
           startDate: "2020",
           endDate: "Atual",
-          description: "Liderança técnica atuando na arquitetura de microsserviços e escrevendo código que precisa funcionar em produção — sem enrolação."
-        }
+          description:
+            "Liderança técnica atuando na arquitetura de microsserviços e escrevendo código que precisa funcionar em produção — sem enrolação.",
+        },
       ],
       education: [
         {
           institution: "Universidade",
           degree: "Ciência da Computação",
           startDate: "2015",
-          endDate: "2019"
-        }
+          endDate: "2019",
+        },
       ],
-      certifications: []
+      certifications: [],
     };
 
-    const keywords = extractKeywords(rawDeliverItJobText, { lang: "pt", topN: 15 });
+    const keywords = extractKeywords(rawDeliverItJobText, {
+      lang: "pt",
+      topN: 15,
+    });
     const tailored = await tailorResume(baseCandidate, {
       title: "Desenvolvedor Backend Sênior - NodeJS/Java/Python",
       company: "Deliver IT",
       rawDescription: rawDeliverItJobText,
       keywords,
-      language: "pt"
+      language: "pt",
     });
 
     const tailoredExp = tailored.tailoredResume.experiences[0];

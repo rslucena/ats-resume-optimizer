@@ -10,7 +10,6 @@ let selectedJobId = null;
 let activeJobData = null;
 let currentFilterStatus = "ALL";
 let currentSearchQuery = "";
-let currentScoreDisplay = 0;
 let currentScannabilityDisplay = 0;
 let currentTechnicalDisplay = 0;
 let currentKnockoutQuestions = [];
@@ -49,7 +48,9 @@ function setupThemeSwitcher() {
   function updateThemeUI(resolvedTheme) {
     if (!themeToggleBtn) return;
     const isDark = resolvedTheme === "dark";
-    themeToggleBtn.title = isDark ? "Alternar para modo claro" : "Alternar para modo escuro";
+    themeToggleBtn.title = isDark
+      ? "Alternar para modo claro"
+      : "Alternar para modo escuro";
     themeToggleBtn.innerHTML = isDark
       ? `<i data-lucide="sun" id="theme-toggle-icon" class="w-4 h-4 text-amber-400"></i>`
       : `<i data-lucide="moon" id="theme-toggle-icon" class="w-4 h-4 text-zinc-600"></i>`;
@@ -70,7 +71,8 @@ function setupThemeSwitcher() {
   // Toggle on single button click
   if (themeToggleBtn) {
     themeToggleBtn.addEventListener("click", () => {
-      const current = document.documentElement.getAttribute("data-theme") || "dark";
+      const current =
+        document.documentElement.getAttribute("data-theme") || "dark";
       const nextTheme = current === "dark" ? "light" : "dark";
       applyTheme(nextTheme);
     });
@@ -85,7 +87,9 @@ function setupThemeSwitcher() {
   });
 
   // Initial theme on boot
-  const initialTheme = localStorage.getItem("ats_theme") || (mediaQuery.matches ? "dark" : "light");
+  const initialTheme =
+    localStorage.getItem("ats_theme") ||
+    (mediaQuery.matches ? "dark" : "light");
   applyTheme(initialTheme);
 }
 
@@ -94,13 +98,17 @@ function setupThemeSwitcher() {
 // ============================================================================
 function setupCollapsibleSidebars() {
   const sidebarLeft = document.getElementById("sidebar-left");
-  const sidebarLeftCollapsed = document.getElementById("sidebar-left-collapsed");
+  const sidebarLeftCollapsed = document.getElementById(
+    "sidebar-left-collapsed",
+  );
   const resizerLeft = document.getElementById("resizer-left");
   const btnToggleLeft = document.getElementById("btn-toggle-sidebar-left");
   const btnReopenLeft = document.getElementById("btn-reopen-sidebar-left");
 
   const sidebarRight = document.getElementById("sidebar-right");
-  const sidebarRightCollapsed = document.getElementById("sidebar-right-collapsed");
+  const sidebarRightCollapsed = document.getElementById(
+    "sidebar-right-collapsed",
+  );
   const resizerRight = document.getElementById("resizer-right");
   const btnToggleRight = document.getElementById("btn-toggle-sidebar-right");
   const btnCloseRight = document.getElementById("btn-close-sidebar-right");
@@ -118,11 +126,15 @@ function setupCollapsibleSidebars() {
       sidebarLeft.classList.remove("hidden");
       if (sidebarLeftCollapsed) sidebarLeftCollapsed.classList.add("hidden");
       if (resizerLeft) resizerLeft.classList.remove("hidden");
-      const savedWidth = parseInt(localStorage.getItem("ats_sidebar_left_width"), 10) || 360;
+      const savedWidth =
+        parseInt(localStorage.getItem("ats_sidebar_left_width"), 10) || 360;
       sidebarLeft.style.width = `${savedWidth}px`;
     }
     if (save) {
-      localStorage.setItem("ats_sidebar_left", collapsed ? "collapsed" : "open");
+      localStorage.setItem(
+        "ats_sidebar_left",
+        collapsed ? "collapsed" : "open",
+      );
     }
     if (window.lucide) window.lucide.createIcons();
   }
@@ -132,7 +144,8 @@ function setupCollapsibleSidebars() {
     if (collapsed) {
       sidebarRight.classList.add("collapsed");
       sidebarRight.classList.add("hidden");
-      if (sidebarRightCollapsed) sidebarRightCollapsed.classList.remove("hidden");
+      if (sidebarRightCollapsed)
+        sidebarRightCollapsed.classList.remove("hidden");
       if (resizerRight) resizerRight.classList.add("hidden");
       if (btnToggleRight) {
         btnToggleRight.innerHTML = `<i data-lucide="panel-right-open" class="w-4 h-4"></i>`;
@@ -147,53 +160,74 @@ function setupCollapsibleSidebars() {
         btnToggleRight.innerHTML = `<i data-lucide="panel-right-close" class="w-4 h-4"></i>`;
         btnToggleRight.title = "Recolher Painel Inspetor (Ctrl+J ou Ctrl+I)";
       }
-      const savedWidth = parseInt(localStorage.getItem("ats_sidebar_right_width"), 10) || 400;
+      const savedWidth =
+        parseInt(localStorage.getItem("ats_sidebar_right_width"), 10) || 400;
       sidebarRight.style.width = `${savedWidth}px`;
     }
     if (save) {
-      localStorage.setItem("ats_sidebar_right", collapsed ? "collapsed" : "open");
+      localStorage.setItem(
+        "ats_sidebar_right",
+        collapsed ? "collapsed" : "open",
+      );
     }
     if (window.lucide) window.lucide.createIcons();
   }
 
   function toggleSidebarLeft() {
-    const isCollapsed = sidebarLeft?.classList.contains("collapsed") || sidebarLeft?.classList.contains("hidden");
+    const isCollapsed =
+      sidebarLeft?.classList.contains("collapsed") ||
+      sidebarLeft?.classList.contains("hidden");
     setSidebarLeft(!isCollapsed);
   }
 
   function toggleSidebarRight() {
-    const isCollapsed = sidebarRight?.classList.contains("collapsed") || sidebarRight?.classList.contains("hidden");
+    const isCollapsed =
+      sidebarRight?.classList.contains("collapsed") ||
+      sidebarRight?.classList.contains("hidden");
     setSidebarRight(!isCollapsed);
   }
 
   // Left Sidebar listeners
-  if (btnToggleLeft) btnToggleLeft.addEventListener("click", () => setSidebarLeft(true));
-  if (btnReopenLeft) btnReopenLeft.addEventListener("click", (e) => {
-    e.stopPropagation();
-    setSidebarLeft(false);
-  });
-  if (sidebarLeftCollapsed) sidebarLeftCollapsed.addEventListener("click", () => setSidebarLeft(false));
+  if (btnToggleLeft)
+    btnToggleLeft.addEventListener("click", () => setSidebarLeft(true));
+  if (btnReopenLeft)
+    btnReopenLeft.addEventListener("click", (e) => {
+      e.stopPropagation();
+      setSidebarLeft(false);
+    });
+  if (sidebarLeftCollapsed)
+    sidebarLeftCollapsed.addEventListener("click", () => setSidebarLeft(false));
 
   // Right Sidebar listeners
-  if (btnCloseRight) btnCloseRight.addEventListener("click", () => setSidebarRight(true));
-  if (btnToggleRight) btnToggleRight.addEventListener("click", toggleSidebarRight);
-  if (btnReopenRight) btnReopenRight.addEventListener("click", (e) => {
-    e.stopPropagation();
-    setSidebarRight(false);
-  });
-  if (sidebarRightCollapsed) sidebarRightCollapsed.addEventListener("click", () => setSidebarRight(false));
+  if (btnCloseRight)
+    btnCloseRight.addEventListener("click", () => setSidebarRight(true));
+  if (btnToggleRight)
+    btnToggleRight.addEventListener("click", toggleSidebarRight);
+  if (btnReopenRight)
+    btnReopenRight.addEventListener("click", (e) => {
+      e.stopPropagation();
+      setSidebarRight(false);
+    });
+  if (sidebarRightCollapsed)
+    sidebarRightCollapsed.addEventListener("click", () =>
+      setSidebarRight(false),
+    );
 
   // Keyboard Shortcuts: Ctrl+B (Left), Ctrl+J or Ctrl+I (Right)
   window.addEventListener("keydown", (e) => {
     const activeTag = document.activeElement?.tagName;
-    const isEditing = ["INPUT", "TEXTAREA"].includes(activeTag) && !e.ctrlKey && !e.metaKey;
+    const isEditing =
+      ["INPUT", "TEXTAREA"].includes(activeTag) && !e.ctrlKey && !e.metaKey;
     if (isEditing) return;
 
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "b") {
       e.preventDefault();
       toggleSidebarLeft();
     }
-    if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === "j" || e.key.toLowerCase() === "i")) {
+    if (
+      (e.ctrlKey || e.metaKey) &&
+      (e.key.toLowerCase() === "j" || e.key.toLowerCase() === "i")
+    ) {
       e.preventDefault();
       toggleSidebarRight();
     }
@@ -207,7 +241,10 @@ function setupCollapsibleSidebars() {
   }
 
   const savedRight = localStorage.getItem("ats_sidebar_right");
-  if (savedRight === "collapsed" || (isCompactScreen && savedRight !== "open")) {
+  if (
+    savedRight === "collapsed" ||
+    (isCompactScreen && savedRight !== "open")
+  ) {
     setSidebarRight(true, false);
   }
 }
@@ -227,8 +264,10 @@ function setupResizableDividers() {
   const resizerDiff = document.getElementById("resizer-diff");
 
   // Load saved widths
-  const savedLeftWidth = parseInt(localStorage.getItem("ats_sidebar_left_width"), 10) || 360;
-  const savedRightWidth = parseInt(localStorage.getItem("ats_sidebar_right_width"), 10) || 400;
+  const savedLeftWidth =
+    parseInt(localStorage.getItem("ats_sidebar_left_width"), 10) || 360;
+  const savedRightWidth =
+    parseInt(localStorage.getItem("ats_sidebar_right_width"), 10) || 400;
 
   if (sidebarLeft && !sidebarLeft.classList.contains("collapsed")) {
     sidebarLeft.style.width = `${savedLeftWidth}px`;
@@ -286,7 +325,7 @@ function setupResizableDividers() {
       if (!sidebarLeft) return;
       sidebarLeft.style.width = "360px";
       localStorage.setItem("ats_sidebar_left_width", "360");
-    }
+    },
   });
 
   // 2. Resizer Right (Center / Inspetor ATS)
@@ -307,12 +346,13 @@ function setupResizableDividers() {
       if (!sidebarRight) return;
       sidebarRight.style.width = "400px";
       localStorage.setItem("ats_sidebar_right_width", "400");
-    }
+    },
   });
 
   // 3. Resizer Diff (Master CV vs Tailored CV inside Editor)
   if (resizerDiff && diffPaneLeft && diffPaneRight) {
-    const savedDiffRatio = parseFloat(localStorage.getItem("ats_diff_split_ratio")) || 0.5;
+    const savedDiffRatio =
+      parseFloat(localStorage.getItem("ats_diff_split_ratio")) || 0.5;
     diffPaneLeft.style.flex = `${savedDiffRatio} 1 0%`;
     diffPaneRight.style.flex = `${1 - savedDiffRatio} 1 0%`;
 
@@ -341,11 +381,10 @@ function setupResizableDividers() {
         diffPaneLeft.style.flex = "1 1 50%";
         diffPaneRight.style.flex = "1 1 50%";
         localStorage.setItem("ats_diff_split_ratio", "0.5");
-      }
+      },
     });
   }
 }
-
 
 // ============================================================================
 // 3. EMPTY STATE & QUICK START ACTIONS
@@ -358,14 +397,18 @@ function setupEmptyStateActions() {
     });
   }
 
-  const btnEmptyConfigMaster = document.getElementById("btn-empty-config-master");
+  const btnEmptyConfigMaster = document.getElementById(
+    "btn-empty-config-master",
+  );
   if (btnEmptyConfigMaster) {
     btnEmptyConfigMaster.addEventListener("click", () => {
       openProfileDrawer();
     });
   }
 
-  const btnSidebarEditMaster = document.getElementById("btn-sidebar-edit-master");
+  const btnSidebarEditMaster = document.getElementById(
+    "btn-sidebar-edit-master",
+  );
   if (btnSidebarEditMaster) {
     btnSidebarEditMaster.addEventListener("click", () => {
       openProfileDrawer();
@@ -426,13 +469,16 @@ function animateDualScores(scannabilityTarget, technicalTarget) {
   const techEl = document.getElementById("inspect-technical-val");
   const legacyEl = document.getElementById("inspect-score-val");
 
-  if (scannabilityTarget === null || scannabilityTarget === undefined || isNaN(scannabilityTarget)) {
+  if (
+    scannabilityTarget === null ||
+    scannabilityTarget === undefined ||
+    isNaN(scannabilityTarget)
+  ) {
     if (scanEl) scanEl.textContent = "--";
     if (techEl) techEl.textContent = "--";
     if (legacyEl) legacyEl.textContent = "--";
     currentScannabilityDisplay = 0;
     currentTechnicalDisplay = 0;
-    currentScoreDisplay = 0;
     return;
   }
 
@@ -450,8 +496,12 @@ function animateDualScores(scannabilityTarget, technicalTarget) {
     const progress = Math.min(elapsed / duration, 1);
     const easeProgress = 1 - (1 - progress) * (1 - progress);
 
-    const valScan = Math.round(startScan + (targetScan - startScan) * easeProgress);
-    const valTech = Math.round(startTech + (targetTech - startTech) * easeProgress);
+    const valScan = Math.round(
+      startScan + (targetScan - startScan) * easeProgress,
+    );
+    const valTech = Math.round(
+      startTech + (targetTech - startTech) * easeProgress,
+    );
 
     if (scanEl) scanEl.textContent = valScan;
     if (techEl) techEl.textContent = valTech;
@@ -465,7 +515,6 @@ function animateDualScores(scannabilityTarget, technicalTarget) {
       if (legacyEl) legacyEl.textContent = targetTech;
       currentScannabilityDisplay = targetScan;
       currentTechnicalDisplay = targetTech;
-      currentScoreDisplay = targetTech;
     }
   }
 
@@ -503,7 +552,8 @@ async function loadMasterProfile() {
       populateDrawerForm(currentMasterProfile);
     } else {
       if (nameEl) nameEl.textContent = "Pendente de Configuração";
-      if (statusTextEl) statusTextEl.textContent = "Clique em Editar para importar PDF";
+      if (statusTextEl)
+        statusTextEl.textContent = "Clique em Editar para importar PDF";
       if (dotEl) {
         dotEl.className = "w-2 h-2 rounded-full bg-amber-500";
       }
@@ -543,7 +593,7 @@ function setupProfileDrawer() {
   if (drawer) {
     let startedOnBackdrop = false;
     drawer.addEventListener("mousedown", (e) => {
-      startedOnBackdrop = (e.target === drawer);
+      startedOnBackdrop = e.target === drawer;
     });
     drawer.addEventListener("click", (e) => {
       if (e.target === drawer && startedOnBackdrop) {
@@ -587,24 +637,31 @@ function setupProfileDrawer() {
   }
 
   async function uploadPdfFile(file) {
-    if (uploadStatus) uploadStatus.innerHTML = `<span class="text-zinc-400">Processando PDF...</span>`;
+    if (uploadStatus)
+      uploadStatus.innerHTML = `<span class="text-zinc-400">Processando PDF...</span>`;
     const fd = new FormData();
     fd.append("file", file);
 
     try {
-      const res = await fetch("/api/profile/upload", { method: "POST", body: fd });
+      const res = await fetch("/api/profile/upload", {
+        method: "POST",
+        body: fd,
+      });
       const data = await res.json();
       if (res.ok) {
-        if (uploadStatus) uploadStatus.innerHTML = `<span class="text-emerald-400 font-medium">PDF extraído com sucesso</span>`;
+        if (uploadStatus)
+          uploadStatus.innerHTML = `<span class="text-emerald-400 font-medium">PDF extraído com sucesso</span>`;
         showToast("Master CV atualizado via PDF", "success");
         await loadMasterProfile();
         if (selectedJobId) selectJob(selectedJobId);
       } else {
-        if (uploadStatus) uploadStatus.innerHTML = `<span class="text-rose-400">${data.error || "Erro no upload"}</span>`;
+        if (uploadStatus)
+          uploadStatus.innerHTML = `<span class="text-rose-400">${data.error || "Erro no upload"}</span>`;
         showToast("Falha na extração do PDF", "error");
       }
     } catch {
-      if (uploadStatus) uploadStatus.innerHTML = `<span class="text-rose-400">Erro de rede</span>`;
+      if (uploadStatus)
+        uploadStatus.innerHTML = `<span class="text-rose-400">Erro de rede</span>`;
     }
   }
 
@@ -613,7 +670,13 @@ function setupProfileDrawer() {
   if (btnAddExp) {
     btnAddExp.addEventListener("click", () => {
       const exps = collectDrawerExperiences();
-      exps.push({ role: "", company: "", startDate: "", endDate: "", description: "" });
+      exps.push({
+        role: "",
+        company: "",
+        startDate: "",
+        endDate: "",
+        description: "",
+      });
       if (!currentMasterProfile) currentMasterProfile = {};
       currentMasterProfile.experiences = exps;
       renderDrawerExperiences(exps);
@@ -650,7 +713,7 @@ function setupProfileDrawer() {
         } else {
           showToast(data.error || "Erro ao reprocessar Master CV", "error");
         }
-      } catch (err) {
+      } catch {
         showToast("Erro ao conectar com a API", "error");
       } finally {
         btnReprocess.disabled = false;
@@ -676,16 +739,20 @@ function setupProfileDrawer() {
         linkedin: document.getElementById("drawer-linkedin").value,
         github: document.getElementById("drawer-github").value,
         summary: document.getElementById("drawer-summary").value,
-        skills: document.getElementById("drawer-skills").value.split(",").map(s => s.trim()).filter(Boolean),
+        skills: document
+          .getElementById("drawer-skills")
+          .value.split(",")
+          .map((s) => s.trim())
+          .filter(Boolean),
         experiences,
-        education
+        education,
       };
 
       try {
         const res = await fetch("/api/profile", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
+          body: JSON.stringify(payload),
         });
         if (res.ok) {
           showToast("Master CV gravado", "success");
@@ -703,13 +770,13 @@ function setupProfileDrawer() {
 function collectDrawerExperiences() {
   const expCards = document.querySelectorAll("#drawer-experiences-list > div");
   const list = [];
-  expCards.forEach(card => {
+  expCards.forEach((card) => {
     list.push({
       role: card.querySelector(".d-exp-role")?.value || "",
       company: card.querySelector(".d-exp-company")?.value || "",
       startDate: card.querySelector(".d-exp-start")?.value || "",
       endDate: card.querySelector(".d-exp-end")?.value || "",
-      description: card.querySelector(".d-exp-desc")?.value || ""
+      description: card.querySelector(".d-exp-desc")?.value || "",
     });
   });
   return list;
@@ -718,12 +785,12 @@ function collectDrawerExperiences() {
 function collectDrawerEducation() {
   const eduCards = document.querySelectorAll("#drawer-education-list > div");
   const list = [];
-  eduCards.forEach(card => {
+  eduCards.forEach((card) => {
     list.push({
       degree: card.querySelector(".d-edu-degree")?.value || "",
       institution: card.querySelector(".d-edu-inst")?.value || "",
       startDate: card.querySelector(".d-edu-start")?.value || "",
-      endDate: card.querySelector(".d-edu-end")?.value || ""
+      endDate: card.querySelector(".d-edu-end")?.value || "",
     });
   });
   return list;
@@ -767,17 +834,17 @@ function renderDrawerExperiences(exps) {
         <button type="button" class="btn-del-exp text-zinc-400 hover:text-rose-400 transition-colors font-mono" data-idx="${idx}">Remover</button>
       </div>
       <div class="grid grid-cols-2 gap-2">
-        <input type="text" placeholder="Cargo" class="ui-input d-exp-role" value="${escapeHtml(exp.role || '')}" required>
-        <input type="text" placeholder="Empresa" class="ui-input d-exp-company" value="${escapeHtml(exp.company || '')}" required>
-        <input type="text" placeholder="Início" class="ui-input d-exp-start font-mono text-xs" value="${escapeHtml(exp.startDate || '')}">
-        <input type="text" placeholder="Fim" class="ui-input d-exp-end font-mono text-xs" value="${escapeHtml(exp.endDate || '')}">
+        <input type="text" placeholder="Cargo" class="ui-input d-exp-role" value="${escapeHtml(exp.role || "")}" required>
+        <input type="text" placeholder="Empresa" class="ui-input d-exp-company" value="${escapeHtml(exp.company || "")}" required>
+        <input type="text" placeholder="Início" class="ui-input d-exp-start font-mono text-xs" value="${escapeHtml(exp.startDate || "")}">
+        <input type="text" placeholder="Fim" class="ui-input d-exp-end font-mono text-xs" value="${escapeHtml(exp.endDate || "")}">
       </div>
-      <textarea rows="2" placeholder="Bullets / Resultados" class="ui-input w-full d-exp-desc font-mono text-xs leading-relaxed">${escapeHtml(exp.description || '')}</textarea>
+      <textarea rows="2" placeholder="Bullets / Resultados" class="ui-input w-full d-exp-desc font-mono text-xs leading-relaxed">${escapeHtml(exp.description || "")}</textarea>
     `;
     container.appendChild(card);
   });
 
-  container.querySelectorAll(".btn-del-exp").forEach(btn => {
+  container.querySelectorAll(".btn-del-exp").forEach((btn) => {
     btn.addEventListener("click", (e) => {
       const idx = parseInt(e.target.dataset.idx, 10);
       const exps = collectDrawerExperiences();
@@ -804,16 +871,16 @@ function renderDrawerEducation(edus) {
         <button type="button" class="btn-del-edu text-zinc-400 hover:text-rose-400 transition-colors font-mono" data-idx="${idx}">Remover</button>
       </div>
       <div class="grid grid-cols-2 gap-2">
-        <input type="text" placeholder="Curso / Grau" class="ui-input d-edu-degree" value="${escapeHtml(edu.degree || '')}" required>
-        <input type="text" placeholder="Instituição" class="ui-input d-edu-inst" value="${escapeHtml(edu.institution || '')}" required>
-        <input type="text" placeholder="Início" class="ui-input d-edu-start font-mono text-xs" value="${escapeHtml(edu.startDate || '')}">
-        <input type="text" placeholder="Fim" class="ui-input d-edu-end font-mono text-xs" value="${escapeHtml(edu.endDate || '')}">
+        <input type="text" placeholder="Curso / Grau" class="ui-input d-edu-degree" value="${escapeHtml(edu.degree || "")}" required>
+        <input type="text" placeholder="Instituição" class="ui-input d-edu-inst" value="${escapeHtml(edu.institution || "")}" required>
+        <input type="text" placeholder="Início" class="ui-input d-edu-start font-mono text-xs" value="${escapeHtml(edu.startDate || "")}">
+        <input type="text" placeholder="Fim" class="ui-input d-edu-end font-mono text-xs" value="${escapeHtml(edu.endDate || "")}">
       </div>
     `;
     container.appendChild(card);
   });
 
-  container.querySelectorAll(".btn-del-edu").forEach(btn => {
+  container.querySelectorAll(".btn-del-edu").forEach((btn) => {
     btn.addEventListener("click", (e) => {
       const idx = parseInt(e.target.dataset.idx, 10);
       const edus = collectDrawerEducation();
@@ -841,7 +908,7 @@ async function loadJobs() {
     renderSidebarJobs();
 
     if (currentJobs.length > 0) {
-      if (!selectedJobId || !currentJobs.some(j => j.id === selectedJobId)) {
+      if (!selectedJobId || !currentJobs.some((j) => j.id === selectedJobId)) {
         selectJob(currentJobs[0].id);
       }
     } else {
@@ -858,9 +925,12 @@ function renderSidebarJobs() {
   const container = document.getElementById("jobs-list");
   if (!container) return;
 
-  const filtered = currentJobs.filter(job => {
-    const matchesSearch = job.title.toLowerCase().includes(currentSearchQuery) || job.company.toLowerCase().includes(currentSearchQuery);
-    const matchesStatus = currentFilterStatus === "ALL" || job.status === currentFilterStatus;
+  const filtered = currentJobs.filter((job) => {
+    const matchesSearch =
+      job.title.toLowerCase().includes(currentSearchQuery) ||
+      job.company.toLowerCase().includes(currentSearchQuery);
+    const matchesStatus =
+      currentFilterStatus === "ALL" || job.status === currentFilterStatus;
     return matchesSearch && matchesStatus;
   });
 
@@ -874,10 +944,10 @@ function renderSidebarJobs() {
   }
 
   container.innerHTML = "";
-  filtered.forEach(job => {
+  filtered.forEach((job) => {
     const isSelected = job.id === selectedJobId;
     const row = document.createElement("div");
-    row.className = `px-5 py-3.5 border-b cursor-pointer select-none job-row-spring group relative ${isSelected ? 'sidebar-job-active' : ''}`;
+    row.className = `px-5 py-3.5 border-b cursor-pointer select-none job-row-spring group relative ${isSelected ? "sidebar-job-active" : ""}`;
     row.style.borderColor = "var(--border-color)";
     row.dataset.id = job.id;
 
@@ -886,12 +956,12 @@ function renderSidebarJobs() {
       APPLIED: "Aplicada",
       INTERVIEW: "Entrevista",
       OFFER: "Oferta",
-      REJECTED: "Rejeitada"
+      REJECTED: "Rejeitada",
     };
     const statusLabel = statusMap[job.status] || job.status;
 
-    const scoreText = job.tailored 
-      ? `<span class="tabular-nums font-mono text-xs" style="color: var(--text-muted);">${job.tailored.scoreBefore}</span> <span style="color: var(--text-muted);">→</span> <span class="tabular-nums font-mono text-xs font-semibold ${job.tailored.scoreAfter >= 80 ? 'text-emerald-500' : ''}" style="${job.tailored.scoreAfter >= 80 ? '' : 'color: var(--text-primary);'}">${job.tailored.scoreAfter}</span>`
+    const scoreText = job.tailored
+      ? `<span class="tabular-nums font-mono text-xs" style="color: var(--text-muted);">${job.tailored.scoreBefore}</span> <span style="color: var(--text-muted);">→</span> <span class="tabular-nums font-mono text-xs font-semibold ${job.tailored.scoreAfter >= 80 ? "text-emerald-500" : ""}" style="${job.tailored.scoreAfter >= 80 ? "" : "color: var(--text-primary);"}">${job.tailored.scoreAfter}</span>`
       : `<span class="tabular-nums font-mono text-xs" style="color: var(--text-muted);">--</span>`;
 
     row.innerHTML = `
@@ -933,13 +1003,15 @@ function setupSidebarNavigation() {
     });
   }
 
-  document.querySelectorAll(".filter-tab-btn").forEach(btn => {
+  document.querySelectorAll(".filter-tab-btn").forEach((btn) => {
     btn.addEventListener("click", (e) => {
-      document.querySelectorAll(".filter-tab-btn").forEach(b => {
-        b.className = "filter-tab-btn px-2 py-1 rounded-md text-zinc-400 hover:text-zinc-200";
+      document.querySelectorAll(".filter-tab-btn").forEach((b) => {
+        b.className =
+          "filter-tab-btn px-2 py-1 rounded-md text-zinc-400 hover:text-zinc-200";
         b.style.backgroundColor = "transparent";
       });
-      e.target.className = "filter-tab-btn active px-2.5 py-1 rounded-md font-medium";
+      e.target.className =
+        "filter-tab-btn active px-2.5 py-1 rounded-md font-medium";
       e.target.style.backgroundColor = "var(--bg-subtle)";
       e.target.style.color = "var(--text-primary)";
 
@@ -956,7 +1028,7 @@ async function selectJob(jobId) {
   selectedJobId = jobId;
   renderSidebarJobs();
 
-  const job = currentJobs.find(j => j.id === jobId);
+  const job = currentJobs.find((j) => j.id === jobId);
   if (!job) return;
 
   activeJobData = job;
@@ -982,7 +1054,7 @@ async function selectJob(jobId) {
     await fetch(`/api/jobs/${job.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: newStatus })
+      body: JSON.stringify({ status: newStatus }),
     });
     job.status = newStatus;
     showToast(`Status: ${newStatus}`, "info");
@@ -1015,22 +1087,36 @@ function renderInspectorTelemetry(job) {
 
   // Section 1: Score ATS with Animated Count Up (Dual-Score)
   if (tailored) {
-    const gain = Math.max(0, Math.round(tailored.scoreAfter - tailored.scoreBefore));
-    const sScore = tailored.auditAfter?.scannabilityScore !== undefined ? tailored.auditAfter.scannabilityScore : tailored.scoreAfter;
-    const tScore = tailored.auditAfter?.technicalScore !== undefined ? tailored.auditAfter.technicalScore : tailored.scoreAfter;
+    const gain = Math.max(
+      0,
+      Math.round(tailored.scoreAfter - tailored.scoreBefore),
+    );
+    const sScore =
+      tailored.auditAfter?.scannabilityScore !== undefined
+        ? tailored.auditAfter.scannabilityScore
+        : tailored.scoreAfter;
+    const tScore =
+      tailored.auditAfter?.technicalScore !== undefined
+        ? tailored.auditAfter.technicalScore
+        : tailored.scoreAfter;
     animateDualScores(sScore, tScore);
 
     const diffEl = document.getElementById("inspect-technical-diff");
     if (diffEl) {
       diffEl.textContent = `+${gain} pts`;
-      diffEl.className = "text-xs font-mono text-emerald-400 font-semibold px-2 py-0.5 rounded";
+      diffEl.className =
+        "text-xs font-mono text-emerald-400 font-semibold px-2 py-0.5 rounded";
     }
     const beforeEl = document.getElementById("inspect-technical-before");
     if (beforeEl) beforeEl.textContent = `antes: ${tailored.scoreBefore}`;
 
     // Legacy elements
-    if (document.getElementById("inspect-score-before")) document.getElementById("inspect-score-before").textContent = `antes: ${tailored.scoreBefore}`;
-    if (document.getElementById("inspect-score-diff")) document.getElementById("inspect-score-diff").textContent = `+${gain} pts`;
+    if (document.getElementById("inspect-score-before"))
+      document.getElementById("inspect-score-before").textContent =
+        `antes: ${tailored.scoreBefore}`;
+    if (document.getElementById("inspect-score-diff"))
+      document.getElementById("inspect-score-diff").textContent =
+        `+${gain} pts`;
   } else {
     animateDualScores(null, null);
     const diffEl = document.getElementById("inspect-technical-diff");
@@ -1044,9 +1130,12 @@ function renderInspectorTelemetry(job) {
     const badgeEl = document.getElementById("inspect-scannability-badge");
     if (badgeEl) {
       badgeEl.textContent = "Aguardando";
-      badgeEl.className = "text-xs font-mono text-zinc-500 font-semibold px-2 py-0.5 rounded";
+      badgeEl.className =
+        "text-xs font-mono text-zinc-500 font-semibold px-2 py-0.5 rounded";
     }
-    const countEl = document.getElementById("inspect-scannability-metrics-count");
+    const countEl = document.getElementById(
+      "inspect-scannability-metrics-count",
+    );
     if (countEl) countEl.textContent = "0 métricas de impacto";
 
     resetBreakdownLines();
@@ -1054,25 +1143,32 @@ function renderInspectorTelemetry(job) {
 
   // Section 2: Densidade TF-IDF Vertical Table
   const tableBody = document.getElementById("inspect-keywords-table");
-  document.getElementById("inspect-kw-count").textContent = `${keywords.length} termos`;
+  document.getElementById("inspect-kw-count").textContent =
+    `${keywords.length} termos`;
 
   const density = job.tailored?.auditAfter?.keywordDensity || {};
 
   if (keywords.length === 0) {
     tableBody.innerHTML = `<tr><td colspan="4" class="py-4 text-center text-zinc-500 text-xs italic">Sem keywords extraídas</td></tr>`;
   } else {
-    tableBody.innerHTML = keywords.map(kw => {
-      const termLower = kw.term.toLowerCase();
-      const rawCount = density[kw.term] !== undefined 
-        ? density[kw.term] 
-        : (density[termLower] !== undefined ? density[termLower] : null);
-      const cvDisplay = rawCount !== null ? `${rawCount}x` : "--";
-      const cvClass = rawCount !== null && rawCount >= 1 
-        ? "py-2 text-center text-emerald-400 text-xs font-semibold" 
-        : "py-2 text-center text-zinc-400 text-xs";
-      const safeId = "kw-cv-" + kw.term.toLowerCase().replace(/[^a-z0-9]/g, "_");
+    tableBody.innerHTML = keywords
+      .map((kw) => {
+        const termLower = kw.term.toLowerCase();
+        const rawCount =
+          density[kw.term] !== undefined
+            ? density[kw.term]
+            : density[termLower] !== undefined
+              ? density[termLower]
+              : null;
+        const cvDisplay = rawCount !== null ? `${rawCount}x` : "--";
+        const cvClass =
+          rawCount !== null && rawCount >= 1
+            ? "py-2 text-center text-emerald-400 text-xs font-semibold"
+            : "py-2 text-center text-zinc-400 text-xs";
+        const safeId =
+          "kw-cv-" + kw.term.toLowerCase().replace(/[^a-z0-9]/g, "_");
 
-      return `
+        return `
         <tr class="hover:bg-zinc-800/20 transition-colors">
           <td class="py-2 font-sans text-xs truncate max-w-[130px]" style="color: var(--text-primary);">${escapeHtml(kw.term)}</td>
           <td class="py-2 text-center text-zinc-400 text-xs">${kw.count}x</td>
@@ -1082,40 +1178,66 @@ function renderInspectorTelemetry(job) {
           </td>
         </tr>
       `;
-    }).join("");
+      })
+      .join("");
   }
 
   // Section 3: Propriedades do Binário
   document.getElementById("prop-title").textContent = job.title;
-  document.getElementById("prop-creator").textContent = currentMasterProfile?.fullName || "Rodrigo Silva";
-  document.getElementById("prop-keywords").textContent = keywords.slice(0, 4).map(k => k.term).join(", ") || "--";
+  document.getElementById("prop-creator").textContent =
+    currentMasterProfile?.fullName || "Rodrigo Silva";
+  document.getElementById("prop-keywords").textContent =
+    keywords
+      .slice(0, 4)
+      .map((k) => k.term)
+      .join(", ") || "--";
 }
 
 function resetBreakdownLines() {
-  if (document.getElementById("scannability-structure")) document.getElementById("scannability-structure").textContent = "--/30";
-  if (document.getElementById("scannability-metrics")) document.getElementById("scannability-metrics").textContent = "--/45";
-  if (document.getElementById("scannability-readability")) document.getElementById("scannability-readability").textContent = "--/25";
-  if (document.getElementById("line-scannability-structure")) document.getElementById("line-scannability-structure").style.width = "0%";
-  if (document.getElementById("line-scannability-metrics")) document.getElementById("line-scannability-metrics").style.width = "0%";
-  if (document.getElementById("line-scannability-readability")) document.getElementById("line-scannability-readability").style.width = "0%";
+  if (document.getElementById("scannability-structure"))
+    document.getElementById("scannability-structure").textContent = "--/30";
+  if (document.getElementById("scannability-metrics"))
+    document.getElementById("scannability-metrics").textContent = "--/45";
+  if (document.getElementById("scannability-readability"))
+    document.getElementById("scannability-readability").textContent = "--/25";
+  if (document.getElementById("line-scannability-structure"))
+    document.getElementById("line-scannability-structure").style.width = "0%";
+  if (document.getElementById("line-scannability-metrics"))
+    document.getElementById("line-scannability-metrics").style.width = "0%";
+  if (document.getElementById("line-scannability-readability"))
+    document.getElementById("line-scannability-readability").style.width = "0%";
 
-  if (document.getElementById("breakdown-format")) document.getElementById("breakdown-format").textContent = "--/30";
-  if (document.getElementById("breakdown-keywords")) document.getElementById("breakdown-keywords").textContent = "--/35";
-  if (document.getElementById("breakdown-density")) document.getElementById("breakdown-density").textContent = "--/20";
-  if (document.getElementById("breakdown-entity")) document.getElementById("breakdown-entity").textContent = "--/15";
+  if (document.getElementById("breakdown-format"))
+    document.getElementById("breakdown-format").textContent = "--/30";
+  if (document.getElementById("breakdown-keywords"))
+    document.getElementById("breakdown-keywords").textContent = "--/35";
+  if (document.getElementById("breakdown-density"))
+    document.getElementById("breakdown-density").textContent = "--/20";
+  if (document.getElementById("breakdown-entity"))
+    document.getElementById("breakdown-entity").textContent = "--/15";
 
-  if (document.getElementById("line-format")) document.getElementById("line-format").style.width = "0%";
-  if (document.getElementById("line-keywords")) document.getElementById("line-keywords").style.width = "0%";
-  if (document.getElementById("line-density")) document.getElementById("line-density").style.width = "0%";
-  if (document.getElementById("line-entity")) document.getElementById("line-entity").style.width = "0%";
+  if (document.getElementById("line-format"))
+    document.getElementById("line-format").style.width = "0%";
+  if (document.getElementById("line-keywords"))
+    document.getElementById("line-keywords").style.width = "0%";
+  if (document.getElementById("line-density"))
+    document.getElementById("line-density").style.width = "0%";
+  if (document.getElementById("line-entity"))
+    document.getElementById("line-entity").style.width = "0%";
 }
 
 function updateInspectorBreakdown(audit) {
   if (!audit) return;
 
   // 1. Dual-Score Animated Values
-  const scannabilityScore = audit.scannabilityScore !== undefined ? audit.scannabilityScore : (audit.overallScore || 0);
-  const technicalScore = audit.technicalScore !== undefined ? audit.technicalScore : (audit.overallScore || 0);
+  const scannabilityScore =
+    audit.scannabilityScore !== undefined
+      ? audit.scannabilityScore
+      : audit.overallScore || 0;
+  const technicalScore =
+    audit.technicalScore !== undefined
+      ? audit.technicalScore
+      : audit.overallScore || 0;
   animateDualScores(scannabilityScore, technicalScore);
 
   // 2. Scannability & Impact Dimensions (Top Card)
@@ -1124,35 +1246,44 @@ function updateInspectorBreakdown(audit) {
     const structEl = document.getElementById("scannability-structure");
     const structLine = document.getElementById("line-scannability-structure");
     if (structEl) structEl.textContent = `${sb.structureClarity}/30`;
-    if (structLine) structLine.style.width = `${(sb.structureClarity / 30) * 100}%`;
+    if (structLine)
+      structLine.style.width = `${(sb.structureClarity / 30) * 100}%`;
 
     const metricsEl = document.getElementById("scannability-metrics");
     const metricsLine = document.getElementById("line-scannability-metrics");
     if (metricsEl) metricsEl.textContent = `${sb.quantifiableMetrics}/45`;
-    if (metricsLine) metricsLine.style.width = `${(sb.quantifiableMetrics / 45) * 100}%`;
+    if (metricsLine)
+      metricsLine.style.width = `${(sb.quantifiableMetrics / 45) * 100}%`;
 
     const readEl = document.getElementById("scannability-readability");
     const readLine = document.getElementById("line-scannability-readability");
     if (readEl) readEl.textContent = `${sb.humanReadability}/25`;
     if (readLine) readLine.style.width = `${(sb.humanReadability / 25) * 100}%`;
 
-    const countEl = document.getElementById("inspect-scannability-metrics-count");
-    if (countEl) countEl.textContent = `${sb.metricsFoundCount} métricas encontradas`;
+    const countEl = document.getElementById(
+      "inspect-scannability-metrics-count",
+    );
+    if (countEl)
+      countEl.textContent = `${sb.metricsFoundCount} métricas encontradas`;
 
     const badgeEl = document.getElementById("inspect-scannability-badge");
     if (badgeEl) {
       if (scannabilityScore >= 85) {
         badgeEl.textContent = "Excelente (6s)";
-        badgeEl.className = "text-xs font-mono text-emerald-400 font-semibold px-2 py-0.5 rounded";
+        badgeEl.className =
+          "text-xs font-mono text-emerald-400 font-semibold px-2 py-0.5 rounded";
       } else if (scannabilityScore >= 70) {
         badgeEl.textContent = "Alta Clareza";
-        badgeEl.className = "text-xs font-mono text-emerald-400 font-semibold px-2 py-0.5 rounded";
+        badgeEl.className =
+          "text-xs font-mono text-emerald-400 font-semibold px-2 py-0.5 rounded";
       } else if (scannabilityScore >= 50) {
         badgeEl.textContent = "Moderada";
-        badgeEl.className = "text-xs font-mono text-amber-400 font-semibold px-2 py-0.5 rounded";
+        badgeEl.className =
+          "text-xs font-mono text-amber-400 font-semibold px-2 py-0.5 rounded";
       } else {
         badgeEl.textContent = "Necessita Métricas";
-        badgeEl.className = "text-xs font-mono text-rose-400 font-semibold px-2 py-0.5 rounded";
+        badgeEl.className =
+          "text-xs font-mono text-rose-400 font-semibold px-2 py-0.5 rounded";
       }
     }
   }
@@ -1160,42 +1291,58 @@ function updateInspectorBreakdown(audit) {
   // 3. Technical TF-IDF Dimensions (Bottom Card)
   const b = audit.breakdown || {};
   if (document.getElementById("breakdown-format")) {
-    document.getElementById("breakdown-format").textContent = `${b.formatting || 0}/30`;
-    document.getElementById("line-format").style.width = `${((b.formatting || 0) / 30) * 100}%`;
+    document.getElementById("breakdown-format").textContent =
+      `${b.formatting || 0}/30`;
+    document.getElementById("line-format").style.width =
+      `${((b.formatting || 0) / 30) * 100}%`;
   }
   if (document.getElementById("breakdown-keywords")) {
-    document.getElementById("breakdown-keywords").textContent = `${b.keywords || 0}/35`;
-    document.getElementById("line-keywords").style.width = `${((b.keywords || 0) / 35) * 100}%`;
+    document.getElementById("breakdown-keywords").textContent =
+      `${b.keywords || 0}/35`;
+    document.getElementById("line-keywords").style.width =
+      `${((b.keywords || 0) / 35) * 100}%`;
   }
   if (document.getElementById("breakdown-density")) {
-    document.getElementById("breakdown-density").textContent = `${b.density || 0}/20`;
-    document.getElementById("line-density").style.width = `${((b.density || 0) / 20) * 100}%`;
+    document.getElementById("breakdown-density").textContent =
+      `${b.density || 0}/20`;
+    document.getElementById("line-density").style.width =
+      `${((b.density || 0) / 20) * 100}%`;
   }
   if (document.getElementById("breakdown-entity")) {
-    document.getElementById("breakdown-entity").textContent = `${b.entityCompliance || 0}/15`;
-    document.getElementById("line-entity").style.width = `${((b.entityCompliance || 0) / 15) * 100}%`;
+    document.getElementById("breakdown-entity").textContent =
+      `${b.entityCompliance || 0}/15`;
+    document.getElementById("line-entity").style.width =
+      `${((b.entityCompliance || 0) / 15) * 100}%`;
   }
 
   // Update CV counts in TF-IDF table
   const density = audit.keywordDensity || {};
   for (const [term, count] of Object.entries(density)) {
     const safeId = "kw-cv-" + term.toLowerCase().replace(/[^a-z0-9]/g, "_");
-    const cell = document.getElementById(safeId) || document.getElementById(`kw-cv-${term}`);
+    const cell =
+      document.getElementById(safeId) ||
+      document.getElementById(`kw-cv-${term}`);
     if (cell) {
       cell.textContent = `${count}x`;
-      cell.className = count >= 1 ? "py-2 text-center text-emerald-400 text-xs font-semibold" : "py-2 text-center text-zinc-400 text-xs";
+      cell.className =
+        count >= 1
+          ? "py-2 text-center text-emerald-400 text-xs font-semibold"
+          : "py-2 text-center text-zinc-400 text-xs";
     }
   }
 
   // Also match any cells by data-term
-  document.querySelectorAll("[id^='kw-cv-']").forEach(cell => {
+  document.querySelectorAll("[id^='kw-cv-']").forEach((cell) => {
     const term = cell.getAttribute("data-term");
     if (term) {
       const lower = term.toLowerCase();
       if (density[term] !== undefined || density[lower] !== undefined) {
         const c = density[term] !== undefined ? density[term] : density[lower];
         cell.textContent = `${c}x`;
-        cell.className = c >= 1 ? "py-2 text-center text-emerald-400 text-xs font-semibold" : "py-2 text-center text-zinc-400 text-xs";
+        cell.className =
+          c >= 1
+            ? "py-2 text-center text-emerald-400 text-xs font-semibold"
+            : "py-2 text-center text-zinc-400 text-xs";
       }
     }
   });
@@ -1205,7 +1352,9 @@ function updateInspectorBreakdown(audit) {
 function formatClientDateRange(start, end) {
   if (!start && !end) return "";
   if (start && (!end || end === "Atual" || end === "")) {
-    const two = start.match(/^(.+?\b(?:19\d\d|20\d\d))\s+(.+?\b(?:19\d\d|20\d\d|\batual\b|\bpresente?\b))$/i);
+    const two = start.match(
+      /^(.+?\b(?:19\d\d|20\d\d))\s+(.+?\b(?:19\d\d|20\d\d|\batual\b|\bpresente?\b))$/i,
+    );
     if (two) {
       start = two[1];
       end = two[2];
@@ -1214,12 +1363,54 @@ function formatClientDateRange(start, end) {
   const formatSingle = (s) => {
     if (!s) return "";
     const lower = s.trim().toLowerCase();
-    if (["atual", "present", "presente", "current"].includes(lower)) return "Atual";
+    if (["atual", "present", "presente", "current"].includes(lower))
+      return "Atual";
     const ym = lower.match(/^(\d{4})[-/.](\d{1,2})$/);
-    const months = { "01": "Jan", "02": "Fev", "03": "Mar", "04": "Abr", "05": "Mai", "06": "Jun", "07": "Jul", "08": "Ago", "09": "Set", "10": "Out", "11": "Nov", "12": "Dez" };
+    const months = {
+      "01": "Jan",
+      "02": "Fev",
+      "03": "Mar",
+      "04": "Abr",
+      "05": "Mai",
+      "06": "Jun",
+      "07": "Jul",
+      "08": "Ago",
+      "09": "Set",
+      10: "Out",
+      11: "Nov",
+      12: "Dez",
+    };
     if (ym) return `${months[ym[2].padStart(2, "0")] || ym[2]} ${ym[1]}`;
-    const mMatch = lower.normalize("NFD").replace(/[\u0300-\u036f]/g, "").match(/\b([a-z]+)\.?\s+(?:de\s+)?(\d{4})\b/);
-    const mWords = { "janeiro": "Jan", "jan": "Jan", "fevereiro": "Fev", "fev": "Fev", "marco": "Mar", "mar": "Mar", "abril": "Abr", "abr": "Abr", "maio": "Mai", "mai": "Mai", "junho": "Jun", "jun": "Jun", "julho": "Jul", "jul": "Jul", "agosto": "Ago", "ago": "Ago", "setembro": "Set", "set": "Set", "outubro": "Out", "out": "Out", "novembro": "Nov", "nov": "Nov", "dezembro": "Dez", "dez": "Dez" };
+    const mMatch = lower
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .match(/\b([a-z]+)\.?\s+(?:de\s+)?(\d{4})\b/);
+    const mWords = {
+      janeiro: "Jan",
+      jan: "Jan",
+      fevereiro: "Fev",
+      fev: "Fev",
+      marco: "Mar",
+      mar: "Mar",
+      abril: "Abr",
+      abr: "Abr",
+      maio: "Mai",
+      mai: "Mai",
+      junho: "Jun",
+      jun: "Jun",
+      julho: "Jul",
+      jul: "Jul",
+      agosto: "Ago",
+      ago: "Ago",
+      setembro: "Set",
+      set: "Set",
+      outubro: "Out",
+      out: "Out",
+      novembro: "Nov",
+      nov: "Nov",
+      dezembro: "Dez",
+      dez: "Dez",
+    };
     if (mMatch && mWords[mMatch[1]]) return `${mWords[mMatch[1]]} ${mMatch[2]}`;
     const yr = lower.match(/\b(19\d\d|20\d\d)\b/);
     if (yr) return yr[1];
@@ -1251,7 +1442,7 @@ function renderMasterCvDiff() {
     <div class="border-b pb-3" style="border-color: var(--border-color);">
       <div class="text-sm font-semibold" style="color: var(--text-primary);">${escapeHtml(p.fullName)}</div>
       <div class="text-xs text-zinc-400 mt-0.5">${escapeHtml(p.headline)}</div>
-      <div class="text-xs text-zinc-500 mt-1">${escapeHtml(p.email)} | ${escapeHtml(p.phone || '')} | ${escapeHtml(p.location || '')}</div>
+      <div class="text-xs text-zinc-500 mt-1">${escapeHtml(p.email)} | ${escapeHtml(p.phone || "")} | ${escapeHtml(p.location || "")}</div>
     </div>
 
     <div>
@@ -1262,19 +1453,23 @@ function renderMasterCvDiff() {
     <div>
       <div class="text-xs font-mono uppercase text-zinc-500 font-semibold mb-2">Experiências Originais</div>
       <div class="space-y-3.5">
-        ${(p.experiences || []).map(exp => `
+        ${(p.experiences || [])
+          .map(
+            (exp) => `
           <div>
             <div class="text-sm font-medium" style="color: var(--text-primary);">${escapeHtml(exp.role)} — <span class="text-zinc-400">${escapeHtml(exp.company)}</span></div>
             <div class="text-xs font-mono tabular-nums" style="color: var(--text-secondary);">${escapeHtml(formatClientDateRange(exp.startDate, exp.endDate))}</div>
             <div class="text-xs mt-1 whitespace-pre-line leading-relaxed" style="color: var(--text-secondary);">${escapeHtml(exp.description)}</div>
           </div>
-        `).join('')}
+        `,
+          )
+          .join("")}
       </div>
     </div>
 
     <div>
       <div class="text-xs font-mono uppercase text-zinc-500 font-semibold mb-1">Habilidades Base</div>
-      <div class="font-mono text-xs leading-relaxed" style="color: var(--text-secondary);">${(p.skills || []).join(' • ')}</div>
+      <div class="font-mono text-xs leading-relaxed" style="color: var(--text-secondary);">${(p.skills || []).join(" • ")}</div>
     </div>
   `;
 }
@@ -1296,14 +1491,24 @@ async function fetchAndPopulateTailoredData(jobId) {
 
 function populateTailoredEditor(data) {
   const { tailoredResume } = data;
-  document.getElementById("edit-tailored-title").value = tailoredResume.headline || "";
-  document.getElementById("edit-tailored-summary").value = tailoredResume.summary || "";
-  document.getElementById("edit-tailored-skills").value = (tailoredResume.skills || []).join(", ");
+  document.getElementById("edit-tailored-title").value =
+    tailoredResume.headline || "";
+  document.getElementById("edit-tailored-summary").value =
+    tailoredResume.summary || "";
+  document.getElementById("edit-tailored-skills").value = (
+    tailoredResume.skills || []
+  ).join(", ");
 
-  updateSummaryDottedPreview(tailoredResume.summary || "", activeJobData?.topKeywords || []);
+  updateSummaryDottedPreview(
+    tailoredResume.summary || "",
+    activeJobData?.topKeywords || [],
+  );
 
   document.getElementById("edit-tailored-summary").oninput = (e) => {
-    updateSummaryDottedPreview(e.target.value, activeJobData?.topKeywords || []);
+    updateSummaryDottedPreview(
+      e.target.value,
+      activeJobData?.topKeywords || [],
+    );
   };
 
   const expContainer = document.getElementById("edit-tailored-experiences");
@@ -1333,7 +1538,7 @@ function updateSummaryDottedPreview(text, keywords) {
   }
 
   let html = escapeHtml(text);
-  const terms = (keywords || []).slice(0, 10).map(k => k.term);
+  const terms = (keywords || []).slice(0, 10).map((k) => k.term);
 
   for (const term of terms) {
     const escaped = escapeHtml(term).replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&");
@@ -1353,7 +1558,8 @@ function clearTailoredEditor() {
       Clique em "Otimizar Currículo" para gerar a versão com as 7 camadas.
     </div>
   `;
-  document.getElementById("summary-dotted-preview").innerHTML = `<span class="text-zinc-500 italic">Aguardando otimização...</span>`;
+  document.getElementById("summary-dotted-preview").innerHTML =
+    `<span class="text-zinc-500 italic">Aguardando otimização...</span>`;
   document.getElementById("a4-preview-content").innerHTML = `
     <div class="p-16 text-center text-zinc-500 font-mono text-xs">
       Otimize o currículo para visualizar o layout da folha A4 Linear.
@@ -1374,7 +1580,7 @@ function renderA4Preview(resume) {
     <div class="border-b pb-4 mb-5" style="border-color: var(--border-color);">
       <h1 class="text-lg font-bold tracking-tight uppercase" style="color: var(--text-primary);">${escapeHtml(resume.fullName)}</h1>
       <div class="text-xs mt-1" style="color: var(--text-secondary);">${escapeHtml(resume.headline)}</div>
-      <div class="text-xs text-zinc-500 mt-1">${escapeHtml(resume.email)}  |  ${escapeHtml(resume.phone || '')}  |  ${escapeHtml(resume.location || '')}</div>
+      <div class="text-xs text-zinc-500 mt-1">${escapeHtml(resume.email)}  |  ${escapeHtml(resume.phone || "")}  |  ${escapeHtml(resume.location || "")}</div>
     </div>
 
     <div class="mb-5">
@@ -1385,27 +1591,35 @@ function renderA4Preview(resume) {
     <div class="mb-5">
       <div class="text-xs font-bold uppercase pb-1 mb-2 font-mono border-b" style="color: var(--text-primary); border-color: var(--border-color);">Experiência Profissional</div>
       <div class="space-y-3.5">
-        ${(resume.experiences || []).map(exp => `
+        ${(resume.experiences || [])
+          .map(
+            (exp) => `
           <div>
             <div class="font-bold text-xs" style="color: var(--text-primary);">${escapeHtml(exp.role)} — <span class="font-normal" style="color: var(--text-secondary);">${escapeHtml(exp.company)}</span> <span class="text-[11px] float-right font-mono tabular-nums" style="color: var(--text-secondary);">(${escapeHtml(formatClientDateRange(exp.startDate, exp.endDate))})</span></div>
             <div class="text-xs mt-1 whitespace-pre-line leading-relaxed" style="color: var(--text-secondary);">${escapeHtml(exp.description)}</div>
           </div>
-        `).join('')}
+        `,
+          )
+          .join("")}
       </div>
     </div>
 
     <div class="mb-5">
       <div class="text-xs font-bold uppercase pb-1 mb-1.5 font-mono border-b" style="color: var(--text-primary); border-color: var(--border-color);">Formação Acadêmica</div>
       <div class="space-y-1.5">
-        ${(resume.education || []).map(edu => `
+        ${(resume.education || [])
+          .map(
+            (edu) => `
           <div class="text-xs" style="color: var(--text-secondary);"><span class="font-medium" style="color: var(--text-primary);">${escapeHtml(edu.degree)}</span> — <span class="text-zinc-500">${escapeHtml(edu.institution)}</span> <span class="text-[11px] text-zinc-500 float-right font-mono">(${escapeHtml(formatClientDateRange(edu.startDate, edu.endDate))})</span></div>
-        `).join('')}
+        `,
+          )
+          .join("")}
       </div>
     </div>
 
     <div>
       <div class="text-xs font-bold uppercase pb-1 mb-1.5 font-mono border-b" style="color: var(--text-primary); border-color: var(--border-color);">Habilidades Técnicas</div>
-      <div class="text-xs font-mono leading-relaxed" style="color: var(--text-secondary);">${(resume.skills || []).join('   •   ')}</div>
+      <div class="text-xs font-mono leading-relaxed" style="color: var(--text-secondary);">${(resume.skills || []).join("   •   ")}</div>
     </div>
   `;
 }
@@ -1414,15 +1628,17 @@ function renderA4Preview(resume) {
 // 8. WORKBENCH TABS & ACTIONS
 // ============================================================================
 function setupWorkbenchTabs() {
-  document.querySelectorAll(".nav-tab-btn").forEach(btn => {
+  document.querySelectorAll(".nav-tab-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       const target = btn.dataset.tab;
-      document.querySelectorAll(".nav-tab-btn").forEach(b => {
-        b.className = "nav-tab-btn h-full flex items-center text-sm font-medium text-zinc-400 hover:text-zinc-200 transition-colors";
+      document.querySelectorAll(".nav-tab-btn").forEach((b) => {
+        b.className =
+          "nav-tab-btn h-full flex items-center text-sm font-medium text-zinc-400 hover:text-zinc-200 transition-colors";
       });
-      btn.className = "nav-tab-btn nav-tab-active h-full flex items-center text-sm font-medium transition-colors";
+      btn.className =
+        "nav-tab-btn nav-tab-active h-full flex items-center text-sm font-medium transition-colors";
 
-      document.querySelectorAll(".tab-pane-content").forEach(p => {
+      document.querySelectorAll(".tab-pane-content").forEach((p) => {
         p.classList.add("hidden");
         p.classList.remove("fade-slide-up");
       });
@@ -1486,7 +1702,10 @@ function applyGeminiAvailability() {
       btnEngineGemini.disabled = true;
       btnEngineGemini.setAttribute("disabled", "true");
       btnEngineGemini.classList.add("opacity-40", "cursor-not-allowed");
-      btnEngineGemini.classList.remove("cursor-pointer", "hover:bg-zinc-500/10");
+      btnEngineGemini.classList.remove(
+        "cursor-pointer",
+        "hover:bg-zinc-500/10",
+      );
       btnEngineGemini.title = "GEMINI_API_KEY não configurada no arquivo .env";
     }
     if (badgeGemini) {
@@ -1512,7 +1731,8 @@ function applyGeminiAvailability() {
       badgeGemini.classList.add("hidden");
     }
     if (descGemini) {
-      descGemini.textContent = "Reescrita contextual, linguagem fluida e natural";
+      descGemini.textContent =
+        "Reescrita contextual, linguagem fluida e natural";
       descGemini.classList.remove("text-rose-400");
       descGemini.classList.add("text-zinc-400");
     }
@@ -1525,7 +1745,10 @@ function updateTailorEngineUI(engine) {
   }
 
   currentTailorEngine = engine;
-  localStorage.setItem("ats_use_gemini_tailoring", engine === "gemini" ? "true" : "false");
+  localStorage.setItem(
+    "ats_use_gemini_tailoring",
+    engine === "gemini" ? "true" : "false",
+  );
 
   const label = document.getElementById("tailor-btn-label");
   const icon = document.getElementById("tailor-btn-icon");
@@ -1568,8 +1791,12 @@ function setupWorkbenchActions() {
       await checkSystemConfig();
       const isHidden = modeDropdown.classList.contains("hidden");
       // Close other dropdowns
-      document.getElementById("download-dropdown-menu")?.classList.add("hidden");
-      document.getElementById("download-chevron-icon")?.classList.remove("rotate-180");
+      document
+        .getElementById("download-dropdown-menu")
+        ?.classList.add("hidden");
+      document
+        .getElementById("download-chevron-icon")
+        ?.classList.remove("rotate-180");
 
       if (isHidden) {
         modeDropdown.classList.remove("hidden");
@@ -1581,17 +1808,23 @@ function setupWorkbenchActions() {
     });
 
     // Options inside mode dropdown
-    document.querySelectorAll(".tailor-engine-option-btn").forEach(btn => {
+    document.querySelectorAll(".tailor-engine-option-btn").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
         const selectedEngine = btn.dataset.engine;
         if (selectedEngine === "gemini" && !hasGeminiKey) {
-          showToast("GEMINI_API_KEY não configurada no arquivo .env. Configure a chave para habilitar a IA.", "warning");
+          showToast(
+            "GEMINI_API_KEY não configurada no arquivo .env. Configure a chave para habilitar a IA.",
+            "warning",
+          );
           return;
         }
         if (selectedEngine) {
           updateTailorEngineUI(selectedEngine);
-          showToast(`Motor selecionado: ${selectedEngine === "gemini" ? "Gemini 1.5 Flash (IA)" : "Motor ATS Local"}`, "info");
+          showToast(
+            `Motor selecionado: ${selectedEngine === "gemini" ? "Gemini 1.5 Flash (IA)" : "Motor ATS Local"}`,
+            "info",
+          );
         }
         modeDropdown.classList.add("hidden");
         modeChevron?.classList.remove("rotate-180");
@@ -1618,7 +1851,7 @@ function setupWorkbenchActions() {
         return;
       }
 
-      const useAi = (currentTailorEngine === "gemini" && hasGeminiKey);
+      const useAi = currentTailorEngine === "gemini" && hasGeminiKey;
       const label = document.getElementById("tailor-btn-label");
       const icon = document.getElementById("tailor-btn-icon");
 
@@ -1628,7 +1861,10 @@ function setupWorkbenchActions() {
           icon.className = "w-4 h-4 animate-spin text-amber-300";
         }
         if (label) label.textContent = "Otimizando com IA...";
-        showToast("Conectando ao Gemini 1.5 Flash para otimização contextual...", "info");
+        showToast(
+          "Conectando ao Gemini 1.5 Flash para otimização contextual...",
+          "info",
+        );
       } else {
         if (icon) {
           icon.setAttribute("data-lucide", "loader-2");
@@ -1643,13 +1879,15 @@ function setupWorkbenchActions() {
       bar.style.opacity = "1";
       bar.style.width = "30%";
 
-      setTimeout(() => { bar.style.width = "75%"; }, 150);
+      setTimeout(() => {
+        bar.style.width = "75%";
+      }, 150);
 
       try {
         const res = await fetch(`/api/jobs/${selectedJobId}/tailor`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ useAi })
+          body: JSON.stringify({ useAi }),
         });
         const data = await res.json();
 
@@ -1660,9 +1898,13 @@ function setupWorkbenchActions() {
         }, 300);
 
         if (res.ok) {
-          const engineLabel = data.engine === "gemini" ? "Gemini IA" : "Motor ATS";
+          const engineLabel =
+            data.engine === "gemini" ? "Gemini IA" : "Motor ATS";
           const diffPts = Math.round(data.scoreAfter - data.scoreBefore);
-          showToast(`Otimizado (${engineLabel}): Score ${data.scoreAfter}/100 (+${diffPts} pts)`, "success");
+          showToast(
+            `Otimizado (${engineLabel}): Score ${data.scoreAfter}/100 (+${diffPts} pts)`,
+            "success",
+          );
           await loadJobs();
           selectJob(selectedJobId);
         } else {
@@ -1689,27 +1931,37 @@ function setupWorkbenchActions() {
 
       const headline = document.getElementById("edit-tailored-title").value;
       const summary = document.getElementById("edit-tailored-summary").value;
-      const skills = document.getElementById("edit-tailored-skills").value.split(",").map(s => s.trim()).filter(Boolean);
+      const skills = document
+        .getElementById("edit-tailored-skills")
+        .value.split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
 
-      const expTextareas = document.querySelectorAll("#edit-tailored-experiences textarea");
-      const experiences = (currentMasterProfile?.experiences || []).map((exp, idx) => ({
-        ...exp,
-        description: expTextareas[idx] ? expTextareas[idx].value : exp.description
-      }));
+      const expTextareas = document.querySelectorAll(
+        "#edit-tailored-experiences textarea",
+      );
+      const experiences = (currentMasterProfile?.experiences || []).map(
+        (exp, idx) => ({
+          ...exp,
+          description: expTextareas[idx]
+            ? expTextareas[idx].value
+            : exp.description,
+        }),
+      );
 
       const updatedResume = {
         ...currentMasterProfile,
         headline,
         summary,
         skills,
-        experiences
+        experiences,
       };
 
       try {
         const res = await fetch(`/api/jobs/${selectedJobId}/tailor`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ tailoredResume: updatedResume })
+          body: JSON.stringify({ tailoredResume: updatedResume }),
         });
         const data = await res.json();
         if (res.ok) {
@@ -1749,14 +2001,17 @@ function setupWorkbenchActions() {
 
     // Close when clicking anywhere outside
     document.addEventListener("click", (e) => {
-      if (!downloadDropdown.contains(e.target) && !btnDownloadMenu.contains(e.target)) {
+      if (
+        !downloadDropdown.contains(e.target) &&
+        !btnDownloadMenu.contains(e.target)
+      ) {
         downloadDropdown.classList.add("hidden");
         if (downloadChevron) downloadChevron.style.transform = "rotate(0deg)";
       }
     });
 
     // Options selection
-    downloadOptionBtns.forEach(btn => {
+    downloadOptionBtns.forEach((btn) => {
       btn.addEventListener("click", () => {
         const format = btn.getAttribute("data-format");
         downloadDropdown.classList.add("hidden");
@@ -1772,7 +2027,7 @@ function setupWorkbenchActions() {
           pdf: "PDF (Linear ATS XMP)",
           txt: "Texto Puro (.txt)",
           md: "Markdown (.md)",
-          json: "JSON Resume (.json)"
+          json: "JSON Resume (.json)",
         };
 
         const label = formatLabels[format] || format.toUpperCase();
@@ -1803,7 +2058,8 @@ function setupWorkbenchActions() {
 
         try {
           const res = await fetch(`/api/jobs/${selectedJobId}/download/txt`);
-          if (!res.ok) throw new Error("Falha ao obter texto puro do currículo");
+          if (!res.ok)
+            throw new Error("Falha ao obter texto puro do currículo");
           const plainText = await res.text();
 
           // Escrita na área de transferência com fallback
@@ -1825,33 +2081,47 @@ function setupWorkbenchActions() {
           if (copyLabel) copyLabel.textContent = "✅ Copiado!";
           if (copyBadge) {
             copyBadge.textContent = "Copiado!";
-            copyBadge.className = "text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500 text-zinc-950 font-bold border border-emerald-400";
+            copyBadge.className =
+              "text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500 text-zinc-950 font-bold border border-emerald-400";
           }
-          if (copyDesc) copyDesc.textContent = "Pronto para colar em formulários da Gupy!";
-          if (copyBox) copyBox.className = "p-1.5 rounded-md bg-emerald-500 text-zinc-950 mt-0.5 border border-emerald-400 shrink-0 transition-colors";
+          if (copyDesc)
+            copyDesc.textContent = "Pronto para colar em formulários da Gupy!";
+          if (copyBox)
+            copyBox.className =
+              "p-1.5 rounded-md bg-emerald-500 text-zinc-950 mt-0.5 border border-emerald-400 shrink-0 transition-colors";
 
-          showToast("Currículo copiado para o Clipboard! Pronto para a Gupy.", "success");
+          showToast(
+            "Currículo copiado para o Clipboard! Pronto para a Gupy.",
+            "success",
+          );
 
           // Restaura estado após 2.5s
           setTimeout(() => {
             if (copyLabel) copyLabel.textContent = "📋 Copiar (Clipboard)";
             if (copyBadge) {
               copyBadge.textContent = "Rápido";
-              copyBadge.className = "text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-medium border border-emerald-500/30";
+              copyBadge.className =
+                "text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-medium border border-emerald-500/30";
             }
-            if (copyDesc) copyDesc.textContent = "Texto limpo para colar em formulários";
-            if (copyBox) copyBox.className = "p-1.5 rounded-md bg-emerald-500/20 text-emerald-400 mt-0.5 border border-emerald-500/30 shrink-0 transition-colors";
+            if (copyDesc)
+              copyDesc.textContent = "Texto limpo para colar em formulários";
+            if (copyBox)
+              copyBox.className =
+                "p-1.5 rounded-md bg-emerald-500/20 text-emerald-400 mt-0.5 border border-emerald-500/30 shrink-0 transition-colors";
           }, 2500);
 
           // Fecha dropdown suavemente após 750ms para que o usuário veja a confirmação visual
           setTimeout(() => {
             downloadDropdown.classList.add("hidden");
-            if (downloadChevron) downloadChevron.style.transform = "rotate(0deg)";
+            if (downloadChevron)
+              downloadChevron.style.transform = "rotate(0deg)";
           }, 750);
-
         } catch (err) {
           console.error("Erro ao copiar texto:", err);
-          showToast("Erro ao copiar texto para a área de transferência", "error");
+          showToast(
+            "Erro ao copiar texto para a área de transferência",
+            "error",
+          );
           if (copyLabel) copyLabel.textContent = "Copiar (Clipboard)";
           if (copyBadge) copyBadge.textContent = "Rápido";
         }
@@ -1870,7 +2140,7 @@ function setupWorkbenchActions() {
       await fetch(`/api/jobs/${selectedJobId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rawDescription, jobUrl })
+        body: JSON.stringify({ rawDescription, jobUrl }),
       });
       showToast("Requisitos atualizados", "success");
       await loadJobs();
@@ -1892,7 +2162,7 @@ function setupWorkbenchActions() {
         const res = await fetch("/api/jobs/extract-url", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url })
+          body: JSON.stringify({ url }),
         });
         const data = await res.json();
         if (res.ok) {
@@ -1927,7 +2197,11 @@ function setupWorkbenchActions() {
 
   // Close modal on Escape key
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && modalDelete && !modalDelete.classList.contains("hidden")) {
+    if (
+      e.key === "Escape" &&
+      modalDelete &&
+      !modalDelete.classList.contains("hidden")
+    ) {
       hideDeleteJobModal();
     }
   });
@@ -1958,7 +2232,9 @@ let pendingDeleteJobId = null;
 function showDeleteJobModal(jobId, jobTitle) {
   if (!jobId) return;
   pendingDeleteJobId = jobId;
-  const targetJob = currentJobs.find(j => j.id === jobId) || (activeJobData && activeJobData.id === jobId ? activeJobData : null);
+  const targetJob =
+    currentJobs.find((j) => j.id === jobId) ||
+    (activeJobData && activeJobData.id === jobId ? activeJobData : null);
   const title = jobTitle || (targetJob ? targetJob.title : "esta vaga");
 
   const titleEl = document.getElementById("modal-delete-job-title");
@@ -1982,18 +2258,18 @@ async function executeDeleteJob() {
 
   try {
     const res = await fetch(`/api/jobs/${jobId}`, {
-      method: "DELETE"
+      method: "DELETE",
     });
 
     if (res.ok) {
       showToast("Vaga removida com sucesso", "info");
-      
+
       // If the deleted job was currently active, clear active selection
       if (selectedJobId === jobId) {
         selectedJobId = null;
         activeJobData = null;
       }
-      
+
       await loadJobs();
     } else {
       const data = await res.json().catch(() => ({}));
@@ -2006,9 +2282,9 @@ async function executeDeleteJob() {
 }
 
 // Legacy alias for compatibility
-async function handleDeleteJob(jobId, jobTitle) {
+window.handleDeleteJob = async function handleDeleteJob(jobId, jobTitle) {
   showDeleteJobModal(jobId, jobTitle);
-}
+};
 
 // ============================================================================
 // 9. ADD JOB MODAL
@@ -2040,7 +2316,7 @@ function setupAddJobModal() {
   if (modal) {
     let startedOnBackdrop = false;
     modal.addEventListener("mousedown", (e) => {
-      startedOnBackdrop = (e.target === modal);
+      startedOnBackdrop = e.target === modal;
     });
     modal.addEventListener("click", (e) => {
       if (e.target === modal && startedOnBackdrop) {
@@ -2071,14 +2347,16 @@ function setupAddJobModal() {
         const res = await fetch("/api/jobs/extract-url", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url })
+          body: JSON.stringify({ url }),
         });
         const data = await res.json();
 
         if (res.ok) {
           document.getElementById("modal-input-title").value = data.title || "";
-          document.getElementById("modal-input-company").value = data.company || "";
-          document.getElementById("modal-input-description").value = data.description || "";
+          document.getElementById("modal-input-company").value =
+            data.company || "";
+          document.getElementById("modal-input-description").value =
+            data.description || "";
           feedback.innerHTML = `<span class="text-emerald-400 font-medium">${escapeHtml(data.company)} • ${data.keywords.length} keywords extraídas</span>`;
         } else {
           feedback.innerHTML = `<span class="text-zinc-400">${data.error}</span>`;
@@ -2099,14 +2377,15 @@ function setupAddJobModal() {
         jobUrl: urlInput.value.trim() || undefined,
         status: document.getElementById("modal-input-status").value,
         notes: document.getElementById("modal-input-notes").value,
-        rawDescription: document.getElementById("modal-input-description").value
+        rawDescription: document.getElementById("modal-input-description")
+          .value,
       };
 
       try {
         const res = await fetch("/api/jobs", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
+          body: JSON.stringify(payload),
         });
         const data = await res.json();
         if (res.ok) {
@@ -2134,7 +2413,7 @@ function showToast(message, type = "info") {
   const colors = {
     success: "border-emerald-500/40 text-emerald-300",
     error: "border-rose-900/60 text-rose-300",
-    info: "border-zinc-700 text-zinc-200"
+    info: "border-zinc-700 text-zinc-200",
   };
 
   toast.className = `toast-item pointer-events-auto px-4 py-2.5 rounded-lg border ${colors[type]} shadow-xl flex items-center gap-2.5`;
@@ -2196,10 +2475,11 @@ function renderKnockoutQuestionsList() {
 
   if (emptyState) emptyState.classList.add("hidden");
 
-  container.innerHTML = currentKnockoutQuestions.map((q, idx) => {
-    const currentAnswer = q.candidateAnswer || q.aiSuggestedAnswer || "";
+  container.innerHTML = currentKnockoutQuestions
+    .map((q, idx) => {
+      const currentAnswer = q.candidateAnswer || q.aiSuggestedAnswer || "";
 
-    return `
+      return `
       <div class="p-5 rounded-xl border space-y-3.5 fade-slide-up" style="border-color: var(--border-color); background-color: var(--bg-panel);" id="kq-card-${escapeHtml(q.id)}">
         
         <!-- Header da Pergunta -->
@@ -2256,7 +2536,8 @@ function renderKnockoutQuestionsList() {
 
       </div>
     `;
-  }).join("");
+    })
+    .join("");
 
   if (window.lucide) window.lucide.createIcons();
 
@@ -2266,14 +2547,19 @@ function renderKnockoutQuestionsList() {
 
 function setupKnockoutCardListeners() {
   // Delete Question
-  document.querySelectorAll(".btn-delete-kq").forEach(btn => {
+  document.querySelectorAll(".btn-delete-kq").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const qid = btn.dataset.id;
-      if (!confirm("Deseja realmente remover esta pergunta eliminatória?")) return;
+      if (!confirm("Deseja realmente remover esta pergunta eliminatória?"))
+        return;
       try {
-        const res = await fetch(`/api/jobs/${selectedJobId}/knockout/${qid}`, { method: "DELETE" });
+        const res = await fetch(`/api/jobs/${selectedJobId}/knockout/${qid}`, {
+          method: "DELETE",
+        });
         if (res.ok) {
-          currentKnockoutQuestions = currentKnockoutQuestions.filter(item => item.id !== qid);
+          currentKnockoutQuestions = currentKnockoutQuestions.filter(
+            (item) => item.id !== qid,
+          );
           showToast("Pergunta removida", "info");
           renderKnockoutQuestionsList();
         }
@@ -2284,7 +2570,7 @@ function setupKnockoutCardListeners() {
   });
 
   // Regenerate Answer (discreet refresh option)
-  document.querySelectorAll(".btn-regenerate-kq").forEach(btn => {
+  document.querySelectorAll(".btn-regenerate-kq").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const qid = btn.dataset.id;
       const originalHtml = btn.innerHTML;
@@ -2292,7 +2578,10 @@ function setupKnockoutCardListeners() {
       btn.disabled = true;
 
       try {
-        const res = await fetch(`/api/jobs/${selectedJobId}/knockout/${qid}/generate`, { method: "POST" });
+        const res = await fetch(
+          `/api/jobs/${selectedJobId}/knockout/${qid}/generate`,
+          { method: "POST" },
+        );
         const data = await res.json();
         if (res.ok) {
           showToast("Resposta regerada com sucesso!", "success");
@@ -2311,7 +2600,7 @@ function setupKnockoutCardListeners() {
   });
 
   // Copy Answer
-  document.querySelectorAll(".btn-copy-kq").forEach(btn => {
+  document.querySelectorAll(".btn-copy-kq").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const qid = btn.dataset.id;
       const card = document.getElementById(`kq-card-${qid}`);
@@ -2335,7 +2624,7 @@ function setupKnockoutCardListeners() {
   });
 
   // Auto-save on textarea edit
-  document.querySelectorAll(".kq-answer-textarea").forEach(textarea => {
+  document.querySelectorAll(".kq-answer-textarea").forEach((textarea) => {
     const qid = textarea.dataset.id;
     const counter = document.getElementById(`kq-counter-${qid}`);
     const indicator = document.getElementById(`kq-autosave-${qid}`);
@@ -2349,17 +2638,17 @@ function setupKnockoutCardListeners() {
         const res = await fetch(`/api/jobs/${selectedJobId}/knockout/${qid}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ candidateAnswer: text })
+          body: JSON.stringify({ candidateAnswer: text }),
         });
         if (res.ok) {
-          const q = currentKnockoutQuestions.find(i => i.id === qid);
+          const q = currentKnockoutQuestions.find((i) => i.id === qid);
           if (q) q.candidateAnswer = text;
           if (indicator) {
             indicator.innerHTML = `<i data-lucide="check" class="w-3 h-3 text-emerald-500"></i><span class="text-emerald-500">Salvo automaticamente</span>`;
             if (window.lucide) window.lucide.createIcons();
           }
         }
-      } catch (err) {
+      } catch {
         if (indicator) {
           indicator.innerHTML = `<span class="text-rose-400">Erro ao salvar</span>`;
         }
@@ -2397,7 +2686,7 @@ function setupKnockoutCardListeners() {
 
 function setupKnockoutQuestionsEvents() {
   // Quick template pills
-  document.querySelectorAll(".kq-quick-pill").forEach(pill => {
+  document.querySelectorAll(".kq-quick-pill").forEach((pill) => {
     pill.addEventListener("click", () => {
       const input = document.getElementById("knockout-new-question-input");
       if (input) {
@@ -2433,7 +2722,7 @@ function setupKnockoutQuestionsEvents() {
         const res = await fetch(`/api/jobs/${selectedJobId}/knockout`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ questionText: text })
+          body: JSON.stringify({ questionText: text }),
         });
         const data = await res.json();
         if (!res.ok || !data.question?.id) {
@@ -2447,13 +2736,19 @@ function setupKnockoutQuestionsEvents() {
         input.value = "";
 
         // 2. Triga automaticamente a geração de resposta inteligente
-        const genRes = await fetch(`/api/jobs/${selectedJobId}/knockout/${qid}/generate`, {
-          method: "POST"
-        });
-        const genData = await genRes.json();
+        const genRes = await fetch(
+          `/api/jobs/${selectedJobId}/knockout/${qid}/generate`,
+          {
+            method: "POST",
+          },
+        );
+        await genRes.json();
 
         if (genRes.ok) {
-          showToast("Pergunta adicionada e resposta gerada com sucesso!", "success");
+          showToast(
+            "Pergunta adicionada e resposta gerada com sucesso!",
+            "success",
+          );
         } else {
           showToast("Pergunta criada", "info");
         }

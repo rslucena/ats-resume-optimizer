@@ -1,13 +1,15 @@
 import { describe, expect, it } from "bun:test";
 import { detectLanguage } from "../src/nlp/language.ts";
-import { stemWord, getStemmer } from "../src/nlp/stemmer.ts";
-import { extractKeywords, calculateTfIdfDensity } from "../src/nlp/tfidf.ts";
 import { termSimilarity } from "../src/nlp/similarity.ts";
+import { stemWord } from "../src/nlp/stemmer.ts";
+import { calculateTfIdfDensity, extractKeywords } from "../src/nlp/tfidf.ts";
 
 describe("Mathematical NLP & TF-IDF Extraction Engine", () => {
   it("should detect language correctly with franc", () => {
-    const ptText = "Vaga para Engenheiro de Software Senior com experiência em Node.js, microsserviços e banco de dados relacional.";
-    const enText = "We are seeking a Senior Backend Engineer with hands-on experience in distributed systems and cloud platforms.";
+    const ptText =
+      "Vaga para Engenheiro de Software Senior com experiência em Node.js, microsserviços e banco de dados relacional.";
+    const enText =
+      "We are seeking a Senior Backend Engineer with hands-on experience in distributed systems and cloud platforms.";
 
     expect(detectLanguage(ptText)).toBe("pt");
     expect(detectLanguage(enText)).toBe("en");
@@ -38,15 +40,21 @@ describe("Mathematical NLP & TF-IDF Extraction Engine", () => {
     `;
 
     const keywords = extractKeywords(jobDescription, { lang: "pt", topN: 15 });
-    
+
     expect(keywords.length).toBeGreaterThan(0);
     expect(keywords.length).toBeLessThanOrEqual(15);
 
-    const terms = keywords.map(k => k.term.toLowerCase());
+    const terms = keywords.map((k) => k.term.toLowerCase());
     // Should include high-weight technical keywords
-    expect(terms.some(t => t.includes("typescript"))).toBe(true);
-    expect(terms.some(t => t.includes("node.js") || t.includes("node"))).toBe(true);
-    expect(terms.some(t => t.includes("microsserviços") || t.includes("microsservicos"))).toBe(true);
+    expect(terms.some((t) => t.includes("typescript"))).toBe(true);
+    expect(terms.some((t) => t.includes("node.js") || t.includes("node"))).toBe(
+      true,
+    );
+    expect(
+      terms.some(
+        (t) => t.includes("microsserviços") || t.includes("microsservicos"),
+      ),
+    ).toBe(true);
 
     // Each keyword must have tfidf score, occurrence count and stem
     for (const kw of keywords) {
@@ -57,8 +65,13 @@ describe("Mathematical NLP & TF-IDF Extraction Engine", () => {
   });
 
   it("should calculate term density and similarity with leven", () => {
-    const text = "Node.js e TypeScript são essenciais. Node.js backend com TypeScript e Bun.";
-    const density = calculateTfIdfDensity(text, ["node.js", "typescript", "bun"]);
+    const text =
+      "Node.js e TypeScript são essenciais. Node.js backend com TypeScript e Bun.";
+    const density = calculateTfIdfDensity(text, [
+      "node.js",
+      "typescript",
+      "bun",
+    ]);
 
     expect(density["node.js"]).toBe(2);
     expect(density["typescript"]).toBe(2);
