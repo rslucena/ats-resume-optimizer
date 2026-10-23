@@ -152,11 +152,79 @@ Acesse no navegador: `http://localhost:3000`
 
 ---
 
-## Configuracao Opcional de Motores de IA (.env)
+## Quer usar Agentes e Modelos de IA? Provedores Suportados
 
-O sistema opera 100% offline utilizando o motor matematico deterministico por padrao, sem necessidade de chaves externas.
+Embora a aplicacao seja concebida segundo a filosofia **100% Local-First** — funcionando plenamente offline com o motor deterministico de 7 camadas, SQLite local e zero telemetria —, voce pode facilmente conectar provedores e agentes de IA modernos para obter maior refinamento estilistico, redacao executiva e analise contextual avancada.
 
-Para habilitar motores adicionais de IA, crie ou edite o arquivo `.env`:
+O sistema foi arquitetado de forma modular e agnostica a provedores, com suporte nativo a inferencia privada local e nuvens de alta performance.
+
+### Matriz Comparativa de Provedores
+
+| Provedor | Tipo de Execucao | Requer Internet? | Variavel no .env | Modelos de Referencia | Indicado Para |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| Motor ATS Local | Deterministico Local | Nao (100% Offline) | Nenhuma (Padrao) | Algoritmo TF-IDF de 7 Camadas | Zero alucinacao, velocidade instantanea e garantia absoluta de privacidade de dados |
+| Ollama | Inferencia Local Privada | Nao (100% Offline) | `OLLAMA_BASE_URL` | Llama 3.2, DeepSeek-R1, Mistral, Gemma 2 | Inferencia generativa local no seu proprio hardware sem custos ou trafego externo |
+| Anthropic Claude | Nuvem (API Nativa) | Sim | `ANTHROPIC_API_KEY` | Claude 3.5 Sonnet, Claude 3.5 Haiku | Raciocinio executivo superior, cartas altamente persuasivas e saida estruturada |
+| OpenRouter | Nuvem (Gateway Multi-LLM) | Sim | `OPENROUTER_API_KEY` | Claude 3.5, DeepSeek-R1/V3, Llama 3.3, GPT-4o | Flexibilidade maxima: acesso a mais de 100 modelos de mercado com uma unica chave |
+| Google Gemini | Nuvem (API Nativa) | Sim | `GEMINI_API_KEY` | Gemini 1.5 Flash | Rapido, confiavel e com cota gratuita generosa no Google AI Studio |
+
+---
+
+### Como Ativar Cada Provedor
+
+Para conectar um ou mais provedores, basta definir as variaveis correspondentes no arquivo `.env` na raiz do projeto:
+
+#### 1. Inferencia Local Privada via Ollama (100% Offline)
+Para quem exige privacidade total sem trafegar nenhum dado pessoal para fora da maquina:
+1. Instale e execute o Ollama em sua maquina (`ollama serve`).
+2. Baixe o modelo de sua preferencia:
+   ```bash
+   ollama pull llama3.2
+   ```
+3. No arquivo `.env`:
+   ```env
+   OLLAMA_BASE_URL=http://localhost:11434
+   OLLAMA_MODEL=llama3.2
+   ```
+
+#### 2. Anthropic Claude API
+Para redacao executiva de alto impacto e raciocinio analitico apurado:
+1. Obtenha sua API Key no console da Anthropic (console.anthropic.com).
+2. No arquivo `.env`:
+   ```env
+   ANTHROPIC_API_KEY=sk-ant-api03-...
+   ANTHROPIC_MODEL=claude-3-5-sonnet-20241022
+   ```
+
+#### 3. OpenRouter Gateway (Multi-LLM)
+Para alternar entre dezenas de modelos de ponta sem gerenciar multiplas contas:
+1. Obtenha sua chave em openrouter.ai.
+2. No arquivo `.env`:
+   ```env
+   OPENROUTER_API_KEY=sk-or-v1-...
+   OPENROUTER_MODEL=anthropic/claude-3.5-sonnet
+   # Exemplos alternativos: deepseek/deepseek-r1, meta-llama/llama-3.3-70b-instruct
+   ```
+
+#### 4. Google Gemini API
+Para geracao rapida e baixo custo com cota do Google AI Studio:
+1. Obtenha sua chave no Google AI Studio (aistudio.google.com).
+2. No arquivo `.env`:
+   ```env
+   GEMINI_API_KEY=AIzaSy...
+   ```
+
+---
+
+### Arquitetura de Fallback Gracioso
+
+O seletor de motor permite alternar dinamicamente entre qualquer provedor configurado diretamente na interface (cabecalho ou estudios de edicao).
+
+Se qualquer motor externo configurado falhar temporariamente por instabilidade de rede, rate limit ou ausencia de saldo, o sistema **nunca trava**: ele recorre de forma transparente ao **Motor Deterministico Local de 7 Camadas**, garantindo que o seu curriculo, suas respostas e suas cartas de apresentacao sejam sempre concluidos com sucesso.
+
+---
+
+### Exemplo Completo de Configuracao (.env)
 
 ```env
 # Porta do servidor HTTP (Padrao: 3000)
