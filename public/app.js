@@ -1487,7 +1487,11 @@ function renderMasterCvDiff() {
 // Fetch and load tailored data
 async function fetchAndPopulateTailoredData(jobId) {
   try {
-    const res = await fetch(`/api/jobs/${jobId}/tailor`, { method: "POST" });
+    const res = await fetch(`/api/jobs/${jobId}/tailor`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ engine: currentTailorEngine }),
+    });
     const data = await res.json();
     if (res.ok) {
       populateTailoredEditor(data);

@@ -22,6 +22,7 @@ export interface KnockoutGenerationContext {
     | "openrouter"
     | "claude"
     | "openai"
+    | "local"
     | "heuristic";
 }
 
@@ -121,11 +122,9 @@ export async function generateKnockoutAnswerWithMeta(
     }
   }
 
-  const geminiKey = getEnvKey("GEMINI_API_KEY");
-  const openaiKey = getEnvKey("OPENAI_API_KEY");
-
-  if (preferredEngine !== "heuristic") {
-    if (geminiKey && preferredEngine !== "openai") {
+  if (preferredEngine === "gemini") {
+    const geminiKey = getEnvKey("GEMINI_API_KEY");
+    if (geminiKey) {
       try {
         const llmAnswer = await callGeminiKnockout(
           geminiKey,
@@ -147,7 +146,12 @@ export async function generateKnockoutAnswerWithMeta(
           e,
         );
       }
-    } else if (openaiKey) {
+    }
+  }
+
+  if (preferredEngine === "openai") {
+    const openaiKey = getEnvKey("OPENAI_API_KEY");
+    if (openaiKey) {
       try {
         const llmAnswer = await callOpenAiKnockout(
           openaiKey,
@@ -169,21 +173,40 @@ export async function generateKnockoutAnswerWithMeta(
           e,
         );
       }
-    } else if (!preferredEngine) {
-      // If no cloud key is set, attempt Ollama before falling back to deterministic heuristic
-      const llmAnswer = await callOllamaKnockout(
-        questionText,
-        job,
-        profile,
-        isEn,
-      );
-      const validated = validateAndCleanAnswer(llmAnswer);
-      if (validated) {
-        return {
-          answer: validated,
-          source: "ollama",
-        };
-      }
+    }
+  }
+
+  // If no specific engine was requested, attempt available providers before deterministic fallback
+  if (!preferredEngine) {
+    const geminiKey = getEnvKey("GEMINI_API_KEY");
+    if (geminiKey) {
+      try {
+        const llmAnswer = await callGeminiKnockout(
+          geminiKey,
+          questionText,
+          job,
+          profile,
+          isEn,
+        );
+        const validated = validateAndCleanAnswer(llmAnswer);
+        if (validated) {
+          return { answer: validated, source: "gemini" };
+        }
+      } catch {}
+    }
+
+    const llmAnswer = await callOllamaKnockout(
+      questionText,
+      job,
+      profile,
+      isEn,
+    );
+    const validated = validateAndCleanAnswer(llmAnswer);
+    if (validated) {
+      return {
+        answer: validated,
+        source: "ollama",
+      };
     }
   }
 

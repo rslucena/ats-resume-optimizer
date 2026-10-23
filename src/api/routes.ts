@@ -760,7 +760,10 @@ export function createApp() {
     let preferredEngine:
       | "gemini"
       | "ollama"
+      | "openrouter"
+      | "claude"
       | "openai"
+      | "local"
       | "heuristic"
       | undefined;
     try {
