@@ -443,7 +443,7 @@ body.is-resizing .collapsible-sidebar {
   color: #52525b !important; /* Zinc 600 - High contrast text (5.7:1) */
 }
 
-[data-theme="light"] .text-zinc-500 {
+:root[data-theme="light"] .text-zinc-500 {
   color: #52525b !important; /* Zinc 600 */
 }
 
@@ -615,4 +615,65 @@ body.is-resizing .collapsible-sidebar {
 #job-header-title {
   min-width: 0;
   flex: 1 1 0%;
+}
+
+/* Cover Letter Studio Refinements */
+.cl-segmented-pill {
+  padding: 5px 12px;
+  font-size: 12px;
+  border-radius: 6px;
+  transition: all 150ms var(--ease-out);
+  cursor: pointer;
+  color: var(--text-secondary);
+  border: 1px solid transparent;
+  user-select: none;
+}
+
+.cl-segmented-pill:hover {
+  color: var(--text-primary);
+  background-color: var(--bg-subtle);
+}
+
+.cl-segmented-pill.active {
+  background-color: var(--bg-subtle);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+  font-weight: 600;
+}
+
+.cl-paper-sheet {
+  background: var(--a4-bg);
+  color: var(--a4-text);
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 56px 64px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  border-radius: 6px;
+  transition:
+    background 200ms ease,
+    border-color 200ms ease;
+}
+
+.cl-paper-textarea {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--a4-text);
+  font-family: inherit;
+  font-size: 14.5px;
+  line-height: 1.8;
+  letter-spacing: -0.01em;
+  resize: vertical;
+  min-height: 420px;
+}
+
+.cl-paper-textarea::placeholder {
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+.cl-paper-textarea:focus {
+  outline: none;
 }

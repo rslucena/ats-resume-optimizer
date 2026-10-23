@@ -196,7 +196,7 @@
                   <div class="flex items-center justify-between">
                     <div class="flex items-center gap-1.5 flex-wrap">
                       <span class="text-xs font-semibold" style="color: var(--text-primary);">Gemini 1.5 Flash (IA)</span>
-                      <span id="badge-engine-gemini" class="hidden text-[9px] px-1 py-0.2 rounded bg-zinc-800 text-rose-300 border border-rose-500/30 font-medium">Sem chave .env</span>
+                      <span id="badge-engine-gemini" class="hidden text-[9px] px-1 py-0.2 rounded bg-zinc-800 text-rose-300 border border-rose-500/30 font-medium">Indisponível</span>
                     </div>
                     <i data-lucide="check" id="check-engine-gemini" class="w-3.5 h-3.5 text-emerald-500 font-bold"></i>
                   </div>
@@ -204,7 +204,24 @@
                 </div>
               </button>
 
-              <!-- 2. Motor ATS Local (Determinístico 7 camadas) -->
+              <!-- 2. Ollama Local LLM (100% Offline IA) -->
+              <button id="btn-engine-ollama" class="tailor-engine-option-btn w-full text-left p-2 rounded-lg flex items-start gap-2.5 transition-colors group cursor-pointer" data-engine="ollama">
+                <div class="p-1.5 rounded-md bg-emerald-500/10 text-emerald-400 mt-0.5 border border-emerald-500/25 shrink-0" id="icon-container-engine-ollama">
+                  <i data-lucide="bot" class="w-4 h-4 text-emerald-400"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                      <span class="text-xs font-semibold" style="color: var(--text-primary);">Ollama (Offline Local)</span>
+                      <span id="badge-engine-ollama" class="text-[9px] px-1 py-0.2 rounded bg-zinc-800 text-zinc-400 border border-zinc-700/50 font-medium">Indisponível</span>
+                    </div>
+                    <i data-lucide="check" id="check-engine-ollama" class="w-3.5 h-3.5 text-emerald-500 font-bold hidden"></i>
+                  </div>
+                  <p class="text-[11px] text-zinc-400 leading-tight mt-0.5" id="engine-ollama-desc">Llama 3.2 / Mistral 100% local e privado</p>
+                </div>
+              </button>
+
+              <!-- 3. Motor ATS Local (Determinístico 7 camadas) -->
               <button id="btn-engine-local" class="tailor-engine-option-btn w-full text-left p-2 rounded-lg flex items-start gap-2.5 transition-colors group cursor-pointer" data-engine="local">
                 <div class="p-1.5 rounded-md bg-blue-500/10 text-blue-400 mt-0.5 border border-blue-500/25 shrink-0">
                   <i data-lucide="cpu" class="w-4 h-4 text-blue-400"></i>
@@ -386,6 +403,9 @@
           <button class="nav-tab-btn h-full flex items-center text-sm font-medium text-zinc-400 hover:text-zinc-200 transition-colors" data-tab="tab-preview">
             Folha A4 (Preview)
           </button>
+          <button class="nav-tab-btn h-full flex items-center text-sm font-medium text-zinc-400 hover:text-zinc-200 transition-colors" data-tab="tab-cover-letter">
+            Carta de Apresentação
+          </button>
           <button class="nav-tab-btn h-full flex items-center text-sm font-medium text-zinc-400 hover:text-zinc-200 transition-colors" data-tab="tab-knockout">
             Perguntas Eliminatórias
           </button>
@@ -541,6 +561,230 @@
           <!-- Lista de Perguntas Eliminatórias -->
           <div id="knockout-questions-list" class="space-y-4">
             <!-- Cards renderizados dinamicamente via app.js -->
+          </div>
+
+        </div>
+
+        <!-- Aba 5: Cover Letter Studio (Gerador de Carta de Apresentação) -->
+        <div id="tab-cover-letter" class="tab-pane-content fade-slide-up hidden max-w-4xl mx-auto space-y-5">
+          
+          <!-- Barra Superior do Studio (Compacta, Sem poluição visual) -->
+          <div class="px-4 py-3 rounded-xl border flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-xs" style="border-color: var(--border-color); background-color: var(--bg-panel);">
+            
+            <!-- Esquerda: Seletor Segmentado de Tom + Badge de Motor -->
+            <div class="flex items-center gap-3 flex-wrap">
+              <!-- Segmented Control de Tom -->
+              <div class="flex items-center p-1 rounded-lg border gap-1" style="border-color: var(--border-color); background-color: var(--bg-subtle);">
+                <button type="button" class="cl-tone-pill cl-segmented-pill active" data-tone="tecnico" title="Foco em stack técnica e resultados mensuráveis">
+                  Técnico & Direto
+                </button>
+                <button type="button" class="cl-tone-pill cl-segmented-pill" data-tone="executivo" title="Foco em liderança, visão de negócio e entregas ponta a ponta">
+                  Executivo
+                </button>
+                <button type="button" class="cl-tone-pill cl-segmented-pill" data-tone="entusiasta" title="Foco em afinidade cultural e motivação para com a empresa">
+                  Entusiasta
+                </button>
+              </div>
+
+            </div>
+
+            <!-- Direita: Ações Principais e Exportação -->
+            <div class="flex items-center gap-2 flex-wrap justify-end">
+              <!-- Botão Primário Unificado com Dropdown de Seleção de Motor (Gemini / Ollama / ATS Local) -->
+              <div class="relative inline-flex items-center shrink-0" id="cl-engine-dropdown-container">
+                <div class="inline-flex items-center rounded-lg border overflow-hidden shrink-0" style="border-color: var(--border-color); background-color: transparent; color: var(--text-primary);">
+                  
+                  <!-- Ação Principal de Redigir -->
+                  <button id="btn-generate-cover-letter" class="btn-spring h-8.5 px-3 text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors whitespace-nowrap hover:bg-zinc-500/10" style="color: var(--text-primary); background: transparent;" title="Redigir carta de apresentação com o motor ativo">
+                    <i data-lucide="sparkles" id="cl-generate-icon" class="w-3.5 h-3.5 fill-current shrink-0"></i>
+                    <span id="cl-generate-label" class="whitespace-nowrap">Redigir Carta</span>
+                  </button>
+
+                  <!-- Divisor Vertical Fino -->
+                  <div class="w-[1px] h-4 shrink-0" style="background-color: var(--border-color);"></div>
+
+                  <!-- Botão Seletor de Modo (Chevron) -->
+                  <button id="btn-cl-engine-menu" type="button" class="btn-spring h-8.5 px-2 flex items-center justify-center cursor-pointer transition-colors hover:bg-zinc-500/10 shrink-0" style="color: var(--text-secondary); background: transparent;" title="Alterar motor de redação (Motor Local, Gemini ou Ollama)">
+                    <i data-lucide="chevron-down" id="cl-engine-chevron-icon" class="w-3.5 h-3.5 transition-transform duration-200"></i>
+                  </button>
+                </div>
+
+                <!-- Submenu Dropdown de Motores da Carta -->
+                <div id="cl-engine-dropdown-menu" class="hidden absolute right-0 top-full mt-2 w-72 rounded-xl border p-1.5 shadow-2xl z-50 fade-slide-up" style="background-color: var(--bg-panel); border-color: var(--border-color);">
+                  <div class="px-2.5 py-1.5 text-[11px] font-mono font-medium border-b mb-1 flex items-center justify-between" style="border-color: var(--border-color); color: var(--text-secondary);">
+                    <span>Motor de Redação</span>
+                  </div>
+
+                  <!-- 1. Gemini 1.5 Flash (IA) -->
+                  <button id="btn-cl-engine-gemini" class="cl-engine-option-btn w-full text-left p-2 rounded-lg flex items-start gap-2.5 transition-colors group cursor-pointer" data-engine="gemini">
+                    <div class="p-1.5 rounded-md bg-amber-500/10 text-amber-400 mt-0.5 border border-amber-500/25 shrink-0" id="icon-container-cl-gemini">
+                      <i data-lucide="sparkles" class="w-4 h-4 fill-amber-400 text-amber-400"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                          <span class="text-xs font-semibold" style="color: var(--text-primary);">Gemini 1.5 Flash (IA)</span>
+                          <span id="badge-cl-engine-gemini" class="hidden text-[9px] px-1 py-0.2 rounded bg-zinc-800 text-rose-300 border border-rose-500/30 font-medium">Indisponível</span>
+                        </div>
+                        <i data-lucide="check" id="check-cl-engine-gemini" class="w-3.5 h-3.5 text-emerald-500 font-bold hidden"></i>
+                      </div>
+                      <p class="text-[11px] text-zinc-400 leading-tight mt-0.5" id="cl-engine-gemini-desc">Reescrita contextual com IA em nuvem</p>
+                    </div>
+                  </button>
+
+                  <!-- 2. Ollama Local LLM (100% Offline IA) -->
+                  <button id="btn-cl-engine-ollama" class="cl-engine-option-btn w-full text-left p-2 rounded-lg flex items-start gap-2.5 transition-colors group cursor-pointer" data-engine="ollama">
+                    <div class="p-1.5 rounded-md bg-emerald-500/10 text-emerald-400 mt-0.5 border border-emerald-500/25 shrink-0" id="icon-container-cl-ollama">
+                      <i data-lucide="bot" class="w-4 h-4 text-emerald-400"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                          <span class="text-xs font-semibold" style="color: var(--text-primary);">Ollama (Offline Local)</span>
+                          <span id="badge-cl-engine-ollama" class="text-[9px] px-1 py-0.2 rounded bg-zinc-800 text-zinc-400 border border-zinc-700/50 font-medium">Indisponível</span>
+                        </div>
+                        <i data-lucide="check" id="check-cl-engine-ollama" class="w-3.5 h-3.5 text-emerald-500 font-bold hidden"></i>
+                      </div>
+                      <p class="text-[11px] text-zinc-400 leading-tight mt-0.5" id="cl-engine-ollama-desc">LLM local privada (100% offline)</p>
+                    </div>
+                  </button>
+
+                  <!-- 3. Motor ATS Local (Determinístico) -->
+                  <button id="btn-cl-engine-local" class="cl-engine-option-btn w-full text-left p-2 rounded-lg flex items-start gap-2.5 transition-colors group cursor-pointer" data-engine="local">
+                    <div class="p-1.5 rounded-md bg-blue-500/10 text-blue-400 mt-0.5 border border-blue-500/25 shrink-0">
+                      <i data-lucide="cpu" class="w-4 h-4 text-blue-400"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold" style="color: var(--text-primary);">Motor ATS Local</span>
+                        <i data-lucide="check" id="check-cl-engine-local" class="w-3.5 h-3.5 text-emerald-500 font-bold"></i>
+                      </div>
+                      <p class="text-[11px] text-zinc-400 leading-tight mt-0.5">Geração determinística (zero alucinação, 100% offline)</p>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Botão Copiar Texto -->
+              <button id="btn-copy-cover-letter" class="btn-spring px-3 py-1.5 rounded-lg border text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer" style="border-color: var(--border-color); background-color: var(--bg-subtle); color: var(--text-primary);" title="Copiar texto formatado para colar em formulários ou e-mail">
+                <i data-lucide="copy" id="cl-copy-icon" class="w-3.5 h-3.5 text-zinc-400"></i>
+                <span id="cl-copy-text">Copiar</span>
+              </button>
+
+              <!-- Dropdown Exportar -->
+              <div class="relative inline-block" id="cl-export-dropdown-container">
+                <button type="button" id="btn-cl-export-menu" class="btn-spring px-3 py-1.5 rounded-lg border text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer" style="border-color: var(--border-color); background-color: var(--bg-subtle); color: var(--text-primary);">
+                  <i data-lucide="download" class="w-3.5 h-3.5 text-zinc-400"></i>
+                  <span>Exportar</span>
+                  <i data-lucide="chevron-down" id="cl-export-chevron" class="w-3 h-3 text-zinc-400"></i>
+                </button>
+
+                <div id="cl-export-dropdown-menu" class="hidden absolute right-0 mt-2 w-56 rounded-xl border p-1.5 shadow-2xl z-50 fade-slide-up" style="background-color: var(--bg-panel); border-color: var(--border-color);">
+                  <button id="btn-download-cl-docx" class="w-full text-left p-2 rounded-lg flex items-center gap-2.5 transition-colors hover:bg-zinc-500/10 cursor-pointer">
+                    <i data-lucide="file-text" class="w-4 h-4 text-amber-400"></i>
+                    <div>
+                      <div class="text-xs font-semibold" style="color: var(--text-primary);">DOCX (Word)</div>
+                      <div class="text-[11px] text-zinc-400">Arquivo formatado padrão ABNT/ATS</div>
+                    </div>
+                  </button>
+
+                  <button id="btn-download-cl-pdf" class="w-full text-left p-2 rounded-lg flex items-center gap-2.5 transition-colors hover:bg-zinc-500/10 cursor-pointer">
+                    <i data-lucide="download" class="w-4 h-4 text-rose-400"></i>
+                    <div>
+                      <div class="text-xs font-semibold" style="color: var(--text-primary);">PDF (Linear ATS)</div>
+                      <div class="text-[11px] text-zinc-400">Com metadados InfoDict & XMP</div>
+                    </div>
+                  </button>
+
+                  <button id="btn-download-cl-txt" class="w-full text-left p-2 rounded-lg flex items-center gap-2.5 transition-colors hover:bg-zinc-500/10 cursor-pointer">
+                    <i data-lucide="align-left" class="w-4 h-4 text-blue-400"></i>
+                    <div>
+                      <div class="text-xs font-semibold" style="color: var(--text-primary);">Texto Puro (.txt)</div>
+                      <div class="text-[11px] text-zinc-400">Para colar direto na Gupy/Kenoby</div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Empty State Inicial (Quando a carta ainda não foi gerada) -->
+          <div id="cl-empty-state" class="p-10 rounded-xl border text-center space-y-4 hidden" style="border-color: var(--border-color); background-color: var(--bg-panel);">
+            <div class="w-12 h-12 rounded-xl border flex items-center justify-center mx-auto" style="border-color: var(--border-color); background-color: var(--bg-subtle);">
+              <i data-lucide="file-text" class="w-6 h-6 text-emerald-400 stroke-[1.5]"></i>
+            </div>
+            <div class="max-w-md mx-auto space-y-1.5">
+              <h3 class="text-base font-semibold" style="color: var(--text-primary);">Carta de Apresentação Estratégica</h3>
+              <p class="text-xs text-zinc-400 leading-relaxed">
+                Gera automaticamente uma narrativa em 4 seções conectando suas experiências reais cadastradas no Master CV aos requisitos exigidos pela <span id="cl-empty-company" class="font-semibold text-zinc-200">empresa</span>.
+              </p>
+            </div>
+            <div class="pt-2">
+              <button id="btn-empty-generate-cl" class="btn-spring px-5 py-2.5 rounded-lg text-xs font-semibold inline-flex items-center gap-2 shadow-md cursor-pointer" style="background-color: var(--btn-primary-bg); color: var(--btn-primary-text);">
+                <i data-lucide="sparkles" class="w-4 h-4 fill-current"></i>
+                <span>Redigir Carta de Apresentação Agora</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Folha de Papel Executiva (Simulação A4 de Alto Nível) -->
+          <div id="cl-paper-card" class="cl-paper-sheet space-y-6 relative">
+            
+            <!-- Cabeçalho Executivo do Remetente (Letterhead) -->
+            <div class="border-b pb-5 flex flex-col sm:flex-row sm:items-baseline justify-between gap-3" style="border-color: var(--border-color);">
+              <div>
+                <h2 id="cl-sender-name" class="text-lg font-bold tracking-tight" style="color: var(--text-primary);">Rodrigo Silva de Lucena</h2>
+                <p id="cl-sender-headline" class="text-xs font-medium mt-0.5" style="color: var(--text-secondary);">Senior Backend Engineer | IA • Jundiaí - SP</p>
+              </div>
+              <div class="text-left sm:text-right font-mono text-[11px] text-zinc-400 space-y-0.5">
+                <div id="cl-sender-contact">rodrigo@rslucena.com.br</div>
+                <div id="cl-letter-date" class="text-zinc-500">23 de Outubro de 2026</div>
+              </div>
+            </div>
+
+            <!-- Bloco de Destinatário e Referência -->
+            <div class="space-y-1.5 text-xs pb-2" style="color: var(--text-secondary);">
+              <div class="flex items-baseline gap-2">
+                <span class="font-mono text-[11px] uppercase tracking-wider text-zinc-500 select-none">Destinatário:</span>
+                <span id="cl-header-company" class="font-semibold" style="color: var(--text-primary);">TechCorp Global</span>
+              </div>
+              <div class="flex items-baseline gap-2">
+                <span class="font-mono text-[11px] uppercase tracking-wider text-zinc-500 select-none">Assunto:</span>
+                <span id="cl-header-title" class="font-medium" style="color: var(--text-primary);">Candidatura à vaga de Desenvolvedor Full Stack Sênior</span>
+              </div>
+            </div>
+
+            <!-- Área de Redação Sem Bordas Artificiais (Escrita Fluida no Papel) -->
+            <div class="pt-1">
+              <textarea id="cover-letter-content" class="cl-paper-textarea" rows="18" placeholder="Redija ou gere a carta para visualizar o conteúdo aqui..."></textarea>
+            </div>
+
+            <!-- Assinatura do Candidato -->
+            <div class="pt-4 space-y-1 text-sm border-t" style="border-color: var(--border-color); color: var(--text-secondary);">
+              <p class="text-xs">Atenciosamente,</p>
+              <p id="cl-signature-name" class="font-semibold text-sm pt-1" style="color: var(--text-primary);">Rodrigo Silva de Lucena</p>
+            </div>
+
+            <!-- Rodapé de Telemetria e Auto-Save -->
+            <div class="pt-3 border-t flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] font-mono text-zinc-400" style="border-color: var(--border-color);">
+              <div class="flex items-center gap-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                <span id="cl-autosave-indicator" class="flex items-center gap-1 text-emerald-400">
+                  <i data-lucide="check" class="w-3 h-3"></i>
+                  <span>Salvo automaticamente</span>
+                </span>
+                <span class="text-zinc-600">•</span>
+                <span id="cl-badge-tone-footer" class="text-zinc-400">Tom: Técnico & Direto</span>
+              </div>
+              <div class="flex items-center gap-2 text-zinc-500">
+                <span id="cl-word-counter">0 palavras</span>
+                <span>•</span>
+                <span id="cl-read-time">~1 min</span>
+                <span>•</span>
+                <span id="cl-char-counter">0 caracteres</span>
+              </div>
+            </div>
+
           </div>
 
         </div>

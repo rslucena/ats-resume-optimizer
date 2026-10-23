@@ -14,6 +14,8 @@ let currentScannabilityDisplay = 0;
 let currentTechnicalDisplay = 0;
 let currentKnockoutQuestions = [];
 let hasGeminiKey = false;
+let hasOllama = false;
+let ollamaInfo = null;
 let currentTailorEngine = "local";
 
 // On DOM Loaded
@@ -29,6 +31,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupWorkbenchActions();
   setupEmptyStateActions();
   setupKnockoutQuestionsEvents();
+  setupCoverLetterStudio();
 
   await loadMasterProfile();
   await loadJobs();
@@ -472,7 +475,7 @@ function animateDualScores(scannabilityTarget, technicalTarget) {
   if (
     scannabilityTarget === null ||
     scannabilityTarget === undefined ||
-    isNaN(scannabilityTarget)
+    Number.isNaN(scannabilityTarget)
   ) {
     if (scanEl) scanEl.textContent = "--";
     if (techEl) techEl.textContent = "--";
@@ -539,7 +542,7 @@ async function loadMasterProfile() {
     const dotEl = document.getElementById("sidebar-master-dot");
     const legacyStatusEl = document.getElementById("sidebar-master-status");
 
-    if (currentMasterProfile && currentMasterProfile.fullName) {
+    if (currentMasterProfile?.fullName) {
       if (nameEl) nameEl.textContent = currentMasterProfile.fullName;
       if (statusTextEl) statusTextEl.textContent = "Pronto para matching";
       if (dotEl) {
@@ -1078,6 +1081,9 @@ async function selectJob(jobId) {
   // Load Knockout Questions for this job
   await loadKnockoutQuestions(job.id);
 
+  // Load Cover Letter for this job
+  await loadCoverLetter(job.id);
+
   if (window.lucide) window.lucide.createIcons();
 }
 
@@ -1428,7 +1434,7 @@ function formatClientDateRange(start, end) {
 // Master CV in Diff Pane
 function renderMasterCvDiff() {
   const container = document.getElementById("diff-master-content");
-  if (!currentMasterProfile || !currentMasterProfile.fullName) {
+  if (!currentMasterProfile?.fullName) {
     container.innerHTML = `
       <div class="p-8 text-center text-zinc-500 font-mono text-xs">
         Nenhum Master CV cadastrado. Clique no ícone de documento no topo da sidebar para importar seu PDF.
@@ -1655,6 +1661,11 @@ function setupWorkbenchTabs() {
         loadKnockoutQuestions(selectedJobId);
       }
 
+      // If user switches to Cover Letter tab, load cover letter
+      if (target === "tab-cover-letter" && selectedJobId) {
+        loadCoverLetter(selectedJobId);
+      }
+
       // Actions visibility
       const actions = document.getElementById("tab-diff-actions");
       if (actions) {
@@ -1674,67 +1685,166 @@ async function checkSystemConfig() {
     if (res.ok) {
       const data = await res.json();
       hasGeminiKey = !!data.hasGeminiKey;
+      hasOllama = !!(data.ollama?.available && data.ollama?.configured);
+      ollamaInfo = data.ollama || null;
     } else {
       hasGeminiKey = false;
+      hasOllama = false;
+      ollamaInfo = null;
     }
   } catch {
     hasGeminiKey = false;
+    hasOllama = false;
+    ollamaInfo = null;
   }
 
-  // Restore saved choice only if key is available
-  const savedEngine = localStorage.getItem("ats_use_gemini_tailoring");
-  if (hasGeminiKey && savedEngine === "true") {
+  // Restore saved choice only if available and configured
+  const savedEngine = localStorage.getItem("ats_tailor_engine");
+
+  if (savedEngine === "gemini" && hasGeminiKey) {
+    currentTailorEngine = "gemini";
+  } else if (savedEngine === "ollama" && hasOllama) {
+    currentTailorEngine = "ollama";
+  } else if (hasGeminiKey && !savedEngine) {
     currentTailorEngine = "gemini";
   } else {
     currentTailorEngine = "local";
   }
 
-  applyGeminiAvailability();
+  applyEngineAvailability();
 }
 
-function applyGeminiAvailability() {
+function applyEngineAvailability() {
+  // 1. Gemini
   const btnEngineGemini = document.getElementById("btn-engine-gemini");
   const badgeGemini = document.getElementById("badge-engine-gemini");
   const descGemini = document.getElementById("engine-gemini-desc");
 
+  const btnClGemini = document.getElementById("btn-cl-engine-gemini");
+  const badgeClGemini = document.getElementById("badge-cl-engine-gemini");
+  const descClGemini = document.getElementById("cl-engine-gemini-desc");
+
   if (!hasGeminiKey) {
-    if (btnEngineGemini) {
-      btnEngineGemini.disabled = true;
-      btnEngineGemini.setAttribute("disabled", "true");
-      btnEngineGemini.classList.add("opacity-40", "cursor-not-allowed");
-      btnEngineGemini.classList.remove(
-        "cursor-pointer",
-        "hover:bg-zinc-500/10",
-      );
-      btnEngineGemini.title = "GEMINI_API_KEY não configurada no arquivo .env";
-    }
-    if (badgeGemini) {
-      badgeGemini.classList.remove("hidden");
-    }
-    if (descGemini) {
-      descGemini.textContent = "GEMINI_API_KEY ausente";
-      descGemini.classList.add("text-rose-400");
-      descGemini.classList.remove("text-zinc-400");
-    }
-    if (currentTailorEngine === "gemini") {
-      updateTailorEngineUI("local");
-    }
-  } else {
-    if (btnEngineGemini) {
-      btnEngineGemini.disabled = false;
-      btnEngineGemini.removeAttribute("disabled");
-      btnEngineGemini.classList.remove("opacity-40", "cursor-not-allowed");
-      btnEngineGemini.classList.add("cursor-pointer", "hover:bg-zinc-500/10");
-      btnEngineGemini.title = "Reescrita contextual com Gemini 1.5 Flash";
-    }
-    if (badgeGemini) {
-      badgeGemini.classList.add("hidden");
-    }
+    [btnEngineGemini, btnClGemini].forEach((btn) => {
+      if (btn) {
+        btn.disabled = true;
+        btn.setAttribute("disabled", "true");
+        btn.classList.add("opacity-40", "cursor-not-allowed");
+        btn.classList.remove("cursor-pointer", "hover:bg-zinc-500/10");
+        btn.title = "Gemini indisponível";
+      }
+    });
+    [badgeGemini, badgeClGemini].forEach((b) => {
+      if (b) {
+        b.textContent = "Indisponível";
+        b.classList.remove("hidden");
+      }
+    });
     if (descGemini) {
       descGemini.textContent =
         "Reescrita contextual, linguagem fluida e natural";
       descGemini.classList.remove("text-rose-400");
       descGemini.classList.add("text-zinc-400");
+    }
+    if (descClGemini) {
+      descClGemini.textContent = "Reescrita contextual com IA em nuvem";
+      descClGemini.classList.remove("text-rose-400");
+      descClGemini.classList.add("text-zinc-400");
+    }
+    if (currentTailorEngine === "gemini") {
+      updateTailorEngineUI("local");
+    }
+  } else {
+    [btnEngineGemini, btnClGemini].forEach((btn) => {
+      if (btn) {
+        btn.disabled = false;
+        btn.removeAttribute("disabled");
+        btn.classList.remove("opacity-40", "cursor-not-allowed");
+        btn.classList.add("cursor-pointer", "hover:bg-zinc-500/10");
+        btn.title = "Gemini 1.5 Flash disponível via Google AI Studio";
+      }
+    });
+    [badgeGemini, badgeClGemini].forEach((b) => {
+      b?.classList.add("hidden");
+    });
+    if (descGemini) {
+      descGemini.textContent =
+        "Reescrita contextual, linguagem fluida e natural";
+      descGemini.classList.remove("text-rose-400");
+      descGemini.classList.add("text-zinc-400");
+    }
+    if (descClGemini) {
+      descClGemini.textContent = "Reescrita contextual com IA em nuvem";
+      descClGemini.classList.remove("text-rose-400");
+      descClGemini.classList.add("text-zinc-400");
+    }
+  }
+
+  // 2. Ollama
+  const btnEngineOllama = document.getElementById("btn-engine-ollama");
+  const badgeOllama = document.getElementById("badge-engine-ollama");
+  const descOllama = document.getElementById("engine-ollama-desc");
+
+  const btnClOllama = document.getElementById("btn-cl-engine-ollama");
+  const badgeClOllama = document.getElementById("badge-cl-engine-ollama");
+  const descClOllama = document.getElementById("cl-engine-ollama-desc");
+
+  if (!hasOllama) {
+    const isConfigured = !!ollamaInfo?.configured;
+    const badgeText = isConfigured ? "Offline" : "Indisponível";
+
+    [btnEngineOllama, btnClOllama].forEach((btn) => {
+      if (btn) {
+        btn.disabled = true;
+        btn.setAttribute("disabled", "true");
+        btn.classList.add("opacity-40", "cursor-not-allowed");
+        btn.classList.remove("cursor-pointer", "hover:bg-zinc-500/10");
+        btn.title = isConfigured ? "Ollama offline" : "Ollama indisponível";
+      }
+    });
+
+    [badgeOllama, badgeClOllama].forEach((b) => {
+      if (b) {
+        b.textContent = badgeText;
+        b.className =
+          "text-[9px] px-1 py-0.2 rounded bg-zinc-800 text-zinc-400 border border-zinc-700/50 font-medium";
+      }
+    });
+
+    if (descOllama) {
+      descOllama.textContent = "Llama 3.2 / Mistral 100% local e privado";
+    }
+    if (descClOllama) {
+      descClOllama.textContent = "LLM local privada (100% offline)";
+    }
+
+    if (currentTailorEngine === "ollama") {
+      updateTailorEngineUI("local");
+    }
+  } else {
+    [btnEngineOllama, btnClOllama].forEach((btn) => {
+      if (btn) {
+        btn.disabled = false;
+        btn.removeAttribute("disabled");
+        btn.classList.remove("opacity-40", "cursor-not-allowed");
+        btn.classList.add("cursor-pointer", "hover:bg-zinc-500/10");
+        btn.title = `Ollama ativo (${ollamaInfo?.model}) em ${ollamaInfo?.baseUrl}`;
+      }
+    });
+
+    [badgeOllama, badgeClOllama].forEach((b) => {
+      if (b) {
+        b.textContent = ollamaInfo?.model || "Online";
+        b.className =
+          "text-[9px] px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-medium font-mono";
+      }
+    });
+
+    if (descOllama) {
+      descOllama.textContent = `Modelo local ${ollamaInfo?.model} (100% offline)`;
+    }
+    if (descClOllama) {
+      descClOllama.textContent = `Modelo local ${ollamaInfo?.model} (100% offline)`;
     }
   }
 }
@@ -1743,17 +1853,27 @@ function updateTailorEngineUI(engine) {
   if (engine === "gemini" && !hasGeminiKey) {
     engine = "local";
   }
+  if (engine === "ollama" && !hasOllama) {
+    engine = "local";
+  }
 
   currentTailorEngine = engine;
+  localStorage.setItem("ats_tailor_engine", engine);
   localStorage.setItem(
     "ats_use_gemini_tailoring",
     engine === "gemini" ? "true" : "false",
   );
 
+  // 1. Header elements
   const label = document.getElementById("tailor-btn-label");
   const icon = document.getElementById("tailor-btn-icon");
   const checkGemini = document.getElementById("check-engine-gemini");
+  const checkOllama = document.getElementById("check-engine-ollama");
   const checkLocal = document.getElementById("check-engine-local");
+
+  if (checkGemini) checkGemini.classList.toggle("hidden", engine !== "gemini");
+  if (checkOllama) checkOllama.classList.toggle("hidden", engine !== "ollama");
+  if (checkLocal) checkLocal.classList.toggle("hidden", engine !== "local");
 
   if (engine === "gemini") {
     if (label) label.textContent = "Otimizar com IA";
@@ -1761,16 +1881,59 @@ function updateTailorEngineUI(engine) {
       icon.setAttribute("data-lucide", "sparkles");
       icon.className = "w-3.5 h-3.5 fill-current text-amber-300";
     }
-    if (checkGemini) checkGemini.classList.remove("hidden");
-    if (checkLocal) checkLocal.classList.add("hidden");
+  } else if (engine === "ollama") {
+    const modelShort = ollamaInfo?.model
+      ? ollamaInfo.model.split(":")[0]
+      : "Ollama";
+    if (label) label.textContent = `Otimizar (${modelShort})`;
+    if (icon) {
+      icon.setAttribute("data-lucide", "bot");
+      icon.className = "w-3.5 h-3.5 text-emerald-400";
+    }
   } else {
     if (label) label.textContent = "Otimizar (Local)";
     if (icon) {
       icon.setAttribute("data-lucide", "cpu");
       icon.className = "w-3.5 h-3.5 text-blue-300";
     }
-    if (checkGemini) checkGemini.classList.add("hidden");
-    if (checkLocal) checkLocal.classList.remove("hidden");
+  }
+
+  // 2. Cover Letter Studio elements
+  const clLabel = document.getElementById("cl-generate-label");
+  const clIcon = document.getElementById("cl-generate-icon");
+  const checkClGemini = document.getElementById("check-cl-engine-gemini");
+  const checkClOllama = document.getElementById("check-cl-engine-ollama");
+  const checkClLocal = document.getElementById("check-cl-engine-local");
+
+  if (checkClGemini)
+    checkClGemini.classList.toggle("hidden", engine !== "gemini");
+  if (checkClOllama)
+    checkClOllama.classList.toggle("hidden", engine !== "ollama");
+  if (checkClLocal) checkClLocal.classList.toggle("hidden", engine !== "local");
+
+  if (clLabel) {
+    if (engine === "gemini") {
+      clLabel.textContent = "Redigir (Gemini)";
+      if (clIcon) {
+        clIcon.setAttribute("data-lucide", "sparkles");
+        clIcon.className = "w-3.5 h-3.5 fill-amber-400 text-amber-400 shrink-0";
+      }
+    } else if (engine === "ollama") {
+      const modelShort = ollamaInfo?.model
+        ? ollamaInfo.model.split(":")[0]
+        : "Ollama";
+      clLabel.textContent = `Redigir (${modelShort})`;
+      if (clIcon) {
+        clIcon.setAttribute("data-lucide", "bot");
+        clIcon.className = "w-3.5 h-3.5 text-emerald-400 shrink-0";
+      }
+    } else {
+      clLabel.textContent = "Redigir Carta";
+      if (clIcon) {
+        clIcon.setAttribute("data-lucide", "sparkles");
+        clIcon.className = "w-3.5 h-3.5 fill-current shrink-0";
+      }
+    }
   }
 
   if (window.lucide) window.lucide.createIcons();
@@ -1813,18 +1976,21 @@ function setupWorkbenchActions() {
         e.stopPropagation();
         const selectedEngine = btn.dataset.engine;
         if (selectedEngine === "gemini" && !hasGeminiKey) {
-          showToast(
-            "GEMINI_API_KEY não configurada no arquivo .env. Configure a chave para habilitar a IA.",
-            "warning",
-          );
+          showToast("Gemini indisponível no momento.", "warning");
+          return;
+        }
+        if (selectedEngine === "ollama" && !hasOllama) {
+          showToast("Ollama indisponível no momento.", "warning");
           return;
         }
         if (selectedEngine) {
           updateTailorEngineUI(selectedEngine);
-          showToast(
-            `Motor selecionado: ${selectedEngine === "gemini" ? "Gemini 1.5 Flash (IA)" : "Motor ATS Local"}`,
-            "info",
-          );
+          const labels = {
+            gemini: "Gemini 1.5 Flash (IA)",
+            ollama: `Ollama (${ollamaInfo?.model || "Local"})`,
+            local: "Motor ATS Local",
+          };
+          showToast(`Motor selecionado: ${labels[selectedEngine]}`, "info");
         }
         modeDropdown.classList.add("hidden");
         modeChevron?.classList.remove("rotate-180");
@@ -1845,7 +2011,7 @@ function setupWorkbenchActions() {
   if (btnRun) {
     btnRun.addEventListener("click", async () => {
       if (!selectedJobId) return;
-      if (!currentMasterProfile || !currentMasterProfile.fullName) {
+      if (!currentMasterProfile?.fullName) {
         showToast("Cadastre o Master CV primeiro", "error");
         openProfileDrawer();
         return;
@@ -1855,7 +2021,7 @@ function setupWorkbenchActions() {
       const label = document.getElementById("tailor-btn-label");
       const icon = document.getElementById("tailor-btn-icon");
 
-      if (useAi) {
+      if (currentTailorEngine === "gemini" && hasGeminiKey) {
         if (icon) {
           icon.setAttribute("data-lucide", "sparkles");
           icon.className = "w-4 h-4 animate-spin text-amber-300";
@@ -1863,6 +2029,16 @@ function setupWorkbenchActions() {
         if (label) label.textContent = "Otimizando com IA...";
         showToast(
           "Conectando ao Gemini 1.5 Flash para otimização contextual...",
+          "info",
+        );
+      } else if (currentTailorEngine === "ollama" && hasOllama) {
+        if (icon) {
+          icon.setAttribute("data-lucide", "loader-2");
+          icon.className = "w-4 h-4 animate-spin text-emerald-400";
+        }
+        if (label) label.textContent = "Otimizando (Ollama)...";
+        showToast(
+          `Executando inferência local offline com Ollama (${ollamaInfo?.model})...`,
           "info",
         );
       } else {
@@ -1887,7 +2063,7 @@ function setupWorkbenchActions() {
         const res = await fetch(`/api/jobs/${selectedJobId}/tailor`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ useAi }),
+          body: JSON.stringify({ useAi, engine: currentTailorEngine }),
         });
         const data = await res.json();
 
@@ -1898,8 +2074,12 @@ function setupWorkbenchActions() {
         }, 300);
 
         if (res.ok) {
-          const engineLabel =
-            data.engine === "gemini" ? "Gemini IA" : "Motor ATS";
+          const engineLabels = {
+            gemini: "Gemini IA",
+            ollama: "Ollama Local",
+            local: "Motor ATS",
+          };
+          const engineLabel = engineLabels[data.engine] || "Motor ATS";
           const diffPts = Math.round(data.scoreAfter - data.scoreBefore);
           showToast(
             `Otimizado (${engineLabel}): Score ${data.scoreAfter}/100 (+${diffPts} pts)`,
@@ -2063,7 +2243,7 @@ function setupWorkbenchActions() {
           const plainText = await res.text();
 
           // Escrita na área de transferência com fallback
-          if (navigator.clipboard && navigator.clipboard.writeText) {
+          if (navigator.clipboard?.writeText) {
             await navigator.clipboard.writeText(plainText);
           } else {
             const textArea = document.createElement("textarea");
@@ -2580,7 +2760,11 @@ function setupKnockoutCardListeners() {
       try {
         const res = await fetch(
           `/api/jobs/${selectedJobId}/knockout/${qid}/generate`,
-          { method: "POST" },
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ engine: currentTailorEngine }),
+          },
         );
         const data = await res.json();
         if (res.ok) {
@@ -2740,6 +2924,8 @@ function setupKnockoutQuestionsEvents() {
           `/api/jobs/${selectedJobId}/knockout/${qid}/generate`,
           {
             method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ engine: currentTailorEngine }),
           },
         );
         await genRes.json();
@@ -2772,6 +2958,530 @@ function setupKnockoutQuestionsEvents() {
         e.preventDefault();
         handleAdd();
       }
+    });
+  }
+}
+
+// ============================================================================
+// 14. COVER LETTER STUDIO (Gerador de Carta de Apresentação)
+// ============================================================================
+let currentCoverLetter = null;
+let coverLetterAutosaveTimer = null;
+let currentCoverLetterTone = "tecnico";
+
+function updateCoverLetterLetterhead() {
+  const senderName = document.getElementById("cl-sender-name");
+  const senderHeadline = document.getElementById("cl-sender-headline");
+  const senderContact = document.getElementById("cl-sender-contact");
+  const senderSignature = document.getElementById("cl-signature-name");
+  const dateEl = document.getElementById("cl-letter-date");
+  const headerCompany = document.getElementById("cl-header-company");
+  const headerTitle = document.getElementById("cl-header-title");
+  const emptyCompany = document.getElementById("cl-empty-company");
+
+  const name = currentMasterProfile?.fullName || "Candidato";
+  const headline =
+    currentMasterProfile?.headline || "Profissional de Tecnologia";
+  const loc = currentMasterProfile?.location || "";
+  const email = currentMasterProfile?.email || "";
+  const contactText = [loc, email].filter(Boolean).join(" • ");
+
+  if (senderName) senderName.textContent = name;
+  if (senderHeadline) senderHeadline.textContent = headline;
+  if (senderContact) senderContact.textContent = contactText || email;
+  if (senderSignature) senderSignature.textContent = name;
+
+  if (dateEl) {
+    const today = new Date();
+    dateEl.textContent = today.toLocaleDateString("pt-BR", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  }
+
+  const comp = activeJobData?.company || "Empresa";
+  const jobTitle = activeJobData?.title || "Vaga Alvo";
+
+  if (headerCompany) headerCompany.textContent = comp;
+  if (headerTitle)
+    headerTitle.textContent = `Candidatura à posição de ${jobTitle}`;
+  if (emptyCompany) emptyCompany.textContent = comp;
+}
+
+async function loadCoverLetter(jobId) {
+  if (!jobId) return;
+
+  updateCoverLetterLetterhead();
+
+  const contentEl = document.getElementById("cover-letter-content");
+  const emptyState = document.getElementById("cl-empty-state");
+  const paperCard = document.getElementById("cl-paper-card");
+
+  try {
+    const res = await fetch(`/api/jobs/${jobId}/cover-letter`);
+    if (res.ok) {
+      const data = await res.json();
+      const letter = data.coverLetter || data;
+      currentCoverLetter = letter;
+
+      if (letter?.content && letter.content.trim().length > 0) {
+        if (contentEl) contentEl.value = letter.content;
+        currentCoverLetterTone = letter.tone || "tecnico";
+        setCoverLetterTonePill(currentCoverLetterTone);
+        if (emptyState) emptyState.classList.add("hidden");
+        if (paperCard) paperCard.classList.remove("hidden");
+      } else {
+        currentCoverLetter = null;
+        if (contentEl) contentEl.value = "";
+        if (emptyState) emptyState.classList.remove("hidden");
+        if (paperCard) paperCard.classList.add("hidden");
+      }
+      updateCoverLetterCounters();
+    } else {
+      currentCoverLetter = null;
+      if (contentEl) contentEl.value = "";
+      if (emptyState) emptyState.classList.remove("hidden");
+      if (paperCard) paperCard.classList.add("hidden");
+      updateCoverLetterCounters();
+    }
+  } catch (err) {
+    console.error("Erro ao carregar carta de apresentação:", err);
+  }
+}
+
+function setCoverLetterTonePill(tone) {
+  const normalizedKey = tone?.toLowerCase().includes("executiv")
+    ? "executivo"
+    : tone?.toLowerCase().includes("entusiast") ||
+        tone?.toLowerCase().includes("cultural")
+      ? "entusiasta"
+      : "tecnico";
+
+  currentCoverLetterTone = normalizedKey;
+  document.querySelectorAll(".cl-tone-pill").forEach((pill) => {
+    const match = pill.dataset.tone === normalizedKey;
+    pill.classList.toggle("active", match);
+  });
+
+  const toneLabels = {
+    tecnico: "Técnico & Direto",
+    executivo: "Executivo & Liderança",
+    entusiasta: "Entusiasta & Cultural",
+  };
+  const toneFooter = document.getElementById("cl-badge-tone-footer");
+  if (toneFooter) {
+    toneFooter.textContent = `Tom: ${toneLabels[normalizedKey] || "Técnico & Direto"}`;
+  }
+}
+
+function updateCoverLetterCounters() {
+  const contentEl = document.getElementById("cover-letter-content");
+  const wordCounter = document.getElementById("cl-word-counter");
+  const charCounter = document.getElementById("cl-char-counter");
+  const readTime = document.getElementById("cl-read-time");
+
+  const text = (contentEl?.value || "").trim();
+  const words = text ? text.split(/\s+/).length : 0;
+  const chars = text.length;
+
+  if (wordCounter) wordCounter.textContent = `${words} palavras`;
+  if (charCounter) charCounter.textContent = `${chars} caracteres`;
+  if (readTime) {
+    const minutes = Math.max(1, Math.ceil(words / 180));
+    readTime.textContent = words > 0 ? `~${minutes} min` : "0 min";
+  }
+}
+
+async function generateCoverLetter(jobId) {
+  if (!jobId) {
+    showToast("Selecione uma vaga no pipeline primeiro", "info");
+    return;
+  }
+  if (!currentMasterProfile?.fullName) {
+    showToast("Cadastre o Master CV primeiro", "error");
+    openProfileDrawer();
+    return;
+  }
+
+  const btnGen = document.getElementById("btn-generate-cover-letter");
+  const labelGen = document.getElementById("cl-generate-label");
+  const iconGen = document.getElementById("cl-generate-icon");
+  const btnEmptyGen = document.getElementById("btn-empty-generate-cl");
+
+  // Determine actual engine
+  let engineToUse = currentTailorEngine;
+  if (engineToUse === "gemini" && !hasGeminiKey) {
+    engineToUse = hasOllama ? "ollama" : "local";
+  } else if (engineToUse === "ollama" && !hasOllama) {
+    engineToUse = hasGeminiKey ? "gemini" : "local";
+  }
+
+  if (btnGen) btnGen.disabled = true;
+  if (btnEmptyGen) btnEmptyGen.disabled = true;
+  if (labelGen) labelGen.textContent = "Redigindo...";
+  if (iconGen) {
+    iconGen.setAttribute("data-lucide", "loader-2");
+    iconGen.className = "w-3.5 h-3.5 animate-spin";
+  }
+  if (window.lucide) window.lucide.createIcons();
+
+  const engineFeedback =
+    engineToUse === "ollama"
+      ? `Ollama (${ollamaInfo?.model || "local"})`
+      : engineToUse === "gemini"
+        ? "Gemini 1.5 Flash"
+        : "Motor ATS Determinístico";
+  showToast(`Redigindo carta personalizada com ${engineFeedback}...`, "info");
+
+  try {
+    const res = await fetch(`/api/jobs/${jobId}/cover-letter/generate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        tone: currentCoverLetterTone,
+        engine: engineToUse,
+        recipientCompany: activeJobData?.company || "",
+        jobTitle: activeJobData?.title || "",
+      }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      const letter = data.coverLetter || data;
+      currentCoverLetter = letter;
+      const contentEl = document.getElementById("cover-letter-content");
+      if (contentEl) contentEl.value = letter.content || "";
+
+      const emptyState = document.getElementById("cl-empty-state");
+      const paperCard = document.getElementById("cl-paper-card");
+      if (emptyState) emptyState.classList.add("hidden");
+      if (paperCard) paperCard.classList.remove("hidden");
+
+      updateCoverLetterLetterhead();
+      updateCoverLetterCounters();
+
+      if (contentEl) {
+        contentEl.classList.add("ring-2", "ring-emerald-500/30");
+        setTimeout(
+          () => contentEl.classList.remove("ring-2", "ring-emerald-500/30"),
+          1200,
+        );
+      }
+
+      const toneLabels = {
+        tecnico: "Técnico & Direto",
+        executivo: "Executivo & Liderança",
+        entusiasta: "Entusiasta & Cultural",
+      };
+      const activeToneName =
+        toneLabels[currentCoverLetterTone] || "Técnico & Direto";
+      showToast(
+        `Carta gerada com sucesso no tom ${activeToneName}!`,
+        "success",
+      );
+    } else {
+      showToast(data.error || "Erro ao gerar carta", "error");
+    }
+  } catch (err) {
+    console.error("Erro ao gerar carta:", err);
+    showToast("Erro na requisição ao gerar carta", "error");
+  } finally {
+    if (btnGen) btnGen.disabled = false;
+    if (btnEmptyGen) btnEmptyGen.disabled = false;
+    if (labelGen) labelGen.textContent = "Redigir Carta";
+    if (iconGen) {
+      iconGen.setAttribute("data-lucide", "sparkles");
+      iconGen.className = "w-3.5 h-3.5 fill-current";
+    }
+    if (window.lucide) window.lucide.createIcons();
+  }
+}
+
+async function saveCoverLetter(jobId) {
+  if (!jobId) return;
+  const contentEl = document.getElementById("cover-letter-content");
+  const autosaveIndicator = document.getElementById("cl-autosave-indicator");
+  const content = contentEl?.value || "";
+
+  if (autosaveIndicator) {
+    autosaveIndicator.className = "flex items-center gap-1 text-zinc-400";
+    autosaveIndicator.innerHTML = `<i data-lucide="loader-2" class="w-3 h-3 animate-spin"></i><span>Salvando...</span>`;
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  try {
+    const res = await fetch(`/api/jobs/${jobId}/cover-letter`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        content,
+        tone: currentCoverLetterTone,
+        recipientCompany: activeJobData?.company || "",
+        jobTitle: activeJobData?.title || "",
+      }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      currentCoverLetter = data.coverLetter || data;
+      if (autosaveIndicator) {
+        autosaveIndicator.className =
+          "flex items-center gap-1 text-emerald-400";
+        autosaveIndicator.innerHTML = `<i data-lucide="check" class="w-3 h-3"></i><span>Salvo automaticamente</span>`;
+        if (window.lucide) window.lucide.createIcons();
+      }
+    }
+  } catch (err) {
+    console.error("Erro ao salvar carta:", err);
+    if (autosaveIndicator) {
+      autosaveIndicator.className = "flex items-center gap-1 text-rose-400";
+      autosaveIndicator.innerHTML = `<i data-lucide="alert-circle" class="w-3 h-3"></i><span>Erro ao salvar</span>`;
+      if (window.lucide) window.lucide.createIcons();
+    }
+  }
+}
+
+function setupCoverLetterStudio() {
+  const btnGen = document.getElementById("btn-generate-cover-letter");
+  if (btnGen) {
+    btnGen.addEventListener("click", () => generateCoverLetter(selectedJobId));
+  }
+
+  // Cover Letter Engine Dropdown Menu (Mesmo comportamento do Header)
+  const btnClEngineMenu = document.getElementById("btn-cl-engine-menu");
+  const clEngineDropdown = document.getElementById("cl-engine-dropdown-menu");
+  const clEngineChevron = document.getElementById("cl-engine-chevron-icon");
+
+  if (btnClEngineMenu && clEngineDropdown) {
+    btnClEngineMenu.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      await checkSystemConfig();
+      const isHidden = clEngineDropdown.classList.contains("hidden");
+
+      // Close other dropdowns
+      document
+        .getElementById("cl-export-dropdown-menu")
+        ?.classList.add("hidden");
+      document
+        .getElementById("cl-export-chevron")
+        ?.classList.remove("rotate-180");
+
+      if (isHidden) {
+        clEngineDropdown.classList.remove("hidden");
+        clEngineChevron?.classList.add("rotate-180");
+      } else {
+        clEngineDropdown.classList.add("hidden");
+        clEngineChevron?.classList.remove("rotate-180");
+      }
+    });
+
+    document.querySelectorAll(".cl-engine-option-btn").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const selectedEngine = btn.dataset.engine;
+        if (selectedEngine === "gemini" && !hasGeminiKey) {
+          showToast("Gemini indisponível no momento.", "warning");
+          return;
+        }
+        if (selectedEngine === "ollama" && !hasOllama) {
+          showToast("Ollama indisponível no momento.", "warning");
+          return;
+        }
+        if (selectedEngine) {
+          updateTailorEngineUI(selectedEngine);
+          const labels = {
+            gemini: "Gemini 1.5 Flash (IA)",
+            ollama: `Ollama (${ollamaInfo?.model || "Local"})`,
+            local: "Motor ATS Local",
+          };
+          showToast(
+            `Motor de redação ativo: ${labels[selectedEngine]}`,
+            "info",
+          );
+        }
+        clEngineDropdown.classList.add("hidden");
+        clEngineChevron?.classList.remove("rotate-180");
+      });
+    });
+
+    document.addEventListener("click", (e) => {
+      if (
+        !clEngineDropdown.contains(e.target) &&
+        !btnClEngineMenu.contains(e.target)
+      ) {
+        clEngineDropdown.classList.add("hidden");
+        clEngineChevron?.classList.remove("rotate-180");
+      }
+    });
+  }
+
+  const btnEmptyGen = document.getElementById("btn-empty-generate-cl");
+  if (btnEmptyGen) {
+    btnEmptyGen.addEventListener("click", () =>
+      generateCoverLetter(selectedJobId),
+    );
+  }
+
+  // Tone segmented pills
+  document.querySelectorAll(".cl-tone-pill").forEach((pill) => {
+    pill.addEventListener("click", () => {
+      const tone = pill.dataset.tone;
+      if (tone) {
+        setCoverLetterTonePill(tone);
+        const toneLabels = {
+          tecnico: "Técnico & Direto",
+          executivo: "Executivo & Liderança",
+          entusiasta: "Entusiasta & Cultural",
+        };
+        const toneName = toneLabels[tone] || tone;
+        if (currentCoverLetter?.content) {
+          showToast(
+            `Tom "${toneName}" selecionado. Clique em "Redigir Carta" para redigir neste tom.`,
+            "info",
+          );
+        } else {
+          showToast(`Tom "${toneName}" selecionado.`, "info");
+        }
+      }
+    });
+  });
+
+  // Seamless Textarea with input counter & auto-save
+  const contentEl = document.getElementById("cover-letter-content");
+  if (contentEl) {
+    contentEl.addEventListener("input", () => {
+      updateCoverLetterCounters();
+      const autosaveIndicator = document.getElementById(
+        "cl-autosave-indicator",
+      );
+      if (autosaveIndicator) {
+        autosaveIndicator.className = "flex items-center gap-1 text-zinc-400";
+        autosaveIndicator.innerHTML = `<i data-lucide="edit-3" class="w-3 h-3"></i><span>Digitando...</span>`;
+        if (window.lucide) window.lucide.createIcons();
+      }
+      clearTimeout(coverLetterAutosaveTimer);
+      coverLetterAutosaveTimer = setTimeout(() => {
+        saveCoverLetter(selectedJobId);
+      }, 800);
+    });
+
+    contentEl.addEventListener("blur", () => {
+      clearTimeout(coverLetterAutosaveTimer);
+      saveCoverLetter(selectedJobId);
+    });
+  }
+
+  // Copy to clipboard button
+  const btnCopy = document.getElementById("btn-copy-cover-letter");
+  if (btnCopy) {
+    btnCopy.addEventListener("click", async () => {
+      const content = contentEl?.value || "";
+      if (!content.trim()) {
+        showToast(
+          "Carta vazia. Clique em 'Redigir Carta' primeiro.",
+          "warning",
+        );
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(content);
+        const origText = document.getElementById("cl-copy-text");
+        const origIcon = document.getElementById("cl-copy-icon");
+        if (origText) origText.textContent = "Copiado!";
+        if (origIcon) {
+          origIcon.setAttribute("data-lucide", "check");
+          origIcon.className = "w-3.5 h-3.5 text-emerald-400";
+        }
+        if (window.lucide) window.lucide.createIcons();
+        showToast(
+          "Carta de apresentação copiada para a área de transferência!",
+          "success",
+        );
+        setTimeout(() => {
+          if (origText) origText.textContent = "Copiar";
+          if (origIcon) {
+            origIcon.setAttribute("data-lucide", "copy");
+            origIcon.className = "w-3.5 h-3.5 text-zinc-400";
+          }
+          if (window.lucide) window.lucide.createIcons();
+        }, 2000);
+      } catch {
+        showToast("Não foi possível copiar automaticamente", "error");
+      }
+    });
+  }
+
+  // Export Dropdown menu
+  const btnExportMenu = document.getElementById("btn-cl-export-menu");
+  const exportDropdown = document.getElementById("cl-export-dropdown-menu");
+  const exportChevron = document.getElementById("cl-export-chevron");
+
+  if (btnExportMenu && exportDropdown) {
+    btnExportMenu.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const isHidden = exportDropdown.classList.contains("hidden");
+      if (isHidden) {
+        exportDropdown.classList.remove("hidden");
+        exportChevron?.classList.add("rotate-180");
+      } else {
+        exportDropdown.classList.add("hidden");
+        exportChevron?.classList.remove("rotate-180");
+      }
+    });
+
+    document.addEventListener("click", (e) => {
+      if (
+        !exportDropdown.contains(e.target) &&
+        !btnExportMenu.contains(e.target)
+      ) {
+        exportDropdown.classList.add("hidden");
+        exportChevron?.classList.remove("rotate-180");
+      }
+    });
+  }
+
+  // Download buttons
+  const btnPdf = document.getElementById("btn-download-cl-pdf");
+  if (btnPdf) {
+    btnPdf.addEventListener("click", () => {
+      if (!selectedJobId) {
+        showToast("Selecione uma vaga primeiro", "info");
+        return;
+      }
+      exportDropdown?.classList.add("hidden");
+      window.open(
+        `/api/jobs/${selectedJobId}/download/cover-letter/pdf`,
+        "_blank",
+      );
+    });
+  }
+
+  const btnDocx = document.getElementById("btn-download-cl-docx");
+  if (btnDocx) {
+    btnDocx.addEventListener("click", () => {
+      if (!selectedJobId) {
+        showToast("Selecione uma vaga primeiro", "info");
+        return;
+      }
+      exportDropdown?.classList.add("hidden");
+      window.open(
+        `/api/jobs/${selectedJobId}/download/cover-letter/docx`,
+        "_blank",
+      );
+    });
+  }
+
+  const btnTxt = document.getElementById("btn-download-cl-txt");
+  if (btnTxt) {
+    btnTxt.addEventListener("click", () => {
+      if (!selectedJobId) {
+        showToast("Selecione uma vaga primeiro", "info");
+        return;
+      }
+      exportDropdown?.classList.add("hidden");
+      window.open(
+        `/api/jobs/${selectedJobId}/download/cover-letter/txt`,
+        "_blank",
+      );
     });
   }
 }

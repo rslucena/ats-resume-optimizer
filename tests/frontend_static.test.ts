@@ -13,6 +13,10 @@ describe("Frontend Static Delivery", () => {
     const indexText = await indexRes.text();
     expect(indexText).toContain("ATS Optimizer");
     expect(indexText).toContain("7-Camadas");
+    expect(indexText).toContain("tab-cover-letter");
+    expect(indexText).toContain("btn-engine-ollama");
+    expect(indexText).toContain("btn-generate-cover-letter");
+    expect(indexText).toContain("cover-letter-content");
 
     // Test styles.css
     const cssRes = await app.request("/styles.css");
@@ -25,5 +29,7 @@ describe("Frontend Static Delivery", () => {
     expect(jsRes.status).toBe(200);
     const jsText = await jsRes.text();
     expect(jsText).toContain("loadMasterProfile");
+    expect(jsText).toContain("loadCoverLetter");
+    expect(jsText).toContain("setupCoverLetterStudio");
   });
 });
