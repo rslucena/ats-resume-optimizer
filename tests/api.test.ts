@@ -1,6 +1,6 @@
-import { describe, expect, it, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import { createApp } from "../src/api/routes.ts";
-import { resetDbForTesting, getDb } from "../src/db/index.ts";
+import { getDb, resetDbForTesting } from "../src/db/index.ts";
 import { masterProfilesTable } from "../src/db/schema.ts";
 
 describe("Hono REST API Routes", () => {
@@ -50,19 +50,19 @@ describe("Hono REST API Routes", () => {
             role: "Backend Engineer",
             startDate: "2021",
             endDate: "Atual",
-            description: "Desenvolvimento de APIs de alta performance."
-          }
+            description: "Desenvolvimento de APIs de alta performance.",
+          },
         ],
         education: [
           {
             institution: "USP",
             degree: "Bacharelado em Ciência da Computação",
             startDate: "2016",
-            endDate: "2020"
-          }
+            endDate: "2020",
+          },
         ],
-        certifications: []
-      })
+        certifications: [],
+      }),
     });
     expect(putRes.status).toBe(200);
 
@@ -74,10 +74,13 @@ describe("Hono REST API Routes", () => {
     // 4. POST /api/profile/reprocess should reprocess saved rawText
     const db = getDb();
     await db.update(masterProfilesTable).set({
-      rawText: "Page 1 of 6\nCarlos Silva\nSenior Engineer\ncarlos@test.com\n\nResumo\nDev com 5 anos.\n\nExperiência\nTech Corp\nEngineer\n2021 - Atual\nCoding\n\nFormação acadêmica\nUSP\nCiência da Computação (2016 - 2020)"
+      rawText:
+        "Page 1 of 6\nCarlos Silva\nSenior Engineer\ncarlos@test.com\n\nResumo\nDev com 5 anos.\n\nExperiência\nTech Corp\nEngineer\n2021 - Atual\nCoding\n\nFormação acadêmica\nUSP\nCiência da Computação (2016 - 2020)",
     });
 
-    const reprocessRes = await app.request("/api/profile/reprocess", { method: "POST" });
+    const reprocessRes = await app.request("/api/profile/reprocess", {
+      method: "POST",
+    });
     expect(reprocessRes.status).toBe(200);
     const reprocessJson = await reprocessRes.json();
     expect(reprocessJson.success).toBe(true);
@@ -93,7 +96,8 @@ describe("Hono REST API Routes", () => {
       fullName: "Carlos Silva",
       headline: "Senior Backend Engineer",
       email: "carlos@example.com",
-      summary: "Senior Backend Engineer com 5 anos de experiência em Node.js e TypeScript.",
+      summary:
+        "Senior Backend Engineer com 5 anos de experiência em Node.js e TypeScript.",
       skills: JSON.stringify(["Node.js", "TypeScript", "SQL"]),
       experiences: JSON.stringify([
         {
@@ -101,20 +105,20 @@ describe("Hono REST API Routes", () => {
           role: "Developer",
           startDate: "2021",
           endDate: "Atual",
-          description: "Desenvolvimento de APIs em Node.js."
-        }
+          description: "Desenvolvimento de APIs em Node.js.",
+        },
       ]),
       education: JSON.stringify([
         {
           institution: "USP",
           degree: "Ciência da Computação",
           startDate: "2016",
-          endDate: "2020"
-        }
+          endDate: "2020",
+        },
       ]),
       certifications: JSON.stringify([]),
       createdAt: Date.now(),
-      updatedAt: Date.now()
+      updatedAt: Date.now(),
     });
 
     // 1. POST /api/jobs
@@ -126,8 +130,9 @@ describe("Hono REST API Routes", () => {
         company: "Acme",
         jobUrl: "https://acme.com/job/1",
         status: "SAVED",
-        rawDescription: "Vaga para Senior Backend Engineer com foco em Node.js, TypeScript e Docker."
-      })
+        rawDescription:
+          "Vaga para Senior Backend Engineer com foco em Node.js, TypeScript e Docker.",
+      }),
     });
     expect(postJobRes.status).toBe(201);
     const createdJob = await postJobRes.json();
@@ -138,12 +143,16 @@ describe("Hono REST API Routes", () => {
 
     // 2. POST /api/jobs/:id/tailor
     const tailorRes = await app.request(`/api/jobs/${jobId}/tailor`, {
-      method: "POST"
+      method: "POST",
     });
     expect(tailorRes.status).toBe(200);
     const tailorData = await tailorRes.json();
-    expect(tailorData.scoreAfter).toBeGreaterThanOrEqual(tailorData.scoreBefore);
-    expect(tailorData.tailoredResume.headline).toContain("Senior Backend Engineer");
+    expect(tailorData.scoreAfter).toBeGreaterThanOrEqual(
+      tailorData.scoreBefore,
+    );
+    expect(tailorData.tailoredResume.headline).toContain(
+      "Senior Backend Engineer",
+    );
 
     // 3. GET /api/jobs/:id/download/pdf
     const pdfRes = await app.request(`/api/jobs/${jobId}/download/pdf`);
@@ -195,8 +204,8 @@ describe("Hono REST API Routes", () => {
         company: "Vercel",
         jobUrl: "https://vercel.com/jobs/fe",
         status: "SAVED",
-        rawDescription: "Looking for a React and Next.js frontend engineer."
-      })
+        rawDescription: "Looking for a React and Next.js frontend engineer.",
+      }),
     });
     expect(createRes.status).toBe(201);
     const { job } = await createRes.json();
@@ -206,19 +215,21 @@ describe("Hono REST API Routes", () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        questionText: "Você possui experiência com Next.js?"
-      })
+        questionText: "Você possui experiência com Next.js?",
+      }),
     });
     expect(kqRes.status).toBe(201);
 
     // Verify job exists in GET /api/jobs
     const listRes = await app.request("/api/jobs");
     const listData = await listRes.json();
-    expect(listData.jobs.some((j: any) => j.id === job.id)).toBe(true);
+    expect(listData.jobs.some((j: { id: string }) => j.id === job.id)).toBe(
+      true,
+    );
 
     // 3. DELETE /api/jobs/:id
     const delRes = await app.request(`/api/jobs/${job.id}`, {
-      method: "DELETE"
+      method: "DELETE",
     });
     expect(delRes.status).toBe(200);
     const delData = await delRes.json();
@@ -227,7 +238,9 @@ describe("Hono REST API Routes", () => {
     // 4. Verify job is removed
     const listResAfter = await app.request("/api/jobs");
     const listDataAfter = await listResAfter.json();
-    expect(listDataAfter.jobs.some((j: any) => j.id === job.id)).toBe(false);
+    expect(
+      listDataAfter.jobs.some((j: { id: string }) => j.id === job.id),
+    ).toBe(false);
 
     // 5. Knockout questions should also be removed
     const kqListRes = await app.request(`/api/jobs/${job.id}/knockout`);

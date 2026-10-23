@@ -8,22 +8,24 @@
 
 export function sanitizeUtf8(text: string): string {
   if (!text) return "";
-  return text
-    // 1. Unicode NFC Normalization (composes decomposed accents e.g. c + cedilla -> ç)
-    .normalize("NFC")
-    // 2. Remove invisible soft hyphens (\u00AD, &shy;) that break words like RESTful -> REST-ful
-    .replace(/[\u00AD\u200B\u200C\u200D\uFEFF]/g, "")
-    // 3. Normalize non-breaking and unusual unicode spaces to standard space
-    .replace(/[\u00A0\u2000-\u200A\u202F\u205F\u3000]/g, " ")
-    // 4. Normalize unicode hyphens/dashes to standard hyphen '-' (preserving em-dash '—' and en-dash '–' when intentional)
-    .replace(/[\u2010\u2011\u2012\u2212\uFE63\uFF0D]/g, "-")
-    // 5. Expand typographical ligatures so standard font encodings (like PDFKit Helvetica) don't break
-    .replace(/\uFB00/g, "ff")
-    .replace(/\uFB01/g, "fi")
-    .replace(/\uFB02/g, "fl")
-    .replace(/\uFB03/g, "ffi")
-    .replace(/\uFB04/g, "ffl")
-    .trim();
+  return (
+    text
+      // 1. Unicode NFC Normalization (composes decomposed accents e.g. c + cedilla -> ç)
+      .normalize("NFC")
+      // 2. Remove invisible soft hyphens (\u00AD, &shy;) that break words like RESTful -> REST-ful
+      .replace(/(?:[\u00AD\u200B\u200C\uFEFF]|\u200D)/g, "")
+      // 3. Normalize non-breaking and unusual unicode spaces to standard space
+      .replace(/[\u00A0\u2000-\u200A\u202F\u205F\u3000]/g, " ")
+      // 4. Normalize unicode hyphens/dashes to standard hyphen '-' (preserving em-dash '—' and en-dash '–' when intentional)
+      .replace(/[\u2010\u2011\u2012\u2212\uFE63\uFF0D]/g, "-")
+      // 5. Expand typographical ligatures so standard font encodings (like PDFKit Helvetica) don't break
+      .replace(/\uFB00/g, "ff")
+      .replace(/\uFB01/g, "fi")
+      .replace(/\uFB02/g, "fl")
+      .replace(/\uFB03/g, "ffi")
+      .replace(/\uFB04/g, "ffl")
+      .trim()
+  );
 }
 
 /**
@@ -32,17 +34,17 @@ export function sanitizeUtf8(text: string): string {
 export function sanitizeResumeUtf8<T>(data: T): T {
   if (data === null || data === undefined) return data;
   if (typeof data === "string") {
-    return sanitizeUtf8(data) as any;
+    return sanitizeUtf8(data) as unknown as T;
   }
   if (Array.isArray(data)) {
-    return data.map(item => sanitizeResumeUtf8(item)) as any;
+    return data.map((item) => sanitizeResumeUtf8(item)) as unknown as T;
   }
   if (typeof data === "object") {
-    const copy: any = {};
-    for (const [key, val] of Object.entries(data as any)) {
+    const copy = {} as Record<string, unknown>;
+    for (const [key, val] of Object.entries(data as Record<string, unknown>)) {
       copy[key] = sanitizeResumeUtf8(val);
     }
-    return copy;
+    return copy as T;
   }
   return data;
 }
@@ -66,7 +68,7 @@ export function stripJobBoilerplate(rawText: string): string {
     /(?:^|\n|\.)\s*(?:#+\s*|-+\s*|\*+\s*)?(?:quer\s+saber\s+mais\s+sobre\s+(?:a\s+gente|n[óo]s)\??)/i,
     /(?:^|\n|\.)\s*(?:#+\s*|-+\s*|\*+\s*)?(?:erro\s+ao\s+copiar\s+link)/i,
     /(?:^|\n|\.)\s*(?:#+\s*|-+\s*|\*+\s*)?(?:ir\s+para\s+candidatura)/i,
-    /(?:^|\n|\.)\s*(?:#+\s*|-+\s*|\*+\s*)?(?:compartilhe\s+ess?a\s+vaga)/i
+    /(?:^|\n|\.)\s*(?:#+\s*|-+\s*|\*+\s*)?(?:compartilhe\s+ess?a\s+vaga)/i,
   ];
 
   let earliestCutoff = text.length;
@@ -93,13 +95,17 @@ export function stripJobBoilerplate(rawText: string): string {
   // Remove individual junk lines if any remain
   return text
     .split("\n")
-    .map(line => line.trim())
-    .filter(line => {
+    .map((line) => line.trim())
+    .filter((line) => {
       const l = line.toLowerCase();
       if (!l) return false;
       if (l.includes("erro ao copiar link")) return false;
       if (l.includes("ir para candidatura")) return false;
-      if (l.includes("compartilhe essa vaga") || l.includes("compartilhe esta vaga")) return false;
+      if (
+        l.includes("compartilhe essa vaga") ||
+        l.includes("compartilhe esta vaga")
+      )
+        return false;
       return true;
     })
     .join("\n")
@@ -112,14 +118,11 @@ export function stripJobBoilerplate(rawText: string): string {
  */
 export function ungluePunctuation(text: string): string {
   if (!text) return "";
-  return text.replace(
-    /([a-zA-ZÀ-ÿ])\.([a-zA-ZÀ-ÿ]+)/g,
-    (match, p1, p2) => {
-      const lowerP2 = p2.toLowerCase();
-      if (["js", "ts", "net", "io", "ai"].includes(lowerP2)) {
-        return match; // preserve genuine tech names: Node.js, Nest.js, Vue.js, Socket.io, .NET
-      }
-      return `${p1}. ${p2}`;
+  return text.replace(/([a-zA-ZÀ-ÿ])\.([a-zA-ZÀ-ÿ]+)/g, (match, p1, p2) => {
+    const lowerP2 = p2.toLowerCase();
+    if (["js", "ts", "net", "io", "ai"].includes(lowerP2)) {
+      return match; // preserve genuine tech names: Node.js, Nest.js, Vue.js, Socket.io, .NET
     }
-  );
+    return `${p1}. ${p2}`;
+  });
 }

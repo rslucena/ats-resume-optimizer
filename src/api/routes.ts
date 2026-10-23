@@ -1,24 +1,36 @@
+import { desc, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { getDb } from "../db/index.ts";
-import { masterProfilesTable, jobsTable, tailoredResumesTable, knockoutQuestionsTable } from "../db/schema.ts";
-import { eq, desc } from "drizzle-orm";
-import { detectLanguage } from "../nlp/language.ts";
-import { extractKeywords } from "../nlp/tfidf.ts";
-import { tailorResume, deduplicateSummary } from "../optimizer/tailor.ts";
-import { tailorResumeWithAiOption } from "../services/aiTailorService.ts";
-import { auditAtsScore } from "../optimizer/scorer.ts";
-import { generateAtsPdf } from "../documents/pdf.ts";
+import {
+  jobsTable,
+  knockoutQuestionsTable,
+  masterProfilesTable,
+  tailoredResumesTable,
+} from "../db/schema.ts";
 import { generateAtsDocx } from "../documents/docx.ts";
-import { generateAtsPlainText } from "../documents/txt.ts";
-import { generateAtsMarkdown } from "../documents/markdown.ts";
 import { generateJsonResume } from "../documents/jsonResume.ts";
-import { extractTextFromPdf, parseMasterProfileText } from "../services/cvExtractor.ts";
+import { generateAtsMarkdown } from "../documents/markdown.ts";
+import { generateAtsPdf } from "../documents/pdf.ts";
+import { generateAtsPlainText } from "../documents/txt.ts";
+import { detectLanguage, type SupportedLanguage } from "../nlp/language.ts";
+import { extractKeywords } from "../nlp/tfidf.ts";
+import { auditAtsScore } from "../optimizer/scorer.ts";
+import { deduplicateSummary, tailorResume } from "../optimizer/tailor.ts";
+import { tailorResumeWithAiOption } from "../services/aiTailorService.ts";
+import {
+  extractTextFromPdf,
+  parseMasterProfileText,
+} from "../services/cvExtractor.ts";
 import { scrapeJobUrl } from "../services/jobScraper.ts";
-import { generateKnockoutAnswer, generateKnockoutAnswerWithMeta } from "../services/knockoutAnswerService.ts";
-import { sanitizeUtf8, sanitizeResumeUtf8, stripJobBoilerplate } from "../utils/encoding.ts";
+import { generateKnockoutAnswerWithMeta } from "../services/knockoutAnswerService.ts";
+import type { ExperienceItem, ResumeData } from "../types/resume.ts";
+import {
+  sanitizeResumeUtf8,
+  sanitizeUtf8,
+  stripJobBoilerplate,
+} from "../utils/encoding.ts";
 import { getEnvKey } from "../utils/env.ts";
-import type { ResumeData } from "../types/resume.ts";
 
 export function createApp() {
   const app = new Hono();
@@ -26,15 +38,19 @@ export function createApp() {
   app.use("*", cors());
 
   // Healthcheck & System Config
-  app.get("/api/health", (c) => c.json({
-    status: "ok",
-    hasGeminiKey: !!getEnvKey("GEMINI_API_KEY"),
-    timestamp: Date.now()
-  }));
+  app.get("/api/health", (c) =>
+    c.json({
+      status: "ok",
+      hasGeminiKey: !!getEnvKey("GEMINI_API_KEY"),
+      timestamp: Date.now(),
+    }),
+  );
 
-  app.get("/api/config", (c) => c.json({
-    hasGeminiKey: !!getEnvKey("GEMINI_API_KEY")
-  }));
+  app.get("/api/config", (c) =>
+    c.json({
+      hasGeminiKey: !!getEnvKey("GEMINI_API_KEY"),
+    }),
+  );
 
   // 1. Master Profile GET
   app.get("/api/profile", async (c) => {
@@ -59,7 +75,7 @@ export function createApp() {
       experiences: JSON.parse(p.experiences || "[]"),
       education: JSON.parse(p.education || "[]"),
       certifications: JSON.parse(p.certifications || "[]"),
-      rawText: p.rawText || undefined
+      rawText: p.rawText || undefined,
     };
 
     return c.json({ profile: structured, id: p.id });
@@ -88,16 +104,24 @@ export function createApp() {
       experiences: JSON.stringify(body.experiences || []),
       education: JSON.stringify(body.education || []),
       certifications: JSON.stringify(body.certifications || []),
-      rawText: body.rawText !== undefined ? body.rawText : (existing.length > 0 ? existing[0].rawText : null),
-      updatedAt: Date.now()
+      rawText:
+        body.rawText !== undefined
+          ? body.rawText
+          : existing.length > 0
+            ? existing[0].rawText
+            : null,
+      updatedAt: Date.now(),
     };
 
     if (existing.length > 0) {
-      await db.update(masterProfilesTable).set(dataToSave).where(eq(masterProfilesTable.id, profileId));
+      await db
+        .update(masterProfilesTable)
+        .set(dataToSave)
+        .where(eq(masterProfilesTable.id, profileId));
     } else {
       await db.insert(masterProfilesTable).values({
         ...dataToSave,
-        createdAt: Date.now()
+        createdAt: Date.now(),
       });
     }
 
@@ -140,15 +164,18 @@ export function createApp() {
       education: JSON.stringify(parsedProfile.education),
       certifications: JSON.stringify(parsedProfile.certifications || []),
       rawText,
-      updatedAt: Date.now()
+      updatedAt: Date.now(),
     };
 
     if (existing.length > 0) {
-      await db.update(masterProfilesTable).set(dataToSave).where(eq(masterProfilesTable.id, profileId));
+      await db
+        .update(masterProfilesTable)
+        .set(dataToSave)
+        .where(eq(masterProfilesTable.id, profileId));
     } else {
       await db.insert(masterProfilesTable).values({
         ...dataToSave,
-        createdAt: Date.now()
+        createdAt: Date.now(),
       });
     }
 
@@ -160,13 +187,22 @@ export function createApp() {
     const db = getDb();
     const existing = await db.select().from(masterProfilesTable).limit(1);
     if (existing.length === 0) {
-      return c.json({ error: "Nenhum Master CV cadastrado para reprocessar" }, 404);
+      return c.json(
+        { error: "Nenhum Master CV cadastrado para reprocessar" },
+        404,
+      );
     }
 
     const current = existing[0];
     const rawText = current.rawText;
     if (!rawText || rawText.trim().length === 0) {
-      return c.json({ error: "Texto original do CV não encontrado no banco de dados. Faça upload do PDF novamente." }, 400);
+      return c.json(
+        {
+          error:
+            "Texto original do CV não encontrado no banco de dados. Faça upload do PDF novamente.",
+        },
+        400,
+      );
     }
 
     const parsedProfile = parseMasterProfileText(rawText);
@@ -186,10 +222,13 @@ export function createApp() {
       education: JSON.stringify(parsedProfile.education),
       certifications: JSON.stringify(parsedProfile.certifications || []),
       rawText,
-      updatedAt: Date.now()
+      updatedAt: Date.now(),
     };
 
-    await db.update(masterProfilesTable).set(dataToSave).where(eq(masterProfilesTable.id, current.id));
+    await db
+      .update(masterProfilesTable)
+      .set(dataToSave)
+      .where(eq(masterProfilesTable.id, current.id));
 
     return c.json({ success: true, profile: parsedProfile });
   });
@@ -197,7 +236,10 @@ export function createApp() {
   // 4. Jobs List GET
   app.get("/api/jobs", async (c) => {
     const db = getDb();
-    const jobs = await db.select().from(jobsTable).orderBy(desc(jobsTable.createdAt));
+    const jobs = await db
+      .select()
+      .from(jobsTable)
+      .orderBy(desc(jobsTable.createdAt));
 
     const enriched = await Promise.all(
       jobs.map(async (job) => {
@@ -210,15 +252,18 @@ export function createApp() {
         return {
           ...job,
           topKeywords: JSON.parse(job.topKeywords || "[]"),
-          tailored: tailored.length > 0 ? {
-            id: tailored[0].id,
-            scoreBefore: tailored[0].scoreBefore,
-            scoreAfter: tailored[0].scoreAfter,
-            tailoredTitle: tailored[0].tailoredTitle,
-            updatedAt: tailored[0].updatedAt
-          } : null
+          tailored:
+            tailored.length > 0
+              ? {
+                  id: tailored[0].id,
+                  scoreBefore: tailored[0].scoreBefore,
+                  scoreAfter: tailored[0].scoreAfter,
+                  tailoredTitle: tailored[0].tailoredTitle,
+                  updatedAt: tailored[0].updatedAt,
+                }
+              : null,
         };
-      })
+      }),
     );
 
     return c.json({ jobs: enriched });
@@ -236,7 +281,10 @@ export function createApp() {
     }>();
 
     if (!body.title || !body.rawDescription) {
-      return c.json({ error: "Título e descrição da vaga são obrigatórios" }, 400);
+      return c.json(
+        { error: "Título e descrição da vaga são obrigatórios" },
+        400,
+      );
     }
 
     const cleanDesc = stripJobBoilerplate(sanitizeUtf8(body.rawDescription));
@@ -256,19 +304,22 @@ export function createApp() {
       topKeywords: JSON.stringify(keywords),
       notes: body.notes ? sanitizeUtf8(body.notes) : null,
       createdAt: Date.now(),
-      updatedAt: Date.now()
+      updatedAt: Date.now(),
     };
 
     const db = getDb();
     await db.insert(jobsTable).values(newJob);
 
-    return c.json({
-      success: true,
-      job: {
-        ...newJob,
-        topKeywords: keywords
-      }
-    }, 201);
+    return c.json(
+      {
+        success: true,
+        job: {
+          ...newJob,
+          topKeywords: keywords,
+        },
+      },
+      201,
+    );
   });
 
   // 6. Job Update PUT
@@ -277,7 +328,11 @@ export function createApp() {
     const body = await c.req.json<Partial<typeof jobsTable.$inferInsert>>();
 
     const db = getDb();
-    const existing = await db.select().from(jobsTable).where(eq(jobsTable.id, id)).limit(1);
+    const existing = await db
+      .select()
+      .from(jobsTable)
+      .where(eq(jobsTable.id, id))
+      .limit(1);
     if (existing.length === 0) {
       return c.json({ error: "Vaga não encontrada" }, 404);
     }
@@ -286,9 +341,14 @@ export function createApp() {
     let language = existing[0].language;
 
     if (body.rawDescription !== undefined) {
-      const cleanDesc = stripJobBoilerplate(sanitizeUtf8(body.rawDescription || ""));
+      const cleanDesc = stripJobBoilerplate(
+        sanitizeUtf8(body.rawDescription || ""),
+      );
       language = detectLanguage(cleanDesc);
-      const keywords = extractKeywords(cleanDesc, { lang: language as any, topN: 15 });
+      const keywords = extractKeywords(cleanDesc, {
+        lang: language,
+        topN: 15,
+      });
       topKeywordsStr = JSON.stringify(keywords);
       body.rawDescription = cleanDesc;
     }
@@ -296,12 +356,15 @@ export function createApp() {
     if (body.title) body.title = sanitizeUtf8(body.title);
     if (body.company) body.company = sanitizeUtf8(body.company);
 
-    await db.update(jobsTable).set({
-      ...body,
-      language,
-      topKeywords: topKeywordsStr,
-      updatedAt: Date.now()
-    }).where(eq(jobsTable.id, id));
+    await db
+      .update(jobsTable)
+      .set({
+        ...body,
+        language,
+        topKeywords: topKeywordsStr,
+        updatedAt: Date.now(),
+      })
+      .where(eq(jobsTable.id, id));
 
     return c.json({ success: true });
   });
@@ -310,8 +373,12 @@ export function createApp() {
   app.delete("/api/jobs/:id", async (c) => {
     const id = c.req.param("id");
     const db = getDb();
-    await db.delete(knockoutQuestionsTable).where(eq(knockoutQuestionsTable.jobId, id));
-    await db.delete(tailoredResumesTable).where(eq(tailoredResumesTable.jobId, id));
+    await db
+      .delete(knockoutQuestionsTable)
+      .where(eq(knockoutQuestionsTable.jobId, id));
+    await db
+      .delete(tailoredResumesTable)
+      .where(eq(tailoredResumesTable.jobId, id));
     await db.delete(jobsTable).where(eq(jobsTable.id, id));
     return c.json({ success: true });
   });
@@ -333,13 +400,22 @@ export function createApp() {
         company: scraped.company,
         description: scraped.description,
         language: lang,
-        keywords
+        keywords,
       });
-    } catch (err: any) {
-      return c.json({
-        error: err.message || "Erro ao raspar URL. Por favor, cole a descrição manualmente.",
-        fallbackNeeded: true
-      }, 422);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Erro ao raspar URL. Por favor, cole a descrição manualmente.";
+      return c.json(
+        {
+          error:
+            message ||
+            "Erro ao raspar URL. Por favor, cole a descrição manualmente.",
+          fallbackNeeded: true,
+        },
+        422,
+      );
     }
   });
 
@@ -349,14 +425,21 @@ export function createApp() {
     const db = getDb();
 
     // Fetch Job
-    const jobs = await db.select().from(jobsTable).where(eq(jobsTable.id, id)).limit(1);
+    const jobs = await db
+      .select()
+      .from(jobsTable)
+      .where(eq(jobsTable.id, id))
+      .limit(1);
     if (jobs.length === 0) return c.json({ error: "Vaga não encontrada" }, 404);
     const job = jobs[0];
 
     // Fetch Master Profile
     const profiles = await db.select().from(masterProfilesTable).limit(1);
     if (profiles.length === 0) {
-      return c.json({ error: "Cadastre seu currículo base antes de personalizar." }, 400);
+      return c.json(
+        { error: "Cadastre seu currículo base antes de personalizar." },
+        400,
+      );
     }
     const p = profiles[0];
 
@@ -374,7 +457,7 @@ export function createApp() {
       experiences: JSON.parse(p.experiences || "[]"),
       education: JSON.parse(p.education || "[]"),
       certifications: JSON.parse(p.certifications || "[]"),
-      rawText: p.rawText || undefined
+      rawText: p.rawText || undefined,
     };
 
     const keywords = JSON.parse(job.topKeywords || "[]");
@@ -388,13 +471,17 @@ export function createApp() {
     } catch {}
 
     // Run optimization (Gemini AI if useAi is true and available, else local deterministic 7-layer engine)
-    const tailored = await tailorResumeWithAiOption(masterResume, {
-      title: job.title,
-      company: job.company,
-      rawDescription: job.rawDescription,
-      keywords,
-      language: job.language as any
-    }, useAi);
+    const tailored = await tailorResumeWithAiOption(
+      masterResume,
+      {
+        title: job.title,
+        company: job.company,
+        rawDescription: job.rawDescription,
+        keywords,
+        language: (job.language as SupportedLanguage) || "pt",
+      },
+      useAi,
+    );
 
     // Save in DB
     const existingTailored = await db
@@ -404,7 +491,10 @@ export function createApp() {
       .limit(1);
 
     const dataToSave = {
-      id: existingTailored.length > 0 ? existingTailored[0].id : `tailored-${Date.now()}`,
+      id:
+        existingTailored.length > 0
+          ? existingTailored[0].id
+          : `tailored-${Date.now()}`,
       jobId: job.id,
       tailoredTitle: tailored.tailoredResume.headline,
       tailoredSummary: tailored.tailoredResume.summary,
@@ -415,15 +505,18 @@ export function createApp() {
       scoreAfter: tailored.scoreAfter,
       keywordsAchieved: JSON.stringify(tailored.auditAfter.matchedKeywords),
       keywordsMissing: JSON.stringify(tailored.auditAfter.missingKeywords),
-      updatedAt: Date.now()
+      updatedAt: Date.now(),
     };
 
     if (existingTailored.length > 0) {
-      await db.update(tailoredResumesTable).set(dataToSave).where(eq(tailoredResumesTable.id, dataToSave.id));
+      await db
+        .update(tailoredResumesTable)
+        .set(dataToSave)
+        .where(eq(tailoredResumesTable.id, dataToSave.id));
     } else {
       await db.insert(tailoredResumesTable).values({
         ...dataToSave,
-        createdAt: Date.now()
+        createdAt: Date.now(),
       });
     }
 
@@ -438,34 +531,53 @@ export function createApp() {
     }>();
 
     const db = getDb();
-    const jobs = await db.select().from(jobsTable).where(eq(jobsTable.id, id)).limit(1);
+    const jobs = await db
+      .select()
+      .from(jobsTable)
+      .where(eq(jobsTable.id, id))
+      .limit(1);
     if (jobs.length === 0) return c.json({ error: "Vaga não encontrada" }, 404);
     const job = jobs[0];
 
     const sanitizedResume = sanitizeResumeUtf8({
       ...body.tailoredResume,
-      summary: deduplicateSummary(body.tailoredResume.summary || "")
+      summary: deduplicateSummary(body.tailoredResume.summary || ""),
     });
 
     const keywords = JSON.parse(job.topKeywords || "[]");
-    const audit = auditAtsScore(sanitizedResume, keywords, job.language as any);
+    const audit = auditAtsScore(
+      sanitizedResume,
+      keywords,
+      (job.language as SupportedLanguage) || "pt",
+    );
 
-    const existing = await db.select().from(tailoredResumesTable).where(eq(tailoredResumesTable.jobId, id)).limit(1);
+    const existing = await db
+      .select()
+      .from(tailoredResumesTable)
+      .where(eq(tailoredResumesTable.jobId, id))
+      .limit(1);
     if (existing.length > 0) {
-      await db.update(tailoredResumesTable).set({
-        tailoredTitle: sanitizedResume.headline,
-        tailoredSummary: sanitizedResume.summary,
-        tailoredSkills: JSON.stringify(sanitizedResume.skills),
-        tailoredExperiences: JSON.stringify(sanitizedResume.experiences),
-        tailoredEducation: JSON.stringify(sanitizedResume.education),
-        scoreAfter: audit.overallScore,
-        keywordsAchieved: JSON.stringify(audit.matchedKeywords),
-        keywordsMissing: JSON.stringify(audit.missingKeywords),
-        updatedAt: Date.now()
-      }).where(eq(tailoredResumesTable.id, existing[0].id));
+      await db
+        .update(tailoredResumesTable)
+        .set({
+          tailoredTitle: sanitizedResume.headline,
+          tailoredSummary: sanitizedResume.summary,
+          tailoredSkills: JSON.stringify(sanitizedResume.skills),
+          tailoredExperiences: JSON.stringify(sanitizedResume.experiences),
+          tailoredEducation: JSON.stringify(sanitizedResume.education),
+          scoreAfter: audit.overallScore,
+          keywordsAchieved: JSON.stringify(audit.matchedKeywords),
+          keywordsMissing: JSON.stringify(audit.missingKeywords),
+          updatedAt: Date.now(),
+        })
+        .where(eq(tailoredResumesTable.id, existing[0].id));
     }
 
-    return c.json({ success: true, scoreAfter: audit.overallScore, auditAfter: audit });
+    return c.json({
+      success: true,
+      scoreAfter: audit.overallScore,
+      auditAfter: audit,
+    });
   });
 
   // 11. Knockout Questions GET
@@ -484,7 +596,7 @@ export function createApp() {
   app.post("/api/jobs/:id/knockout", async (c) => {
     const jobId = c.req.param("id");
     const body = await c.req.json<{ questionText: string }>();
-    if (!body.questionText || !body.questionText.trim()) {
+    if (!body.questionText?.trim()) {
       return c.json({ error: "O texto da pergunta é obrigatório" }, 400);
     }
     const db = getDb();
@@ -497,7 +609,7 @@ export function createApp() {
       aiSuggestedAnswer: null,
       status: "Pendente",
       createdAt: Date.now(),
-      updatedAt: Date.now()
+      updatedAt: Date.now(),
     };
     await db.insert(knockoutQuestionsTable).values(newRow);
     return c.json({ success: true, question: newRow }, 201);
@@ -506,7 +618,8 @@ export function createApp() {
   // 13. Knockout Questions PUT
   app.put("/api/jobs/:id/knockout/:qid", async (c) => {
     const qid = c.req.param("qid");
-    const body = await c.req.json<Partial<typeof knockoutQuestionsTable.$inferInsert>>();
+    const body =
+      await c.req.json<Partial<typeof knockoutQuestionsTable.$inferInsert>>();
     const db = getDb();
     const existing = await db
       .select()
@@ -520,7 +633,7 @@ export function createApp() {
       .update(knockoutQuestionsTable)
       .set({
         ...body,
-        updatedAt: Date.now()
+        updatedAt: Date.now(),
       })
       .where(eq(knockoutQuestionsTable.id, qid));
     const updated = await db
@@ -535,7 +648,9 @@ export function createApp() {
   app.delete("/api/jobs/:id/knockout/:qid", async (c) => {
     const qid = c.req.param("qid");
     const db = getDb();
-    await db.delete(knockoutQuestionsTable).where(eq(knockoutQuestionsTable.id, qid));
+    await db
+      .delete(knockoutQuestionsTable)
+      .where(eq(knockoutQuestionsTable.id, qid));
     return c.json({ success: true });
   });
 
@@ -550,15 +665,22 @@ export function createApp() {
       .from(knockoutQuestionsTable)
       .where(eq(knockoutQuestionsTable.id, qid))
       .limit(1);
-    if (qList.length === 0) return c.json({ error: "Pergunta não encontrada" }, 404);
+    if (qList.length === 0)
+      return c.json({ error: "Pergunta não encontrada" }, 404);
     const question = qList[0];
 
-    const jList = await db.select().from(jobsTable).where(eq(jobsTable.id, jobId)).limit(1);
-    if (jList.length === 0) return c.json({ error: "Vaga não encontrada" }, 404);
+    const jList = await db
+      .select()
+      .from(jobsTable)
+      .where(eq(jobsTable.id, jobId))
+      .limit(1);
+    if (jList.length === 0)
+      return c.json({ error: "Vaga não encontrada" }, 404);
     const job = jList[0];
 
     const pList = await db.select().from(masterProfilesTable).limit(1);
-    if (pList.length === 0) return c.json({ error: "Master CV não encontrado" }, 400);
+    if (pList.length === 0)
+      return c.json({ error: "Master CV não encontrado" }, 400);
     const p = pList[0];
 
     const masterProfile: ResumeData = {
@@ -574,7 +696,7 @@ export function createApp() {
       skills: JSON.parse(p.skills || "[]"),
       experiences: JSON.parse(p.experiences || "[]"),
       education: JSON.parse(p.education || "[]"),
-      certifications: JSON.parse(p.certifications || "[]")
+      certifications: JSON.parse(p.certifications || "[]"),
     };
 
     const keywords = JSON.parse(job.topKeywords || "[]");
@@ -586,9 +708,9 @@ export function createApp() {
         company: job.company,
         rawDescription: job.rawDescription,
         topKeywords: keywords,
-        language: job.language
+        language: job.language,
       },
-      profile: masterProfile
+      profile: masterProfile,
     });
 
     const finalAnswer = genResult.answer;
@@ -598,7 +720,7 @@ export function createApp() {
       .set({
         aiSuggestedAnswer: finalAnswer,
         candidateAnswer: finalAnswer,
-        updatedAt: Date.now()
+        updatedAt: Date.now(),
       })
       .where(eq(knockoutQuestionsTable.id, qid));
 
@@ -608,7 +730,11 @@ export function createApp() {
       .where(eq(knockoutQuestionsTable.id, qid))
       .limit(1);
 
-    return c.json({ success: true, question: updated[0], engineSource: genResult.source });
+    return c.json({
+      success: true,
+      question: updated[0],
+      engineSource: genResult.source,
+    });
   });
 
   // Helper to build robust RFC 5987 UTF-8 Content-Disposition
@@ -623,9 +749,17 @@ export function createApp() {
   }
 
   // Helper to resolve tailored resume data cleanly
-  async function resolveResumeForExport(jobId: string): Promise<{ resume: ResumeData; job: any; profile: any } | null> {
+  async function resolveResumeForExport(jobId: string): Promise<{
+    resume: ResumeData;
+    job: typeof jobsTable.$inferSelect;
+    profile: typeof masterProfilesTable.$inferSelect;
+  } | null> {
     const db = getDb();
-    const jobs = await db.select().from(jobsTable).where(eq(jobsTable.id, jobId)).limit(1);
+    const jobs = await db
+      .select()
+      .from(jobsTable)
+      .where(eq(jobsTable.id, jobId))
+      .limit(1);
     if (jobs.length === 0) return null;
     const job = jobs[0];
 
@@ -633,7 +767,11 @@ export function createApp() {
     if (profiles.length === 0) return null;
     const p = profiles[0];
 
-    const tailoredList = await db.select().from(tailoredResumesTable).where(eq(tailoredResumesTable.jobId, jobId)).limit(1);
+    const tailoredList = await db
+      .select()
+      .from(tailoredResumesTable)
+      .where(eq(tailoredResumesTable.jobId, jobId))
+      .limit(1);
 
     let resumeToRender: ResumeData;
     if (tailoredList.length > 0) {
@@ -642,20 +780,23 @@ export function createApp() {
         (t.tailoredSummary || "")
           .replace(/\n*Core Stack & Especialidades:.*$/is, "")
           .replace(/\n*Core Stack & Specialties:.*$/is, "")
-          .trim()
+          .trim(),
       );
 
-      const rawExps = JSON.parse(t.tailoredExperiences || "[]");
-      const cleanExperiences = rawExps.map((exp: any) => ({
+      const rawExps = JSON.parse(
+        t.tailoredExperiences || "[]",
+      ) as ExperienceItem[];
+      const cleanExperiences = rawExps.map((exp: ExperienceItem) => ({
         ...exp,
         description: (exp.description || "")
           .split("\n")
-          .filter((l: string) => 
-            !l.toLowerCase().includes("stack técnica & práticas") &&
-            !l.toLowerCase().includes("tecnologias e práticas aplicadas") &&
-            !l.toLowerCase().includes("core stack &")
+          .filter(
+            (l: string) =>
+              !l.toLowerCase().includes("stack técnica & práticas") &&
+              !l.toLowerCase().includes("tecnologias e práticas aplicadas") &&
+              !l.toLowerCase().includes("core stack &"),
           )
-          .join("\n")
+          .join("\n"),
       }));
 
       resumeToRender = sanitizeResumeUtf8({
@@ -671,7 +812,7 @@ export function createApp() {
         skills: JSON.parse(t.tailoredSkills),
         experiences: cleanExperiences,
         education: JSON.parse(t.tailoredEducation),
-        certifications: JSON.parse(p.certifications || "[]")
+        certifications: JSON.parse(p.certifications || "[]"),
       });
     } else {
       const keywords = JSON.parse(job.topKeywords || "[]");
@@ -688,14 +829,14 @@ export function createApp() {
         skills: JSON.parse(p.skills || "[]"),
         experiences: JSON.parse(p.experiences || "[]"),
         education: JSON.parse(p.education || "[]"),
-        certifications: JSON.parse(p.certifications || "[]")
+        certifications: JSON.parse(p.certifications || "[]"),
       };
       const tailoredResult = await tailorResume(baseResume, {
         title: job.title,
         company: job.company,
         rawDescription: job.rawDescription,
         keywords,
-        language: job.language as any
+        language: (job.language as SupportedLanguage) || "pt",
       });
       resumeToRender = sanitizeResumeUtf8(tailoredResult.tailoredResume);
     }
@@ -714,20 +855,23 @@ export function createApp() {
     const metadata = {
       title: job.title,
       author: profile.fullName,
-      keywords: keywords.map((k: any) => k.term),
+      keywords: keywords.map((k: { term: string }) => k.term),
       subject: `Currículo otimizado para ${job.title} na ${job.company}`,
       creator: "Currículo",
-      category: "Currículo"
+      category: "Currículo",
     };
 
     const docxBuffer = await generateAtsDocx(resume, metadata);
     const sanitizedName = sanitizeUtf8(profile.fullName).replace(/\s+/g, "_");
 
-    return new Response(docxBuffer as any, {
+    return new Response(docxBuffer as unknown as BodyInit, {
       headers: {
-        "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "Content-Disposition": buildContentDisposition(`${sanitizedName}_Curriculo_ATS.docx`)
-      }
+        "Content-Type":
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "Content-Disposition": buildContentDisposition(
+          `${sanitizedName}_Curriculo_ATS.docx`,
+        ),
+      },
     });
   });
 
@@ -742,20 +886,22 @@ export function createApp() {
     const metadata = {
       title: job.title,
       author: profile.fullName,
-      keywords: keywords.map((k: any) => k.term),
+      keywords: keywords.map((k: { term: string }) => k.term),
       subject: `Currículo otimizado para ${job.title} na ${job.company}`,
       creator: "Currículo",
-      category: "Currículo"
+      category: "Currículo",
     };
 
     const pdfBytes = await generateAtsPdf(resume, metadata);
     const sanitizedName = sanitizeUtf8(profile.fullName).replace(/\s+/g, "_");
 
-    return new Response(pdfBytes as any, {
+    return new Response(pdfBytes as unknown as BodyInit, {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": buildContentDisposition(`${sanitizedName}_Curriculo_ATS.pdf`)
-      }
+        "Content-Disposition": buildContentDisposition(
+          `${sanitizedName}_Curriculo_ATS.pdf`,
+        ),
+      },
     });
   });
 
@@ -772,8 +918,10 @@ export function createApp() {
     return new Response(txtContent, {
       headers: {
         "Content-Type": "text/plain; charset=utf-8",
-        "Content-Disposition": buildContentDisposition(`${sanitizedName}_Curriculo_ATS.txt`)
-      }
+        "Content-Disposition": buildContentDisposition(
+          `${sanitizedName}_Curriculo_ATS.txt`,
+        ),
+      },
     });
   });
 
@@ -790,8 +938,10 @@ export function createApp() {
     return new Response(mdContent, {
       headers: {
         "Content-Type": "text/markdown; charset=utf-8",
-        "Content-Disposition": buildContentDisposition(`${sanitizedName}_Curriculo_ATS.md`)
-      }
+        "Content-Disposition": buildContentDisposition(
+          `${sanitizedName}_Curriculo_ATS.md`,
+        ),
+      },
     });
   });
 
@@ -808,8 +958,10 @@ export function createApp() {
     return new Response(JSON.stringify(jsonResumeObj, null, 2), {
       headers: {
         "Content-Type": "application/json; charset=utf-8",
-        "Content-Disposition": buildContentDisposition(`${sanitizedName}_Curriculo_ATS.json`)
-      }
+        "Content-Disposition": buildContentDisposition(
+          `${sanitizedName}_Curriculo_ATS.json`,
+        ),
+      },
     });
   });
 

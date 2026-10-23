@@ -1,19 +1,19 @@
-import type { ResumeData, AtsAuditResult } from "../types/resume.ts";
+import { isExcludedSkillTerm } from "../nlp/tfidf.ts";
+import { auditAtsScore } from "../optimizer/scorer.ts";
 import type { JobInput, TailoredResumeResult } from "../optimizer/tailor.ts";
 import {
-  tailorResume,
   ACRONYM_MAP,
-  isProhibitedSoftSkill,
-  formatKeyword,
+  deduplicateSummary,
   enhanceEducation,
+  formatKeyword,
+  isProhibitedSoftSkill,
+  tailorResume,
   weaveKeywordsIntoExperiences,
-  deduplicateSummary
 } from "../optimizer/tailor.ts";
-import { isInternalNlpTerm, isExcludedSkillTerm } from "../nlp/tfidf.ts";
-import { sanitizeLocation } from "./cvExtractor.ts";
-import { auditAtsScore } from "../optimizer/scorer.ts";
-import { getEnvKey } from "../utils/env.ts";
+import type { ResumeData } from "../types/resume.ts";
 import { sanitizeResumeUtf8 } from "../utils/encoding.ts";
+import { getEnvKey } from "../utils/env.ts";
+import { sanitizeLocation } from "./cvExtractor.ts";
 
 export interface AiTailoredResumeResult extends TailoredResumeResult {
   engine: "gemini" | "local";
@@ -40,7 +40,7 @@ interface GeminiTailorResponse {
 export async function tailorResumeWithAiOption(
   masterResume: ResumeData,
   job: JobInput,
-  useAi: boolean = false
+  useAi: boolean = false,
 ): Promise<AiTailoredResumeResult> {
   if (!useAi) {
     const local = await tailorResume(masterResume, job);
@@ -49,7 +49,9 @@ export async function tailorResumeWithAiOption(
 
   const apiKey = getEnvKey("GEMINI_API_KEY");
   if (!apiKey) {
-    console.warn("[AI Tailor] GEMINI_API_KEY ausente no .env. Recorrendo ao motor determinístico local.");
+    console.warn(
+      "[AI Tailor] GEMINI_API_KEY ausente no .env. Recorrendo ao motor determinístico local.",
+    );
     const local = await tailorResume(masterResume, job);
     return { ...local, engine: "local" };
   }
@@ -60,7 +62,10 @@ export async function tailorResumeWithAiOption(
       return { ...aiResult, engine: "gemini" };
     }
   } catch (err) {
-    console.warn("[AI Tailor] Falha na chamada da API Gemini. Recorrendo ao motor determinístico local:", err);
+    console.warn(
+      "[AI Tailor] Falha na chamada da API Gemini. Recorrendo ao motor determinístico local:",
+      err,
+    );
   }
 
   const fallback = await tailorResume(masterResume, job);
@@ -74,7 +79,7 @@ export async function tailorResumeWithAiOption(
 export async function callGeminiTailor(
   master: ResumeData,
   job: JobInput,
-  apiKey: string
+  apiKey: string,
 ): Promise<TailoredResumeResult | null> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 18000); // 18s abort timeout
@@ -93,14 +98,17 @@ export async function callGeminiTailor(
         generationConfig: {
           temperature: 0.2,
           maxOutputTokens: 2500,
-          responseMimeType: "application/json"
-        }
-      })
+          responseMimeType: "application/json",
+        },
+      }),
     });
 
     if (!res.ok) {
       const errText = await res.text();
-      console.warn(`[AI Tailor] Gemini retornou status ${res.status}:`, errText);
+      console.warn(
+        `[AI Tailor] Gemini retornou status ${res.status}:`,
+        errText,
+      );
       return null;
     }
 
@@ -109,8 +117,11 @@ export async function callGeminiTailor(
     if (!rawText) return null;
 
     const parsedJson = extractJsonFromText(rawText) as GeminiTailorResponse;
-    if (!parsedJson || !parsedJson.summary || !Array.isArray(parsedJson.experiences)) {
-      console.warn("[AI Tailor] Estrutura JSON retornada pelo Gemini é inválida:", rawText);
+    if (!parsedJson?.summary || !Array.isArray(parsedJson.experiences)) {
+      console.warn(
+        "[AI Tailor] Estrutura JSON retornada pelo Gemini é inválida:",
+        rawText,
+      );
       return null;
     }
 
@@ -129,21 +140,25 @@ export async function callGeminiTailor(
 export function buildGeminiTailorPrompt(
   master: ResumeData,
   job: JobInput,
-  lang: "pt" | "en"
+  lang: "pt" | "en",
 ): string {
-  const keywordsList = job.keywords.map(k => k.term).slice(0, 15);
-  const masterJson = JSON.stringify({
-    headline: master.headline,
-    summary: master.summary,
-    skills: master.skills,
-    experiences: master.experiences.map(e => ({
-      company: e.company,
-      role: e.role,
-      startDate: e.startDate,
-      endDate: e.endDate,
-      description: e.description
-    }))
-  }, null, 2);
+  const keywordsList = job.keywords.map((k) => k.term).slice(0, 15);
+  const masterJson = JSON.stringify(
+    {
+      headline: master.headline,
+      summary: master.summary,
+      skills: master.skills,
+      experiences: master.experiences.map((e) => ({
+        company: e.company,
+        role: e.role,
+        startDate: e.startDate,
+        endDate: e.endDate,
+        description: e.description,
+      })),
+    },
+    null,
+    2,
+  );
 
   if (lang === "en") {
     return `You are a Principal Software Engineer and ATS (Applicant Tracking Systems) Resume Optimization Specialist.
@@ -244,29 +259,34 @@ export function mergeGeminiOutputWithMaster(
   master: ResumeData,
   job: JobInput,
   aiData: GeminiTailorResponse,
-  lang: "pt" | "en"
+  lang: "pt" | "en",
 ): TailoredResumeResult {
   const auditBefore = auditAtsScore(master, job.keywords, lang);
 
   // 1. Headline
-  const tailoredHeadline = (aiData.headline && aiData.headline.trim().length > 5)
-    ? aiData.headline.trim()
-    : `${job.title} | ${master.skills.slice(0, 3).join(" • ")}`;
+  const tailoredHeadline =
+    aiData.headline && aiData.headline.trim().length > 5
+      ? aiData.headline.trim()
+      : `${job.title} | ${master.skills.slice(0, 3).join(" • ")}`;
 
   // 2. Summary
-  let rawTailoredSummary = (aiData.summary && aiData.summary.trim().length > 30)
-    ? aiData.summary.trim()
-    : master.summary;
+  let rawTailoredSummary =
+    aiData.summary && aiData.summary.trim().length > 30
+      ? aiData.summary.trim()
+      : master.summary;
 
-  const expDurationRegex = /(\d+\s*(anos|ano|years|year))|(\d+\+?\s*(meses|months))/i;
+  const expDurationRegex =
+    /(\d+\s*(anos|ano|years|year))|(\d+\+?\s*(meses|months))/i;
   if (!expDurationRegex.test(rawTailoredSummary)) {
-    const experienceYearsMatch = master.summary.match(/(\d+)\s*(anos|years)/i) || 
-                                 master.rawText?.match(/(\d+)\s*(anos|years)/i);
+    const experienceYearsMatch =
+      master.summary.match(/(\d+)\s*(anos|years)/i) ||
+      master.rawText?.match(/(\d+)\s*(anos|years)/i);
     if (experienceYearsMatch) {
       const years = parseInt(experienceYearsMatch[1], 10);
-      const prefix = lang === "pt"
-        ? `${job.title} com ${years} anos de experiência sólida.`
-        : `${job.title} with ${years} years of solid experience.`;
+      const prefix =
+        lang === "pt"
+          ? `${job.title} com ${years} anos de experiência sólida.`
+          : `${job.title} with ${years} years of solid experience.`;
       rawTailoredSummary = `${prefix} ${rawTailoredSummary}`;
     }
   }
@@ -274,26 +294,39 @@ export function mergeGeminiOutputWithMaster(
 
   // 3. Experiences: Map AI descriptions safely back to master experiences and weave primary keywords
   const topKeywordsList = job.keywords
-    .filter(k => !isExcludedSkillTerm(k.term))
+    .filter((k) => !isExcludedSkillTerm(k.term))
     .slice(0, 15)
-    .map(k => k.term);
+    .map((k) => k.term);
   const primaryKeywords = topKeywordsList.slice(0, 4);
 
   const tailoredExperiences = master.experiences.map((origExp, idx) => {
     const aiExp = aiData.experiences?.[idx];
-    const desc = (aiExp && aiExp.description && aiExp.description.trim().length > 20)
-      ? aiExp.description.trim()
-      : origExp.description;
+    const desc =
+      aiExp?.description && aiExp.description.trim().length > 20
+        ? aiExp.description.trim()
+        : origExp.description;
 
-    const rawBullets = desc.split("\n").map(l => l.replace(/^[-•*]\s*/, "").trim()).filter(Boolean);
-    const wovenBullets = (idx === 0)
-      ? weaveKeywordsIntoExperiences(rawBullets, primaryKeywords, job.title, lang)
-      : rawBullets;
+    const rawBullets = desc
+      .split("\n")
+      .map((l) => l.replace(/^[-•*]\s*/, "").trim())
+      .filter(Boolean);
+    const wovenBullets =
+      idx === 0
+        ? weaveKeywordsIntoExperiences(
+            rawBullets,
+            primaryKeywords,
+            job.title,
+            lang,
+          )
+        : rawBullets;
 
     return {
       ...origExp,
-      role: (aiExp && aiExp.role && aiExp.role.trim().length > 2) ? aiExp.role.trim() : origExp.role,
-      description: wovenBullets.map(b => `- ${b}`).join("\n")
+      role:
+        aiExp?.role && aiExp.role.trim().length > 2
+          ? aiExp.role.trim()
+          : origExp.role,
+      description: wovenBullets.map((b) => `- ${b}`).join("\n"),
     };
   });
 
@@ -312,7 +345,8 @@ export function mergeGeminiOutputWithMaster(
   if (Array.isArray(aiData.skills)) {
     for (const skill of aiData.skills) {
       if (!isProhibitedSoftSkill(skill) && !isExcludedSkillTerm(skill)) {
-        const formatted = ACRONYM_MAP[skill.toLowerCase()] || formatKeyword(skill);
+        const formatted =
+          ACRONYM_MAP[skill.toLowerCase()] || formatKeyword(skill);
         enhancedSkillsSet.add(formatted);
       }
     }
@@ -321,7 +355,8 @@ export function mergeGeminiOutputWithMaster(
   // Preserve master's technical skills
   for (const skill of master.skills) {
     if (!isProhibitedSoftSkill(skill) && !isExcludedSkillTerm(skill)) {
-      const formatted = ACRONYM_MAP[skill.toLowerCase()] || formatKeyword(skill);
+      const formatted =
+        ACRONYM_MAP[skill.toLowerCase()] || formatKeyword(skill);
       enhancedSkillsSet.add(formatted);
     }
   }
@@ -333,7 +368,7 @@ export function mergeGeminiOutputWithMaster(
     summary: tailoredSummary,
     skills: Array.from(enhancedSkillsSet),
     experiences: tailoredExperiences,
-    education: enhanceEducation(master.education, lang)
+    education: enhanceEducation(master.education, lang),
   });
 
   const auditAfter = auditAtsScore(tailoredResume, job.keywords, lang);
@@ -344,7 +379,7 @@ export function mergeGeminiOutputWithMaster(
     keywords: topKeywordsList,
     subject: `Currículo otimizado com IA (Gemini 1.5 Flash) para a vaga de ${job.title} na empresa ${job.company}.`,
     creator: "Currículo (Gemini ATS Engine)",
-    category: "Currículo"
+    category: "Currículo",
   });
 
   return {
@@ -353,14 +388,16 @@ export function mergeGeminiOutputWithMaster(
     scoreAfter: auditAfter.overallScore,
     auditBefore,
     auditAfter,
-    metadata
+    metadata,
   };
 }
 
 /**
  * Extracts and parses JSON from text, handling potential code block delimiters.
  */
-export function extractJsonFromText(text: string): any {
+export function extractJsonFromText(
+  text: string,
+): Record<string, unknown> | null {
   const trimmed = text.trim();
   try {
     return JSON.parse(trimmed);
