@@ -21,6 +21,8 @@ let ollamaInfo = null;
 let claudeInfo = null;
 let openRouterInfo = null;
 let currentTailorEngine = "local";
+let currentTailoredResume = null;
+let lastSavedResumeJson = null;
 
 // On DOM Loaded
 document.addEventListener("DOMContentLoaded", async () => {
@@ -1494,7 +1496,9 @@ async function fetchAndPopulateTailoredData(jobId) {
     });
     const data = await res.json();
     if (res.ok) {
-      populateTailoredEditor(data);
+      currentTailoredResume = data.tailoredResume;
+      lastSavedResumeJson = JSON.stringify(data.tailoredResume);
+      populateTailoredEditor(data.tailoredResume);
       renderA4Preview(data.tailoredResume);
       updateInspectorBreakdown(data.auditAfter);
     }
@@ -1504,21 +1508,29 @@ async function fetchAndPopulateTailoredData(jobId) {
 }
 
 function populateTailoredEditor(data) {
-  const { tailoredResume } = data;
-  document.getElementById("edit-tailored-title").value =
-    tailoredResume.headline || "";
-  document.getElementById("edit-tailored-summary").value =
-    tailoredResume.summary || "";
-  document.getElementById("edit-tailored-skills").value = (
-    tailoredResume.skills || []
-  ).join(", ");
+  const tailoredResume = data?.tailoredResume
+    ? data.tailoredResume
+    : data || {};
+  currentTailoredResume = tailoredResume;
+
+  const titleInput = document.getElementById("edit-tailored-title");
+  const summaryInput = document.getElementById("edit-tailored-summary");
+  const skillsInput = document.getElementById("edit-tailored-skills");
+
+  titleInput.value = tailoredResume.headline || "";
+  summaryInput.value = tailoredResume.summary || "";
+  skillsInput.value = (tailoredResume.skills || []).join(", ");
+
+  titleInput.onblur = onEditorFieldBlur;
+  summaryInput.onblur = onEditorFieldBlur;
+  skillsInput.onblur = onEditorFieldBlur;
 
   updateSummaryDottedPreview(
     tailoredResume.summary || "",
     activeJobData?.topKeywords || [],
   );
 
-  document.getElementById("edit-tailored-summary").oninput = (e) => {
+  summaryInput.oninput = (e) => {
     updateSummaryDottedPreview(
       e.target.value,
       activeJobData?.topKeywords || [],
@@ -1528,18 +1540,22 @@ function populateTailoredEditor(data) {
   const expContainer = document.getElementById("edit-tailored-experiences");
   expContainer.innerHTML = "";
 
-  (tailoredResume.experiences || []).forEach((exp) => {
+  (tailoredResume.experiences || []).forEach((exp, idx) => {
     const card = document.createElement("div");
     card.className = "p-3 rounded-lg border space-y-1.5";
     card.style.borderColor = "var(--border-color)";
     card.style.backgroundColor = "var(--bg-subtle)";
     card.innerHTML = `
       <div class="flex items-center justify-between text-xs font-mono">
-        <span class="font-semibold" style="color: var(--text-primary);">${escapeHtml(exp.role)} — ${escapeHtml(exp.company)}</span>
+        <span class="font-semibold" style="color: var(--text-primary);">${escapeHtml(exp.role || "")} — ${escapeHtml(exp.company || "")}</span>
         <span class="text-xs tabular-nums" style="color: var(--text-secondary);">${escapeHtml(formatClientDateRange(exp.startDate, exp.endDate))}</span>
       </div>
-      <textarea rows="4" class="ui-input w-full font-sans text-xs leading-relaxed tailored-exp-input">${escapeHtml(exp.description)}</textarea>
+      <textarea rows="4" class="ui-input w-full font-sans text-xs leading-relaxed tailored-exp-input" data-exp-idx="${idx}">${escapeHtml(exp.description || "")}</textarea>
     `;
+    const textarea = card.querySelector("textarea");
+    if (textarea) {
+      textarea.onblur = onEditorFieldBlur;
+    }
     expContainer.appendChild(card);
   });
 }
@@ -1564,6 +1580,13 @@ function updateSummaryDottedPreview(text, keywords) {
 }
 
 function clearTailoredEditor() {
+  currentTailoredResume = null;
+  lastSavedResumeJson = null;
+  const autoSaveIndicator = document.getElementById(
+    "auto-save-status-indicator",
+  );
+  if (autoSaveIndicator) autoSaveIndicator.classList.add("hidden");
+
   document.getElementById("edit-tailored-title").value = "";
   document.getElementById("edit-tailored-summary").value = "";
   document.getElementById("edit-tailored-skills").value = "";
@@ -1589,28 +1612,45 @@ function renderJobDescriptionTab(job) {
 }
 
 function renderA4Preview(resume) {
+  if (!resume) return;
+  currentTailoredResume = resume;
   const container = document.getElementById("a4-preview-content");
+  if (!container) return;
+
   container.innerHTML = `
     <div class="border-b pb-4 mb-5" style="border-color: var(--border-color);">
-      <h1 class="text-lg font-bold tracking-tight uppercase" style="color: var(--text-primary);">${escapeHtml(resume.fullName)}</h1>
-      <div class="text-xs mt-1" style="color: var(--text-secondary);">${escapeHtml(resume.headline)}</div>
-      <div class="text-xs text-zinc-500 mt-1">${escapeHtml(resume.email)}  |  ${escapeHtml(resume.phone || "")}  |  ${escapeHtml(resume.location || "")}</div>
+      <h1 class="text-lg font-bold tracking-tight uppercase" style="color: var(--text-primary);">${escapeHtml(resume.fullName || "")}</h1>
+      <div contenteditable="true" spellcheck="false" class="a4-editable-field text-xs mt-1 transition-colors" data-a4-field="headline" data-placeholder="Título do Cargo..." style="color: var(--text-secondary);" title="Clique para editar o título">${escapeHtml(resume.headline || "")}</div>
+      <div class="text-xs text-zinc-500 mt-1">${escapeHtml(resume.email || "")}  |  ${escapeHtml(resume.phone || "")}  |  ${escapeHtml(resume.location || "")}</div>
     </div>
 
     <div class="mb-5">
-      <div class="text-xs font-bold uppercase pb-1 mb-1.5 font-mono border-b" style="color: var(--text-primary); border-color: var(--border-color);">Resumo Profissional</div>
-      <p class="text-xs leading-relaxed" style="color: var(--text-secondary);">${escapeHtml(resume.summary)}</p>
+      <div class="text-xs font-bold uppercase pb-1 mb-1.5 font-mono border-b flex items-center justify-between" style="color: var(--text-primary); border-color: var(--border-color);">
+        <span>Resumo Profissional</span>
+        <span class="text-[10px] font-normal text-zinc-500 lowercase font-sans">editável</span>
+      </div>
+      <div contenteditable="true" spellcheck="false" class="a4-editable-field text-xs leading-relaxed whitespace-pre-line transition-colors" data-a4-field="summary" data-placeholder="Resumo Profissional com palavras-chave..." style="color: var(--text-secondary);" title="Clique para editar o resumo">${escapeHtml(resume.summary || "")}</div>
     </div>
 
     <div class="mb-5">
-      <div class="text-xs font-bold uppercase pb-1 mb-2 font-mono border-b" style="color: var(--text-primary); border-color: var(--border-color);">Experiência Profissional</div>
+      <div class="text-xs font-bold uppercase pb-1 mb-2 font-mono border-b flex items-center justify-between" style="color: var(--text-primary); border-color: var(--border-color);">
+        <span>Experiência Profissional</span>
+        <span class="text-[10px] font-normal text-zinc-500 lowercase font-sans">editável</span>
+      </div>
       <div class="space-y-3.5">
         ${(resume.experiences || [])
           .map(
-            (exp) => `
-          <div>
-            <div class="font-bold text-xs" style="color: var(--text-primary);">${escapeHtml(exp.role)} — <span class="font-normal" style="color: var(--text-secondary);">${escapeHtml(exp.company)}</span> <span class="text-[11px] float-right font-mono tabular-nums" style="color: var(--text-secondary);">(${escapeHtml(formatClientDateRange(exp.startDate, exp.endDate))})</span></div>
-            <div class="text-xs mt-1 whitespace-pre-line leading-relaxed" style="color: var(--text-secondary);">${escapeHtml(exp.description)}</div>
+            (exp, idx) => `
+          <div class="a4-exp-item" data-exp-idx="${idx}">
+            <div class="font-bold text-xs flex items-center justify-between" style="color: var(--text-primary);">
+              <div>
+                <span contenteditable="true" spellcheck="false" class="a4-editable-field inline-block" data-a4-exp-field="role" data-exp-idx="${idx}" data-placeholder="Cargo" title="Clique para editar o cargo">${escapeHtml(exp.role || "")}</span>
+                <span class="font-normal text-zinc-500"> — </span>
+                <span contenteditable="true" spellcheck="false" class="a4-editable-field font-normal inline-block" style="color: var(--text-secondary);" data-a4-exp-field="company" data-exp-idx="${idx}" data-placeholder="Empresa" title="Clique para editar a empresa">${escapeHtml(exp.company || "")}</span>
+              </div>
+              <span class="text-[11px] float-right font-mono tabular-nums text-zinc-500 shrink-0">(${escapeHtml(formatClientDateRange(exp.startDate, exp.endDate))})</span>
+            </div>
+            <div contenteditable="true" spellcheck="false" class="a4-editable-field text-xs mt-1 whitespace-pre-line leading-relaxed transition-colors" style="color: var(--text-secondary);" data-a4-exp-field="description" data-exp-idx="${idx}" data-placeholder="Descrição das realizações e métricas..." title="Clique para editar">${escapeHtml(exp.description || "")}</div>
           </div>
         `,
           )
@@ -1624,7 +1664,7 @@ function renderA4Preview(resume) {
         ${(resume.education || [])
           .map(
             (edu) => `
-          <div class="text-xs" style="color: var(--text-secondary);"><span class="font-medium" style="color: var(--text-primary);">${escapeHtml(edu.degree)}</span> — <span class="text-zinc-500">${escapeHtml(edu.institution)}</span> <span class="text-[11px] text-zinc-500 float-right font-mono">(${escapeHtml(formatClientDateRange(edu.startDate, edu.endDate))})</span></div>
+          <div class="text-xs" style="color: var(--text-secondary);"><span class="font-medium" style="color: var(--text-primary);">${escapeHtml(edu.degree || "")}</span> — <span class="text-zinc-500">${escapeHtml(edu.institution || "")}</span> <span class="text-[11px] text-zinc-500 float-right font-mono">(${escapeHtml(formatClientDateRange(edu.startDate, edu.endDate))})</span></div>
         `,
           )
           .join("")}
@@ -1632,10 +1672,281 @@ function renderA4Preview(resume) {
     </div>
 
     <div>
-      <div class="text-xs font-bold uppercase pb-1 mb-1.5 font-mono border-b" style="color: var(--text-primary); border-color: var(--border-color);">Habilidades Técnicas</div>
-      <div class="text-xs font-mono leading-relaxed" style="color: var(--text-secondary);">${(resume.skills || []).join("   •   ")}</div>
+      <div class="text-xs font-bold uppercase pb-1 mb-1.5 font-mono border-b flex items-center justify-between" style="color: var(--text-primary); border-color: var(--border-color);">
+        <span>Habilidades Técnicas</span>
+        <span class="text-[10px] font-normal text-zinc-500 lowercase font-sans">editável</span>
+      </div>
+      <div contenteditable="true" spellcheck="false" class="a4-editable-field text-xs font-mono leading-relaxed transition-colors whitespace-pre-line" data-a4-field="skills" data-placeholder="Habilidades (separadas por • ou vírgula)..." style="color: var(--text-secondary);" title="Clique para editar habilidades">${escapeHtml((resume.skills || []).join("   •   "))}</div>
     </div>
   `;
+
+  // Bind A4 direct editing events
+  container.querySelectorAll(".a4-editable-field").forEach((field) => {
+    // Paste plain text (preserves newlines, removes dirty html)
+    field.addEventListener("paste", (e) => {
+      e.preventDefault();
+      const text = (e.clipboardData || window.clipboardData).getData(
+        "text/plain",
+      );
+      document.execCommand("insertText", false, text);
+    });
+
+    // Enter key behavior for single line fields
+    const isSingleLine =
+      field.dataset.a4Field === "headline" ||
+      field.dataset.a4ExpField === "role" ||
+      field.dataset.a4ExpField === "company";
+
+    if (isSingleLine) {
+      field.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          field.blur();
+        }
+      });
+    }
+
+    // Auto-save & sync on blur
+    field.addEventListener("blur", onA4FieldBlur);
+  });
+}
+
+function parseSkillsFromA4(text) {
+  if (!text) return [];
+  return text
+    .split(/[•,\n\r\t]+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+function gatherResumeFromEditor() {
+  const base = currentTailoredResume || currentMasterProfile || {};
+  const headlineInput = document.getElementById("edit-tailored-title");
+  const summaryInput = document.getElementById("edit-tailored-summary");
+  const skillsInput = document.getElementById("edit-tailored-skills");
+
+  const headline = headlineInput
+    ? headlineInput.value.trim()
+    : base.headline || "";
+  const summary = summaryInput ? summaryInput.value.trim() : base.summary || "";
+  const skills = skillsInput
+    ? skillsInput.value
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : base.skills || [];
+
+  const expTextareas = document.querySelectorAll(
+    "#edit-tailored-experiences textarea.tailored-exp-input",
+  );
+  const experiences = (base.experiences || []).map((exp, idx) => ({
+    ...exp,
+    description: expTextareas[idx]
+      ? expTextareas[idx].value.trim()
+      : exp.description || "",
+  }));
+
+  return {
+    ...base,
+    headline,
+    summary,
+    skills,
+    experiences,
+  };
+}
+
+function gatherResumeFromA4() {
+  const base = currentTailoredResume || currentMasterProfile || {};
+  const a4Container = document.getElementById("a4-preview-content");
+  if (!a4Container) return base;
+
+  const headlineEl = a4Container.querySelector('[data-a4-field="headline"]');
+  const summaryEl = a4Container.querySelector('[data-a4-field="summary"]');
+  const skillsEl = a4Container.querySelector('[data-a4-field="skills"]');
+
+  const headline = headlineEl
+    ? headlineEl.textContent.trim()
+    : base.headline || "";
+  // biome-ignore lint/performance/useDomNodeTextContent: innerText preserves rendered line breaks from contenteditable
+  const summary = summaryEl ? summaryEl.innerText.trim() : base.summary || "";
+  const skills = skillsEl
+    ? parseSkillsFromA4(skillsEl.textContent)
+    : base.skills || [];
+
+  const expItems = a4Container.querySelectorAll(".a4-exp-item");
+  const experiences = (base.experiences || []).map((exp, idx) => {
+    const item = expItems[idx];
+    if (!item) return exp;
+    const roleEl = item.querySelector('[data-a4-exp-field="role"]');
+    const compEl = item.querySelector('[data-a4-exp-field="company"]');
+    const descEl = item.querySelector('[data-a4-exp-field="description"]');
+    return {
+      ...exp,
+      role: roleEl ? roleEl.textContent.trim() : exp.role,
+      company: compEl ? compEl.textContent.trim() : exp.company,
+      // biome-ignore lint/performance/useDomNodeTextContent: innerText preserves rendered line breaks and bullets
+      description: descEl ? descEl.innerText.trim() : exp.description || "",
+    };
+  });
+
+  return {
+    ...base,
+    headline,
+    summary,
+    skills,
+    experiences,
+  };
+}
+
+function syncRightPaneFromResume(resume) {
+  if (!resume) return;
+  const titleInput = document.getElementById("edit-tailored-title");
+  const summaryInput = document.getElementById("edit-tailored-summary");
+  const skillsInput = document.getElementById("edit-tailored-skills");
+
+  if (titleInput && document.activeElement !== titleInput) {
+    titleInput.value = resume.headline || "";
+  }
+  if (summaryInput && document.activeElement !== summaryInput) {
+    summaryInput.value = resume.summary || "";
+    updateSummaryDottedPreview(
+      resume.summary || "",
+      activeJobData?.topKeywords || [],
+    );
+  }
+  if (skillsInput && document.activeElement !== skillsInput) {
+    skillsInput.value = (resume.skills || []).join(", ");
+  }
+
+  const expTextareas = document.querySelectorAll(
+    "#edit-tailored-experiences textarea.tailored-exp-input",
+  );
+  (resume.experiences || []).forEach((exp, idx) => {
+    const ta = expTextareas[idx];
+    if (ta && document.activeElement !== ta) {
+      ta.value = exp.description || "";
+    }
+  });
+}
+
+function onA4FieldBlur() {
+  if (!selectedJobId) return;
+  const newResume = gatherResumeFromA4();
+  const newJson = JSON.stringify(newResume);
+  if (lastSavedResumeJson && newJson === lastSavedResumeJson) return;
+
+  syncRightPaneFromResume(newResume);
+  saveAndRecalculateTailoredResume({ silent: true, updatedResume: newResume });
+}
+
+function onEditorFieldBlur() {
+  if (!selectedJobId) return;
+  const newResume = gatherResumeFromEditor();
+  const newJson = JSON.stringify(newResume);
+  if (lastSavedResumeJson && newJson === lastSavedResumeJson) return;
+
+  renderA4Preview(newResume);
+  saveAndRecalculateTailoredResume({ silent: true, updatedResume: newResume });
+}
+
+async function saveAndRecalculateTailoredResume(options = {}) {
+  const { silent = false, notify = false, updatedResume } = options;
+  if (!selectedJobId) return;
+
+  const resumeToSave = updatedResume || gatherResumeFromEditor();
+  if (!resumeToSave) return;
+
+  const currentJson = JSON.stringify(resumeToSave);
+  if (silent && lastSavedResumeJson && currentJson === lastSavedResumeJson) {
+    return;
+  }
+
+  const btnRecalculate = document.getElementById("btn-recalculate");
+  const autoSaveText = document.getElementById("auto-save-status-text");
+  const autoSaveIndicator = document.getElementById(
+    "auto-save-status-indicator",
+  );
+
+  if (autoSaveIndicator) {
+    autoSaveIndicator.classList.remove("hidden");
+    if (autoSaveText) autoSaveText.textContent = "Salvando...";
+  }
+
+  if (!silent && btnRecalculate) {
+    btnRecalculate.innerHTML = `<i data-lucide="refresh-cw" class="w-3.5 h-3.5 animate-spin text-emerald-400"></i><span>Salvando...</span>`;
+    btnRecalculate.disabled = true;
+  }
+
+  try {
+    const res = await fetch(`/api/jobs/${selectedJobId}/tailor`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tailoredResume: resumeToSave }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      currentTailoredResume = data.tailoredResume || resumeToSave;
+      lastSavedResumeJson = JSON.stringify(currentTailoredResume);
+
+      // Trigger animated count up for scores
+      animateScoreCountUp(data.scoreAfter);
+      const sScore =
+        data.auditAfter?.scannabilityScore !== undefined
+          ? data.auditAfter.scannabilityScore
+          : data.scoreAfter;
+      const tScore =
+        data.auditAfter?.technicalScore !== undefined
+          ? data.auditAfter.technicalScore
+          : data.scoreAfter;
+      animateDualScores(sScore, tScore);
+      updateInspectorBreakdown(data.auditAfter);
+
+      if (autoSaveIndicator) {
+        const timeStr = new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        });
+        if (autoSaveText) {
+          autoSaveText.textContent = `Salvo às ${timeStr} • ${data.scoreAfter}/100`;
+        }
+      }
+
+      if (notify || !silent) {
+        showToast(
+          `Currículo salvo e score recalculado: ${data.scoreAfter}/100`,
+          "success",
+        );
+      }
+
+      await refreshSidebarJobsScores();
+    } else {
+      if (autoSaveText) autoSaveText.textContent = "Erro ao salvar";
+      showToast(data.error || "Erro ao salvar currículo", "error");
+    }
+  } catch (err) {
+    console.error("Erro ao salvar e recalcular:", err);
+    if (autoSaveText) autoSaveText.textContent = "Erro de conexão";
+    showToast("Erro de rede ao salvar", "error");
+  } finally {
+    if (btnRecalculate) {
+      btnRecalculate.innerHTML = `<i data-lucide="save" class="w-3.5 h-3.5 text-emerald-400"></i><span>Salvar & Recalcular</span>`;
+      btnRecalculate.disabled = false;
+    }
+    if (window.lucide) window.lucide.createIcons();
+  }
+}
+
+async function refreshSidebarJobsScores() {
+  try {
+    const res = await fetch("/api/jobs");
+    if (!res.ok) return;
+    const data = await res.json();
+    currentJobs = data.jobs || [];
+    renderSidebarJobs();
+  } catch (err) {
+    console.error("Erro ao atualizar sidebar jobs:", err);
+  }
 }
 
 // ============================================================================
@@ -1664,6 +1975,13 @@ function setupWorkbenchTabs() {
         targetPane.classList.add("fade-slide-up");
       }
 
+      // Sync views when switching between diff and preview
+      if (target === "tab-diff" && currentTailoredResume) {
+        syncRightPaneFromResume(currentTailoredResume);
+      } else if (target === "tab-preview" && currentTailoredResume) {
+        renderA4Preview(currentTailoredResume);
+      }
+
       // If user switches to Knockout Questions tab, reload questions
       if (target === "tab-knockout" && selectedJobId) {
         loadKnockoutQuestions(selectedJobId);
@@ -1674,10 +1992,10 @@ function setupWorkbenchTabs() {
         loadCoverLetter(selectedJobId);
       }
 
-      // Actions visibility
+      // Actions visibility: Salvar & Recalcular available on both Editor Comparativo and Folha A4
       const actions = document.getElementById("tab-diff-actions");
       if (actions) {
-        if (target === "tab-diff") {
+        if (target === "tab-diff" || target === "tab-preview") {
           actions.classList.remove("hidden");
         } else {
           actions.classList.add("hidden");
@@ -2316,8 +2634,22 @@ function setupWorkbenchActions() {
             `Otimizado (${engineLabel}): Score ${data.scoreAfter}/100 (+${diffPts} pts)`,
             "success",
           );
-          await loadJobs();
-          selectJob(selectedJobId);
+          currentTailoredResume = data.tailoredResume;
+          lastSavedResumeJson = JSON.stringify(data.tailoredResume);
+          populateTailoredEditor(data.tailoredResume);
+          renderA4Preview(data.tailoredResume);
+          updateInspectorBreakdown(data.auditAfter);
+          animateScoreCountUp(data.scoreAfter);
+          const sScore =
+            data.auditAfter?.scannabilityScore !== undefined
+              ? data.auditAfter.scannabilityScore
+              : data.scoreAfter;
+          const tScore =
+            data.auditAfter?.technicalScore !== undefined
+              ? data.auditAfter.technicalScore
+              : data.scoreAfter;
+          animateDualScores(sScore, tScore);
+          await refreshSidebarJobsScores();
         } else {
           showToast(data.error || "Erro ao otimizar", "error");
         }
@@ -2332,62 +2664,11 @@ function setupWorkbenchActions() {
     });
   }
 
-  // Recalcular Score inline
+  // Salvar & Recalcular Score inline
   const btnRecalculate = document.getElementById("btn-recalculate");
   if (btnRecalculate) {
     btnRecalculate.addEventListener("click", async () => {
-      if (!selectedJobId) return;
-
-      btnRecalculate.innerHTML = `<i data-lucide="refresh-cw" class="w-3.5 h-3.5 animate-spin"></i><span>Calculando...</span>`;
-
-      const headline = document.getElementById("edit-tailored-title").value;
-      const summary = document.getElementById("edit-tailored-summary").value;
-      const skills = document
-        .getElementById("edit-tailored-skills")
-        .value.split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
-
-      const expTextareas = document.querySelectorAll(
-        "#edit-tailored-experiences textarea",
-      );
-      const experiences = (currentMasterProfile?.experiences || []).map(
-        (exp, idx) => ({
-          ...exp,
-          description: expTextareas[idx]
-            ? expTextareas[idx].value
-            : exp.description,
-        }),
-      );
-
-      const updatedResume = {
-        ...currentMasterProfile,
-        headline,
-        summary,
-        skills,
-        experiences,
-      };
-
-      try {
-        const res = await fetch(`/api/jobs/${selectedJobId}/tailor`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ tailoredResume: updatedResume }),
-        });
-        const data = await res.json();
-        if (res.ok) {
-          showToast(`Score: ${data.scoreAfter}/100`, "success");
-          animateScoreCountUp(data.scoreAfter);
-          updateInspectorBreakdown(data.auditAfter);
-          renderA4Preview(updatedResume);
-          await loadJobs();
-        }
-      } catch {
-        showToast("Erro ao recalcular", "error");
-      } finally {
-        btnRecalculate.innerHTML = `<i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-emerald-400"></i><span>Recalcular Score</span>`;
-        if (window.lucide) window.lucide.createIcons();
-      }
+      await saveAndRecalculateTailoredResume({ silent: false, notify: true });
     });
   }
 

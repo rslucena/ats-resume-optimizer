@@ -354,6 +354,35 @@ body {
   line-height: 1.65;
 }
 
+/* A4 Live Editable Fields */
+.a4-editable-field {
+  outline: none;
+  border-radius: 4px;
+  padding: 2px 4px;
+  margin: -2px -4px;
+  transition:
+    background-color 140ms ease,
+    box-shadow 140ms ease;
+  position: relative;
+}
+
+.a4-editable-field:hover {
+  background-color: rgba(16, 185, 129, 0.08);
+  cursor: text;
+}
+
+.a4-editable-field:focus {
+  background-color: rgba(16, 185, 129, 0.12);
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.45);
+}
+
+.a4-editable-field:empty::before {
+  content: attr(data-placeholder);
+  color: var(--text-muted, #71717a);
+  font-style: italic;
+  pointer-events: none;
+}
+
 /* Progress bar */
 #top-progress-bar {
   transition:

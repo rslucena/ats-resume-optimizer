@@ -627,12 +627,29 @@ export function createApp() {
           updatedAt: Date.now(),
         })
         .where(eq(tailoredResumesTable.id, existing[0].id));
+    } else {
+      await db.insert(tailoredResumesTable).values({
+        id: `tailored-${Date.now()}`,
+        jobId: id,
+        tailoredTitle: sanitizedResume.headline,
+        tailoredSummary: sanitizedResume.summary,
+        tailoredSkills: JSON.stringify(sanitizedResume.skills),
+        tailoredExperiences: JSON.stringify(sanitizedResume.experiences),
+        tailoredEducation: JSON.stringify(sanitizedResume.education),
+        scoreBefore: audit.overallScore,
+        scoreAfter: audit.overallScore,
+        keywordsAchieved: JSON.stringify(audit.matchedKeywords),
+        keywordsMissing: JSON.stringify(audit.missingKeywords),
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
     }
 
     return c.json({
       success: true,
       scoreAfter: audit.overallScore,
       auditAfter: audit,
+      tailoredResume: sanitizedResume,
     });
   });
 

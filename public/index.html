@@ -445,10 +445,14 @@
           </button>
         </div>
 
-        <div id="tab-diff-actions" class="flex items-center gap-2 hidden">
-          <button id="btn-recalculate" class="btn-spring px-3 py-1.5 rounded-md border text-xs font-mono flex items-center gap-1.5 transition-colors" style="border-color: var(--border-color); background-color: var(--bg-subtle); color: var(--text-secondary);">
-            <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-emerald-500"></i>
-            <span>Recalcular Score</span>
+        <div id="tab-diff-actions" class="flex items-center gap-2.5 hidden">
+          <div id="auto-save-status-indicator" class="text-[11px] font-mono text-zinc-400 hidden flex items-center gap-1.5 mr-1 select-none">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+            <span id="auto-save-status-text">Salvo</span>
+          </div>
+          <button id="btn-recalculate" class="btn-spring px-3 py-1.5 rounded-md border text-xs font-mono font-medium flex items-center gap-1.5 transition-colors" style="border-color: var(--border-color); background-color: var(--bg-subtle); color: var(--text-primary);" title="Salvar alterações e recalcular scores de escaneabilidade e TF-IDF">
+            <i data-lucide="save" class="w-3.5 h-3.5 text-emerald-500"></i>
+            <span>Salvar & Recalcular</span>
           </button>
         </div>
       </div>
@@ -513,8 +517,20 @@
 
         </div>
 
-        <!-- Aba 2: Folha A4 (Preview) -->
-        <div id="tab-preview" class="tab-pane-content fade-slide-up hidden">
+        <!-- Aba 2: Folha A4 (Preview & Edição Direta) -->
+        <div id="tab-preview" class="tab-pane-content fade-slide-up hidden space-y-4">
+          <div class="max-w-[760px] mx-auto flex items-center justify-between text-xs px-2 select-none text-zinc-400 font-mono">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span class="text-zinc-300 font-medium text-xs">Currículo Otimizado (Folha A4)</span>
+              <span class="text-zinc-600">•</span>
+              <span class="text-emerald-400 text-[11px] font-medium">Edição Direta Ativa</span>
+            </div>
+            <div class="text-[11px] text-zinc-400 hidden sm:flex items-center gap-1.5">
+              <i data-lucide="edit-3" class="w-3.5 h-3.5 text-emerald-400"></i>
+              <span>Clique no texto para editar • Salva e recalcula ao clicar fora</span>
+            </div>
+          </div>
           <div class="a4-document" id="a4-preview-content">
             <!-- A4 Preview content -->
           </div>
