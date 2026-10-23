@@ -1,9 +1,9 @@
+import { serveStatic } from "@hono/bun";
 import { createApp } from "./api/routes.ts";
-import { initDb } from "./db/index.ts";
-import { serveStatic } from "hono/bun";
+import { DEFAULT_DB_PATH, initDb } from "./db/index.ts";
 
 // Initialize SQLite database
-initDb("ats_tracker.sqlite");
+initDb();
 
 const app = createApp();
 
@@ -13,10 +13,12 @@ app.get("*", serveStatic({ path: "./public/index.html" }));
 
 const port = Number(process.env.PORT) || 3000;
 
-console.log(`\n🚀 ATS Resume Optimizer & Job Tracker running at: http://localhost:${port}`);
-console.log(`📊 SQLite database connected: ats_tracker.sqlite\n`);
+console.log(
+  `\n🚀 ATS Resume Optimizer & Job Tracker running at: http://localhost:${port}`,
+);
+console.log(`📊 SQLite database connected: ${DEFAULT_DB_PATH}\n`);
 
 export default {
   port,
-  fetch: app.fetch
+  fetch: app.fetch,
 };

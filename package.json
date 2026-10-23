@@ -8,9 +8,15 @@
     "dev": "bun --watch src/server.ts",
     "start": "bun src/server.ts",
     "test": "bun test",
-    "test:watch": "bun test --watch"
+    "test:watch": "bun test --watch",
+    "lint": "biome lint .",
+    "lint:fix": "biome lint --write .",
+    "format": "biome format --write .",
+    "check": "biome check .",
+    "check:fix": "biome check --write ."
   },
   "dependencies": {
+    "@hono/bun": "^1.0.1",
     "cheerio": "^1.0.0",
     "docx": "^9.2.0",
     "drizzle-orm": "^0.40.0",
@@ -20,10 +26,10 @@
     "natural": "^8.0.1",
     "pdf-lib": "^1.17.1",
     "pdf-parse": "^1.1.1",
-    "pdfkit": "^0.16.0",
-    "zod": "^3.24.2"
+    "pdfkit": "^0.16.0"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.6.2",
     "@types/bun": "latest",
     "@types/natural": "^5.1.5",
     "@types/pdf-parse": "^1.1.4",

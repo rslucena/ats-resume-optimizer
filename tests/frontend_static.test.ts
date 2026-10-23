@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
+import { serveStatic } from "@hono/bun";
 import { createApp } from "../src/api/routes.ts";
-import { serveStatic } from "hono/bun";
 
 describe("Frontend Static Delivery", () => {
   it("should serve index.html, styles.css, and app.js", async () => {
