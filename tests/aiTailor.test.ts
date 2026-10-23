@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import { eq } from "drizzle-orm";
-import type { JobInput } from "../optimizer/tailor.ts";
 import { createApp } from "../src/api/routes.ts";
 import { getDb, resetDbForTesting } from "../src/db/index.ts";
 import {
@@ -8,13 +7,14 @@ import {
   masterProfilesTable,
   tailoredResumesTable,
 } from "../src/db/schema.ts";
+import type { JobInput } from "../src/optimizer/tailor.ts";
 import {
   buildGeminiTailorPrompt,
   extractJsonFromText,
   mergeGeminiOutputWithMaster,
   tailorResumeWithAiOption,
 } from "../src/services/aiTailorService.ts";
-import type { ResumeData } from "../types/resume.ts";
+import type { ResumeData } from "../src/types/resume.ts";
 
 describe("Gemini AI Tailoring Service & Fallback Architecture", () => {
   beforeEach(() => {

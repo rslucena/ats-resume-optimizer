@@ -1,5 +1,6 @@
 import type { ResumeData } from "../types/resume.ts";
 import { getEnvKey } from "../utils/env.ts";
+import { callOllamaGenerate } from "./ollamaService.ts";
 
 export interface KnockoutJobContext {
   title: string;
@@ -13,11 +14,12 @@ export interface KnockoutGenerationContext {
   questionText: string;
   job: KnockoutJobContext;
   profile: ResumeData;
+  preferredEngine?: "gemini" | "ollama" | "openai" | "heuristic";
 }
 
 export interface KnockoutGenerationResult {
   answer: string;
-  source: "gemini" | "openai" | "heuristic";
+  source: "gemini" | "ollama" | "openai" | "heuristic";
 }
 
 export function validateAndCleanAnswer(
@@ -54,16 +56,76 @@ export function validateAndCleanAnswer(
 export async function generateKnockoutAnswerWithMeta(
   context: KnockoutGenerationContext,
 ): Promise<KnockoutGenerationResult> {
-  const { questionText, job, profile } = context;
+  const { questionText, job, profile, preferredEngine } = context;
   const isEn = (job.language || "pt").toLowerCase().startsWith("en");
+
+  if (preferredEngine === "ollama") {
+    const llmAnswer = await callOllamaKnockout(
+      questionText,
+      job,
+      profile,
+      isEn,
+    );
+    const validated = validateAndCleanAnswer(llmAnswer);
+    if (validated) {
+      return {
+        answer: validated,
+        source: "ollama",
+      };
+    }
+  }
 
   const geminiKey = getEnvKey("GEMINI_API_KEY");
   const openaiKey = getEnvKey("OPENAI_API_KEY");
 
-  if (geminiKey) {
-    try {
-      const llmAnswer = await callGeminiKnockout(
-        geminiKey,
+  if (preferredEngine !== "heuristic") {
+    if (geminiKey && preferredEngine !== "openai") {
+      try {
+        const llmAnswer = await callGeminiKnockout(
+          geminiKey,
+          questionText,
+          job,
+          profile,
+          isEn,
+        );
+        const validated = validateAndCleanAnswer(llmAnswer);
+        if (validated) {
+          return {
+            answer: validated,
+            source: "gemini",
+          };
+        }
+      } catch (e) {
+        console.warn(
+          "Gemini knockout generation fallback to internal engine:",
+          e,
+        );
+      }
+    } else if (openaiKey) {
+      try {
+        const llmAnswer = await callOpenAiKnockout(
+          openaiKey,
+          questionText,
+          job,
+          profile,
+          isEn,
+        );
+        const validated = validateAndCleanAnswer(llmAnswer);
+        if (validated) {
+          return {
+            answer: validated,
+            source: "openai",
+          };
+        }
+      } catch (e) {
+        console.warn(
+          "OpenAI knockout generation fallback to internal engine:",
+          e,
+        );
+      }
+    } else if (!preferredEngine) {
+      // If no cloud key is set, attempt Ollama before falling back to deterministic heuristic
+      const llmAnswer = await callOllamaKnockout(
         questionText,
         job,
         profile,
@@ -73,36 +135,9 @@ export async function generateKnockoutAnswerWithMeta(
       if (validated) {
         return {
           answer: validated,
-          source: "gemini",
+          source: "ollama",
         };
       }
-    } catch (e) {
-      console.warn(
-        "Gemini knockout generation fallback to internal engine:",
-        e,
-      );
-    }
-  } else if (openaiKey) {
-    try {
-      const llmAnswer = await callOpenAiKnockout(
-        openaiKey,
-        questionText,
-        job,
-        profile,
-        isEn,
-      );
-      const validated = validateAndCleanAnswer(llmAnswer);
-      if (validated) {
-        return {
-          answer: validated,
-          source: "openai",
-        };
-      }
-    } catch (e) {
-      console.warn(
-        "OpenAI knockout generation fallback to internal engine:",
-        e,
-      );
     }
   }
 
@@ -211,6 +246,28 @@ async function callOpenAiKnockout(
     return data?.choices?.[0]?.message?.content || null;
   } finally {
     clearTimeout(timeout);
+  }
+}
+
+async function callOllamaKnockout(
+  question: string,
+  job: KnockoutJobContext,
+  profile: ResumeData,
+  isEn: boolean,
+): Promise<string | null> {
+  try {
+    const prompt = buildKnockoutPrompt(question, job, profile, isEn);
+    const raw = await callOllamaGenerate({
+      prompt,
+      system: isEn
+        ? "You are an expert interview coach. Output ONLY the final concise response ready to paste into the job application. No markdown headers, no introductory remarks."
+        : "Você é um mentor especialista em aprovação de candidatos. Escreva EXCLUSIVAMENTE o texto final da resposta, pronto para colar no formulário da vaga. Sem cabeçalhos ou comentários.",
+      timeoutMs: 25000,
+    });
+    return raw;
+  } catch (err) {
+    console.warn("Ollama knockout generation fallback:", err);
+    return null;
   }
 }
 

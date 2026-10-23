@@ -14,9 +14,12 @@ import type { ResumeData } from "../types/resume.ts";
 import { sanitizeResumeUtf8 } from "../utils/encoding.ts";
 import { getEnvKey } from "../utils/env.ts";
 import { sanitizeLocation } from "./cvExtractor.ts";
+import { callOllamaGenerate } from "./ollamaService.ts";
+
+export type TailorEngine = "gemini" | "ollama" | "local";
 
 export interface AiTailoredResumeResult extends TailoredResumeResult {
-  engine: "gemini" | "local";
+  engine: TailorEngine;
 }
 
 interface GeminiTailorResponse {
@@ -33,20 +36,38 @@ interface GeminiTailorResponse {
 }
 
 /**
- * Main tailored resume generator with AI option.
- * If useAi is true and GEMINI_API_KEY is available, invokes Gemini 1.5 Flash.
- * In case of missing key, API error, invalid JSON or timeout, gracefully falls back to deterministic tailorResume.
+ * Main tailored resume generator with AI option (Gemini, Ollama or local deterministic).
  */
 export async function tailorResumeWithAiOption(
   masterResume: ResumeData,
   job: JobInput,
-  useAi: boolean = false,
+  useAi: boolean | TailorEngine = false,
 ): Promise<AiTailoredResumeResult> {
-  if (!useAi) {
+  const engineChoice: TailorEngine =
+    typeof useAi === "string" ? useAi : useAi ? "gemini" : "local";
+
+  if (engineChoice === "local") {
     const local = await tailorResume(masterResume, job);
     return { ...local, engine: "local" };
   }
 
+  if (engineChoice === "ollama") {
+    try {
+      const ollamaResult = await callOllamaTailor(masterResume, job);
+      if (ollamaResult) {
+        return { ...ollamaResult, engine: "ollama" };
+      }
+    } catch (err) {
+      console.warn(
+        "[AI Tailor] Falha no Ollama. Recorrendo ao motor determinístico local:",
+        err,
+      );
+    }
+    const fallback = await tailorResume(masterResume, job);
+    return { ...fallback, engine: "local" };
+  }
+
+  // Default AI: Gemini 1.5 Flash
   const apiKey = getEnvKey("GEMINI_API_KEY");
   if (!apiKey) {
     console.warn(
@@ -70,6 +91,40 @@ export async function tailorResumeWithAiOption(
 
   const fallback = await tailorResume(masterResume, job);
   return { ...fallback, engine: "local" };
+}
+
+/**
+ * Invokes Ollama local LLM for offline resume tailoring.
+ */
+export async function callOllamaTailor(
+  master: ResumeData,
+  job: JobInput,
+): Promise<TailoredResumeResult | null> {
+  try {
+    const lang = job.language || "pt";
+    const prompt = buildGeminiTailorPrompt(master, job, lang);
+    const rawText = await callOllamaGenerate({
+      prompt,
+      formatJson: true,
+      system:
+        "Você é um especialista em ATS. Retorne EXCLUSIVAMENTE um objeto JSON válido, sem comentários ou blocos adicionais.",
+      timeoutMs: 30000,
+    });
+
+    const parsedJson = extractJsonFromText(rawText) as GeminiTailorResponse;
+    if (!parsedJson?.summary || !Array.isArray(parsedJson.experiences)) {
+      console.warn(
+        "[AI Tailor] Estrutura JSON retornada pelo Ollama é inválida:",
+        rawText,
+      );
+      return null;
+    }
+
+    return mergeGeminiOutputWithMaster(master, job, parsedJson, lang);
+  } catch (e) {
+    console.warn("[AI Tailor] Erro na execução de callOllamaTailor:", e);
+    return null;
+  }
 }
 
 /**
