@@ -1,13 +1,17 @@
 import { desc, eq } from "drizzle-orm";
 import { Hono } from "hono";
+import { bodyLimit } from "hono/body-limit";
 import { cors } from "hono/cors";
 import { getDb } from "../db/index.ts";
 import {
+  coverLettersTable,
   jobsTable,
   knockoutQuestionsTable,
   masterProfilesTable,
   tailoredResumesTable,
 } from "../db/schema.ts";
+import { generateCoverLetterDocx } from "../documents/coverLetterDocx.ts";
+import { generateCoverLetterPdf } from "../documents/coverLetterPdf.ts";
 import { generateAtsDocx } from "../documents/docx.ts";
 import { generateJsonResume } from "../documents/jsonResume.ts";
 import { generateAtsMarkdown } from "../documents/markdown.ts";
@@ -17,13 +21,23 @@ import { detectLanguage, type SupportedLanguage } from "../nlp/language.ts";
 import { extractKeywords } from "../nlp/tfidf.ts";
 import { auditAtsScore } from "../optimizer/scorer.ts";
 import { deduplicateSummary, tailorResume } from "../optimizer/tailor.ts";
-import { tailorResumeWithAiOption } from "../services/aiTailorService.ts";
+import {
+  type TailorEngine,
+  tailorResumeWithAiOption,
+} from "../services/aiTailorService.ts";
+import {
+  type CoverLetterEngine,
+  type CoverLetterTone,
+  generateCoverLetter,
+  normalizeCoverLetterTone,
+} from "../services/coverLetterService.ts";
 import {
   extractTextFromPdf,
   parseMasterProfileText,
 } from "../services/cvExtractor.ts";
 import { scrapeJobUrl } from "../services/jobScraper.ts";
 import { generateKnockoutAnswerWithMeta } from "../services/knockoutAnswerService.ts";
+import { checkOllamaAvailable } from "../services/ollamaService.ts";
 import type { ExperienceItem, ResumeData } from "../types/resume.ts";
 import {
   sanitizeResumeUtf8,
@@ -38,19 +52,23 @@ export function createApp() {
   app.use("*", cors());
 
   // Healthcheck & System Config
-  app.get("/api/health", (c) =>
-    c.json({
+  app.get("/api/health", async (c) => {
+    const ollama = await checkOllamaAvailable();
+    return c.json({
       status: "ok",
       hasGeminiKey: !!getEnvKey("GEMINI_API_KEY"),
+      ollama,
       timestamp: Date.now(),
-    }),
-  );
+    });
+  });
 
-  app.get("/api/config", (c) =>
-    c.json({
+  app.get("/api/config", async (c) => {
+    const ollama = await checkOllamaAvailable();
+    return c.json({
       hasGeminiKey: !!getEnvKey("GEMINI_API_KEY"),
-    }),
-  );
+      ollama,
+    });
+  });
 
   // 1. Master Profile GET
   app.get("/api/profile", async (c) => {
@@ -129,58 +147,66 @@ export function createApp() {
   });
 
   // 3. Master Profile PDF Upload
-  app.post("/api/profile/upload", async (c) => {
-    const formData = await c.req.formData();
-    const file = formData.get("file");
+  app.post(
+    "/api/profile/upload",
+    bodyLimit({
+      maxSize: 10 * 1024 * 1024, // 10MB
+      onError: (c) =>
+        c.json({ error: "Arquivo PDF excede o limite de 10MB." }, 413),
+    }),
+    async (c) => {
+      const formData = await c.req.formData();
+      const file = formData.get("file");
 
-    if (!file || typeof file === "string") {
-      return c.json({ error: "Nenhum arquivo PDF fornecido" }, 400);
-    }
+      if (!file || typeof file === "string") {
+        return c.json({ error: "Nenhum arquivo PDF fornecido" }, 400);
+      }
 
-    const arrayBuffer = await (file as Blob).arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+      const arrayBuffer = await (file as Blob).arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
 
-    // Extract text from PDF
-    const rawText = await extractTextFromPdf(buffer);
-    const parsedProfile = parseMasterProfileText(rawText);
+      // Extract text from PDF
+      const rawText = await extractTextFromPdf(buffer);
+      const parsedProfile = parseMasterProfileText(rawText);
 
-    const db = getDb();
-    const existing = await db.select().from(masterProfilesTable).limit(1);
-    const profileId = existing.length > 0 ? existing[0].id : "master-default";
+      const db = getDb();
+      const existing = await db.select().from(masterProfilesTable).limit(1);
+      const profileId = existing.length > 0 ? existing[0].id : "master-default";
 
-    const dataToSave = {
-      id: profileId,
-      fullName: parsedProfile.fullName,
-      headline: parsedProfile.headline,
-      email: parsedProfile.email,
-      phone: parsedProfile.phone || null,
-      location: parsedProfile.location || null,
-      linkedin: parsedProfile.linkedin || null,
-      github: parsedProfile.github || null,
-      portfolio: parsedProfile.portfolio || null,
-      summary: parsedProfile.summary,
-      skills: JSON.stringify(parsedProfile.skills),
-      experiences: JSON.stringify(parsedProfile.experiences),
-      education: JSON.stringify(parsedProfile.education),
-      certifications: JSON.stringify(parsedProfile.certifications || []),
-      rawText,
-      updatedAt: Date.now(),
-    };
+      const dataToSave = {
+        id: profileId,
+        fullName: parsedProfile.fullName,
+        headline: parsedProfile.headline,
+        email: parsedProfile.email,
+        phone: parsedProfile.phone || null,
+        location: parsedProfile.location || null,
+        linkedin: parsedProfile.linkedin || null,
+        github: parsedProfile.github || null,
+        portfolio: parsedProfile.portfolio || null,
+        summary: parsedProfile.summary,
+        skills: JSON.stringify(parsedProfile.skills),
+        experiences: JSON.stringify(parsedProfile.experiences),
+        education: JSON.stringify(parsedProfile.education),
+        certifications: JSON.stringify(parsedProfile.certifications || []),
+        rawText,
+        updatedAt: Date.now(),
+      };
 
-    if (existing.length > 0) {
-      await db
-        .update(masterProfilesTable)
-        .set(dataToSave)
-        .where(eq(masterProfilesTable.id, profileId));
-    } else {
-      await db.insert(masterProfilesTable).values({
-        ...dataToSave,
-        createdAt: Date.now(),
-      });
-    }
+      if (existing.length > 0) {
+        await db
+          .update(masterProfilesTable)
+          .set(dataToSave)
+          .where(eq(masterProfilesTable.id, profileId));
+      } else {
+        await db.insert(masterProfilesTable).values({
+          ...dataToSave,
+          createdAt: Date.now(),
+        });
+      }
 
-    return c.json({ success: true, profile: parsedProfile });
-  });
+      return c.json({ success: true, profile: parsedProfile });
+    },
+  );
 
   // 3.1. Master Profile Reprocess (Re-runs clean parser on stored rawText)
   app.post("/api/profile/reprocess", async (c) => {
@@ -338,7 +364,8 @@ export function createApp() {
     }
 
     let topKeywordsStr = existing[0].topKeywords;
-    let language = existing[0].language;
+    let language: SupportedLanguage =
+      (existing[0].language as SupportedLanguage) || "pt";
 
     if (body.rawDescription !== undefined) {
       const cleanDesc = stripJobBoilerplate(
@@ -373,6 +400,7 @@ export function createApp() {
   app.delete("/api/jobs/:id", async (c) => {
     const id = c.req.param("id");
     const db = getDb();
+    await db.delete(coverLettersTable).where(eq(coverLettersTable.jobId, id));
     await db
       .delete(knockoutQuestionsTable)
       .where(eq(knockoutQuestionsTable.jobId, id));
@@ -462,15 +490,19 @@ export function createApp() {
 
     const keywords = JSON.parse(job.topKeywords || "[]");
 
-    let useAi = false;
+    let engineChoice: TailorEngine = "local";
     try {
       const body = await c.req.json();
-      if (body && typeof body.useAi === "boolean") {
-        useAi = body.useAi;
+      if (body) {
+        if (typeof body.engine === "string") {
+          engineChoice = body.engine as TailorEngine;
+        } else if (body.useAi === true) {
+          engineChoice = "gemini";
+        }
       }
     } catch {}
 
-    // Run optimization (Gemini AI if useAi is true and available, else local deterministic 7-layer engine)
+    // Run optimization (Gemini, Ollama or local deterministic 7-layer engine)
     const tailored = await tailorResumeWithAiOption(
       masterResume,
       {
@@ -480,7 +512,7 @@ export function createApp() {
         keywords,
         language: (job.language as SupportedLanguage) || "pt",
       },
-      useAi,
+      engineChoice,
     );
 
     // Save in DB
@@ -701,6 +733,19 @@ export function createApp() {
 
     const keywords = JSON.parse(job.topKeywords || "[]");
 
+    let preferredEngine:
+      | "gemini"
+      | "ollama"
+      | "openai"
+      | "heuristic"
+      | undefined;
+    try {
+      const body = await c.req.json().catch(() => ({}));
+      if (body?.engine) {
+        preferredEngine = body.engine;
+      }
+    } catch {}
+
     const genResult = await generateKnockoutAnswerWithMeta({
       questionText: question.questionText,
       job: {
@@ -711,6 +756,7 @@ export function createApp() {
         language: job.language,
       },
       profile: masterProfile,
+      preferredEngine,
     });
 
     const finalAnswer = genResult.answer;
@@ -960,6 +1006,447 @@ export function createApp() {
         "Content-Type": "application/json; charset=utf-8",
         "Content-Disposition": buildContentDisposition(
           `${sanitizedName}_Curriculo_ATS.json`,
+        ),
+      },
+    });
+  });
+
+  // =========================================================================
+  // COVER LETTER STUDIO ENDPOINTS
+  // =========================================================================
+
+  // 16. Cover Letter GET (Retrieve or auto-create)
+  app.get("/api/jobs/:id/cover-letter", async (c) => {
+    const jobId = c.req.param("id");
+    const db = getDb();
+
+    const jobs = await db
+      .select()
+      .from(jobsTable)
+      .where(eq(jobsTable.id, jobId))
+      .limit(1);
+    if (jobs.length === 0) return c.json({ error: "Vaga não encontrada" }, 404);
+    const job = jobs[0];
+
+    const existing = await db
+      .select()
+      .from(coverLettersTable)
+      .where(eq(coverLettersTable.jobId, jobId))
+      .limit(1);
+
+    if (existing.length > 0) {
+      return c.json({ coverLetter: existing[0] });
+    }
+
+    // Auto-generate initial cover letter if master profile exists
+    const profiles = await db.select().from(masterProfilesTable).limit(1);
+    if (profiles.length === 0) {
+      return c.json({ coverLetter: null });
+    }
+    const p = profiles[0];
+    const masterProfile: ResumeData = {
+      fullName: p.fullName,
+      headline: p.headline,
+      email: p.email,
+      phone: p.phone || undefined,
+      location: p.location || undefined,
+      linkedin: p.linkedin || undefined,
+      github: p.github || undefined,
+      portfolio: p.portfolio || undefined,
+      summary: p.summary,
+      skills: JSON.parse(p.skills || "[]"),
+      experiences: JSON.parse(p.experiences || "[]"),
+      education: JSON.parse(p.education || "[]"),
+      certifications: JSON.parse(p.certifications || "[]"),
+    };
+
+    const keywords = JSON.parse(job.topKeywords || "[]");
+    const generated = await generateCoverLetter({
+      profile: masterProfile,
+      job: {
+        title: job.title,
+        company: job.company,
+        rawDescription: job.rawDescription,
+        topKeywords: keywords,
+        language: job.language,
+      },
+      tone: "Técnico & Direto",
+      engine: "local",
+    });
+
+    const newRecord = {
+      id: `cl-${Date.now()}`,
+      jobId,
+      content: generated.content,
+      tone: "Técnico & Direto",
+      engine: generated.engineUsed,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+
+    await db.insert(coverLettersTable).values(newRecord);
+    return c.json({ coverLetter: newRecord });
+  });
+
+  // 17. Cover Letter Generate/Regenerate POST
+  app.post("/api/jobs/:id/cover-letter/generate", async (c) => {
+    const jobId = c.req.param("id");
+    const db = getDb();
+
+    const jobs = await db
+      .select()
+      .from(jobsTable)
+      .where(eq(jobsTable.id, jobId))
+      .limit(1);
+    if (jobs.length === 0) return c.json({ error: "Vaga não encontrada" }, 404);
+    const job = jobs[0];
+
+    const profiles = await db.select().from(masterProfilesTable).limit(1);
+    if (profiles.length === 0) {
+      return c.json({ error: "Master CV não encontrado" }, 400);
+    }
+    const p = profiles[0];
+    const masterProfile: ResumeData = {
+      fullName: p.fullName,
+      headline: p.headline,
+      email: p.email,
+      phone: p.phone || undefined,
+      location: p.location || undefined,
+      linkedin: p.linkedin || undefined,
+      github: p.github || undefined,
+      portfolio: p.portfolio || undefined,
+      summary: p.summary,
+      skills: JSON.parse(p.skills || "[]"),
+      experiences: JSON.parse(p.experiences || "[]"),
+      education: JSON.parse(p.education || "[]"),
+      certifications: JSON.parse(p.certifications || "[]"),
+    };
+
+    let tone: CoverLetterTone = "Técnico & Direto";
+    let engine: CoverLetterEngine = "local";
+    try {
+      const body = await c.req.json().catch(() => ({}));
+      if (body?.tone) tone = normalizeCoverLetterTone(body.tone);
+      if (body?.engine) engine = body.engine;
+    } catch {}
+
+    const keywords = JSON.parse(job.topKeywords || "[]");
+    const result = await generateCoverLetter({
+      profile: masterProfile,
+      job: {
+        title: job.title,
+        company: job.company,
+        rawDescription: job.rawDescription,
+        topKeywords: keywords,
+        language: job.language,
+      },
+      tone,
+      engine,
+    });
+
+    const existing = await db
+      .select()
+      .from(coverLettersTable)
+      .where(eq(coverLettersTable.jobId, jobId))
+      .limit(1);
+
+    const now = Date.now();
+    let savedLetter: typeof coverLettersTable.$inferSelect;
+
+    if (existing.length > 0) {
+      await db
+        .update(coverLettersTable)
+        .set({
+          content: result.content,
+          tone,
+          engine: result.engineUsed,
+          updatedAt: now,
+        })
+        .where(eq(coverLettersTable.id, existing[0].id));
+      savedLetter = {
+        ...existing[0],
+        content: result.content,
+        tone,
+        engine: result.engineUsed,
+        updatedAt: now,
+      };
+    } else {
+      savedLetter = {
+        id: `cl-${now}`,
+        jobId,
+        content: result.content,
+        tone,
+        engine: result.engineUsed,
+        createdAt: now,
+        updatedAt: now,
+      };
+      await db.insert(coverLettersTable).values(savedLetter);
+    }
+
+    return c.json({
+      success: true,
+      coverLetter: savedLetter,
+      engineUsed: result.engineUsed,
+    });
+  });
+
+  // 18. Cover Letter Save/Edit PUT
+  app.put("/api/jobs/:id/cover-letter", async (c) => {
+    const jobId = c.req.param("id");
+    const db = getDb();
+    const body = await c.req.json<{
+      content: string;
+      tone?: string;
+    }>();
+
+    if (!body || typeof body.content !== "string") {
+      return c.json({ error: "Conteúdo da carta inválido" }, 400);
+    }
+
+    const existing = await db
+      .select()
+      .from(coverLettersTable)
+      .where(eq(coverLettersTable.jobId, jobId))
+      .limit(1);
+
+    const now = Date.now();
+    if (existing.length > 0) {
+      await db
+        .update(coverLettersTable)
+        .set({
+          content: sanitizeUtf8(body.content),
+          tone: body.tone
+            ? normalizeCoverLetterTone(body.tone)
+            : existing[0].tone,
+          updatedAt: now,
+        })
+        .where(eq(coverLettersTable.id, existing[0].id));
+    } else {
+      await db.insert(coverLettersTable).values({
+        id: `cl-${now}`,
+        jobId,
+        content: sanitizeUtf8(body.content),
+        tone: normalizeCoverLetterTone(body.tone),
+        engine: "local",
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    const updated = await db
+      .select()
+      .from(coverLettersTable)
+      .where(eq(coverLettersTable.jobId, jobId))
+      .limit(1);
+
+    return c.json({ success: true, coverLetter: updated[0] });
+  });
+
+  // 19. Download Cover Letter PDF
+  app.get("/api/jobs/:id/download/cover-letter/pdf", async (c) => {
+    const jobId = c.req.param("id");
+    const db = getDb();
+
+    const jobs = await db
+      .select()
+      .from(jobsTable)
+      .where(eq(jobsTable.id, jobId))
+      .limit(1);
+    if (jobs.length === 0) return c.text("Vaga não encontrada", 404);
+    const job = jobs[0];
+
+    const profiles = await db.select().from(masterProfilesTable).limit(1);
+    if (profiles.length === 0) return c.text("Perfil não encontrado", 404);
+    const p = profiles[0];
+
+    const masterProfile: ResumeData = {
+      fullName: p.fullName,
+      headline: p.headline,
+      email: p.email,
+      phone: p.phone || undefined,
+      location: p.location || undefined,
+      linkedin: p.linkedin || undefined,
+      github: p.github || undefined,
+      portfolio: p.portfolio || undefined,
+      summary: p.summary,
+      skills: JSON.parse(p.skills || "[]"),
+      experiences: JSON.parse(p.experiences || "[]"),
+      education: JSON.parse(p.education || "[]"),
+      certifications: JSON.parse(p.certifications || "[]"),
+    };
+
+    const letters = await db
+      .select()
+      .from(coverLettersTable)
+      .where(eq(coverLettersTable.jobId, jobId))
+      .limit(1);
+
+    let content = "";
+    if (letters.length > 0 && letters[0].content) {
+      content = letters[0].content;
+    } else {
+      const generated = await generateCoverLetter({
+        profile: masterProfile,
+        job: {
+          title: job.title,
+          company: job.company,
+          rawDescription: job.rawDescription,
+          topKeywords: JSON.parse(job.topKeywords || "[]"),
+          language: job.language,
+        },
+      });
+      content = generated.content;
+    }
+
+    const pdfBytes = await generateCoverLetterPdf({
+      profile: masterProfile,
+      content,
+      metadata: {
+        title: `Carta de Apresentação — ${job.title} — ${job.company}`,
+        author: masterProfile.fullName,
+        subject: `Candidatura à vaga de ${job.title} na ${job.company}`,
+        keywords: [
+          job.title,
+          job.company,
+          "Cover Letter",
+          "Carta de Apresentação",
+        ],
+        creator: "ATS Resume Optimizer & Job Tracker (Cover Letter Studio)",
+      },
+    });
+
+    const safeName = sanitizeUtf8(masterProfile.fullName).replace(/\s+/g, "_");
+    const safeCompany = sanitizeUtf8(job.company).replace(/\s+/g, "_");
+
+    return new Response(pdfBytes as unknown as BodyInit, {
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": buildContentDisposition(
+          `${safeName}_Carta_Apresentacao_${safeCompany}.pdf`,
+        ),
+      },
+    });
+  });
+
+  // 20. Download Cover Letter DOCX
+  app.get("/api/jobs/:id/download/cover-letter/docx", async (c) => {
+    const jobId = c.req.param("id");
+    const db = getDb();
+
+    const jobs = await db
+      .select()
+      .from(jobsTable)
+      .where(eq(jobsTable.id, jobId))
+      .limit(1);
+    if (jobs.length === 0) return c.text("Vaga não encontrada", 404);
+    const job = jobs[0];
+
+    const profiles = await db.select().from(masterProfilesTable).limit(1);
+    if (profiles.length === 0) return c.text("Perfil não encontrado", 404);
+    const p = profiles[0];
+
+    const masterProfile: ResumeData = {
+      fullName: p.fullName,
+      headline: p.headline,
+      email: p.email,
+      phone: p.phone || undefined,
+      location: p.location || undefined,
+      linkedin: p.linkedin || undefined,
+      github: p.github || undefined,
+      portfolio: p.portfolio || undefined,
+      summary: p.summary,
+      skills: JSON.parse(p.skills || "[]"),
+      experiences: JSON.parse(p.experiences || "[]"),
+      education: JSON.parse(p.education || "[]"),
+      certifications: JSON.parse(p.certifications || "[]"),
+    };
+
+    const letters = await db
+      .select()
+      .from(coverLettersTable)
+      .where(eq(coverLettersTable.jobId, jobId))
+      .limit(1);
+
+    let content = "";
+    if (letters.length > 0 && letters[0].content) {
+      content = letters[0].content;
+    } else {
+      const generated = await generateCoverLetter({
+        profile: masterProfile,
+        job: {
+          title: job.title,
+          company: job.company,
+          rawDescription: job.rawDescription,
+          topKeywords: JSON.parse(job.topKeywords || "[]"),
+          language: job.language,
+        },
+      });
+      content = generated.content;
+    }
+
+    const docxBuffer = await generateCoverLetterDocx({
+      profile: masterProfile,
+      content,
+      metadata: {
+        title: `Carta de Apresentação — ${job.title} — ${job.company}`,
+        author: masterProfile.fullName,
+        subject: `Candidatura à vaga de ${job.title} na ${job.company}`,
+        keywords: [
+          job.title,
+          job.company,
+          "Cover Letter",
+          "Carta de Apresentação",
+        ],
+        creator: "ATS Resume Optimizer & Job Tracker (Cover Letter Studio)",
+      },
+    });
+
+    const safeName = sanitizeUtf8(masterProfile.fullName).replace(/\s+/g, "_");
+    const safeCompany = sanitizeUtf8(job.company).replace(/\s+/g, "_");
+
+    return new Response(docxBuffer as unknown as BodyInit, {
+      headers: {
+        "Content-Type":
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "Content-Disposition": buildContentDisposition(
+          `${safeName}_Carta_Apresentacao_${safeCompany}.docx`,
+        ),
+      },
+    });
+  });
+
+  // 21. Download Cover Letter TXT
+  app.get("/api/jobs/:id/download/cover-letter/txt", async (c) => {
+    const jobId = c.req.param("id");
+    const db = getDb();
+
+    const jobs = await db
+      .select()
+      .from(jobsTable)
+      .where(eq(jobsTable.id, jobId))
+      .limit(1);
+    if (jobs.length === 0) return c.text("Vaga não encontrada", 404);
+    const job = jobs[0];
+
+    const profiles = await db.select().from(masterProfilesTable).limit(1);
+    if (profiles.length === 0) return c.text("Perfil não encontrado", 404);
+    const p = profiles[0];
+
+    const letters = await db
+      .select()
+      .from(coverLettersTable)
+      .where(eq(coverLettersTable.jobId, jobId))
+      .limit(1);
+
+    const content = letters[0]?.content || "";
+    const safeName = sanitizeUtf8(p.fullName).replace(/\s+/g, "_");
+    const safeCompany = sanitizeUtf8(job.company).replace(/\s+/g, "_");
+
+    return new Response(content, {
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Content-Disposition": buildContentDisposition(
+          `${safeName}_Carta_Apresentacao_${safeCompany}.txt`,
         ),
       },
     });
