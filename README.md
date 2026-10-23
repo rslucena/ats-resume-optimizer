@@ -1,7 +1,7 @@
 # ATS Resume Optimizer & Job Tracker
 
 [![CI](https://github.com/rslucena/ats-resume-optimizer/actions/workflows/ci.yml/badge.svg)](https://github.com/rslucena/ats-resume-optimizer/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/tests-61%20passed-brightgreen?style=flat-square)](https://github.com/rslucena/ats-resume-optimizer)
+[![Tests](https://img.shields.io/badge/tests-68%20passed-brightgreen?style=flat-square)](https://github.com/rslucena/ats-resume-optimizer)
 [![Runtime](https://img.shields.io/badge/runtime-Bun%20v1.2+-black?style=flat-square&logo=bun)](https://bun.sh)
 [![Language](https://img.shields.io/badge/language-TypeScript-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
@@ -18,7 +18,7 @@ Aplicacao Full-Stack local-first desenvolvida para controle de candidaturas, oti
 | :--- | :--- | :--- |
 | Privacidade | 100% Local (SQLite em disco sem telemetria) | Curriculos e dados enviados para servidores de terceiros |
 | Modelo de Custo | Gratuito e Open-Source (MIT) | Mensalidades recorrentes e creditos pagos por download |
-| Motores de Otimizacao | Hibrido: Motor 7-Camadas (offline), Ollama (local) ou Gemini | Geracao opaca por LLMs em nuvem sem auditoria de densidade |
+| Motores de Otimizacao | Hibrido: Motor 7-Camadas (offline), Claude, OpenRouter, Ollama (local) ou Gemini | Geracao opaca por LLMs em nuvem sem auditoria de densidade |
 | Carta de Apresentacao | Gerador contextual deterministico em 3 tons (PDF e DOCX) | Modelos genericos alucinados e sem alinhamento com a vaga |
 | Formatacao ATS | PDFKit Linear + DOCX OpenXML com metadados XMP | Modelos visuais em duas colunas rejeitados por parsers |
 | Rastreabilidade | Banco SQLite local auditavel via SQL | Dados retidos em plataformas fechadas |
@@ -32,11 +32,13 @@ Aplicacao Full-Stack local-first desenvolvida para controle de candidaturas, oti
 - Enriquecimento contextual do resumo, experiencia e primeira linha de cada cargo sem inventar empresas ou graduacoes.
 - Blindagem contra cortes eliminatorios com sinonimos tecnicos (ex: Node.js / NodeJS, Kubernetes / K8s).
 
-### 2. Suporte Hibrido a LLMs (Ollama Local & Gemini Cloud)
-- Suporte a LLMs locais e privadas via Ollama (Llama 3.2, Mistral, Gemma 2, DeepSeek-R1) com zero envio de dados para a internet.
-- Suporte opcional ao Google Gemini 1.5 Flash via API Key.
-- Arquitetura de fallback gracioso: se o motor de IA falhar ou estiver offline, a aplicacao recorre instantaneamente ao motor deterministico local de 7 camadas sem interromper o fluxo de trabalho.
-- Seletor de motor integrado com dropdown sincronizado entre o cabecalho e os estúdios de edicao.
+### 2. Suporte Hibrido a Motores de IA (Claude, OpenRouter, Ollama & Gemini)
+- Anthropic Claude: Integracao direta com a API da Anthropic (Claude 3.5 Sonnet / Haiku / Opus) com prompt engineering de alta fidelidade e saida estritamente estruturada em JSON.
+- OpenRouter Gateway: Integracao com a API OpenRouter (OpenAI-compatible) permitindo conectar a mais de 100 modelos (Anthropic Claude, DeepSeek-R1/V3, Meta Llama 3.3, Mistral, OpenAI GPT-4o).
+- Ollama Local: Suporte nativo a LLMs locais e privadas (Llama 3.2, Mistral, Gemma 2, DeepSeek-R1) com zero envio de dados para a nuvem.
+- Google Gemini: Suporte opcional ao Google Gemini 1.5 Flash via API Key.
+- Arquitetura de fallback gracioso: se o motor de IA selecionado falhar, estiver sem chave ou offline, a aplicacao recorre instantaneamente ao motor deterministico local de 7 camadas sem interromper o fluxo de trabalho.
+- Seletor de motor integrado com dropdown sincronizado entre o cabecalho e os estudios de edicao, com badges de status em tempo real.
 
 ### 3. Cover Letter Studio (Cartas de Apresentacao ATS-Ready)
 - Geracao de cartas de apresentacao altamente direcionadas a vaga e ao perfil do candidato.
@@ -71,7 +73,9 @@ Aplicacao Full-Stack local-first desenvolvida para controle de candidaturas, oti
   - franc: Deteccao automatica do idioma da vaga (Portugues PT-BR vs. Ingles EN) adaptando stopwords e stemmers dinamicamente.
   - leven: Medicao de distancia de Levenshtein para tolerancia a variacoes lexicais.
   - Tech-First NER & Synonyms: Dicionario canonico com mais de 280 tecnologias modernas e mapeamento de grupos sinonimos (ex: Postgres / PostgreSQL, React / React.js).
-- Motores de IA & Inferencia Local:
+- Motores de IA & Inferencia Local/Cloud:
+  - Anthropic Claude API: Integracao HTTP nativa com Claude 3.5 Sonnet (claude-3-5-sonnet-20241022) via messages endpoint.
+  - OpenRouter API: Gateway universal HTTP OpenAI-compatible para flexibilidade com modelos de mercado.
   - Ollama: Integracao local HTTP para execucao privada de LLMs sem conexao com a nuvem.
   - Google Gemini API: Integracao opcional via Google AI Studio com prompts estritos anti-alucinacao.
 - Extracao & Geracao de Documentos:
@@ -134,7 +138,7 @@ Ao personalizar um curriculo para uma vaga, o motor cruza o perfil mestre aplica
 bun install
 ```
 
-### 3. Rodar os Testes Automatizados (61 testes)
+### 3. Rodar os Testes Automatizados (68 testes)
 ```bash
 bun test
 ```
@@ -161,14 +165,20 @@ PORT=3000
 # Caminho do banco SQLite (Padrao: data/ats_tracker.sqlite)
 DB_PATH=data/ats_tracker.sqlite
 
-# Opcional: Chave da Google Gemini API para reescrita via nuvem
-GEMINI_API_KEY=
+# Anthropic Claude API (Claude 3.5 Sonnet nativo)
+ANTHROPIC_API_KEY=
+ANTHROPIC_MODEL=claude-3-5-sonnet-20241022
 
-# Opcional: URL do servidor Ollama para inferencia local privada (Padrao: http://localhost:11434)
+# OpenRouter Gateway (Acesso a dezenas de modelos de mercado)
+OPENROUTER_API_KEY=
+OPENROUTER_MODEL=anthropic/claude-3.5-sonnet
+
+# Servidor Ollama local para inferencia privada offline (Padrao: http://localhost:11434)
 OLLAMA_BASE_URL=
-
-# Opcional: Modelo local a ser utilizado pelo Ollama (Padrao: llama3.2)
 OLLAMA_MODEL=llama3.2
+
+# Google Gemini API
+GEMINI_API_KEY=
 ```
 
 ---
@@ -203,19 +213,20 @@ OLLAMA_MODEL=llama3.2
 │   │   ├── scorer.ts             # Auditor Dual-Score (Escaneabilidade e TF-IDF)
 │   │   └── tailor.ts             # Motor algoritmico das 7 camadas de ATS
 │   ├── services/
-│   │   ├── aiTailorService.ts    # Orquestrador de reescrita via IA (Gemini / Ollama / Local)
+│   │   ├── aiTailorService.ts    # Orquestrador de reescrita via IA (Gemini / Claude / OpenRouter / Ollama / Local)
+│   │   ├── claudeService.ts      # Cliente HTTP Anthropic Claude (Messages API)
 │   │   ├── coverLetterService.ts # Gerador de Cartas de Apresentacao em 3 tons
 │   │   ├── cvExtractor.ts        # Extracao de texto de PDF, reflow e estruturacao
 │   │   ├── jobScraper.ts         # Scraping e parsing de vagas com cheerio
 │   │   ├── knockoutAnswerService.ts # Gerador de respostas para questoes eliminatorias
-│   │   └── ollamaService.ts      # Cliente HTTP de integracao com Ollama local
+│   │   ├── ollamaService.ts      # Cliente HTTP de integracao com Ollama local
+│   │   └── openRouterService.ts  # Cliente HTTP OpenRouter (OpenAI-compatible)
 │   ├── types/
 │   │   └── resume.ts             # Tipagens TypeScript compartilhadas
 │   ├── utils/
 │   │   ├── dateFormat.ts         # Formatacao e normalizacao de datas
 │   │   ├── encoding.ts           # Sanitizacao UTF-8 e limpeza de boilerplate
 │   │   └── env.ts                # Leitura e sanitizacao de variaveis de ambiente
-│   └── server.ts                 # Servidor Bun.serve + Hono
 └── tests/                        # Suite completa de testes automatizados com bun test
 ```
 
