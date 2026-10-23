@@ -2,7 +2,9 @@ import type { ExtractedKeyword } from "../nlp/tfidf.ts";
 import type { ResumeData } from "../types/resume.ts";
 import { sanitizeResumeUtf8, sanitizeUtf8 } from "../utils/encoding.ts";
 import { getEnvKey } from "../utils/env.ts";
+import { callClaudeGenerate } from "./claudeService.ts";
 import { callOllamaGenerate } from "./ollamaService.ts";
+import { callOpenRouterGenerate } from "./openRouterService.ts";
 
 export type CoverLetterTone = "Técnico & Direto" | "Executivo" | "Entusiasta";
 
@@ -14,7 +16,12 @@ export function normalizeCoverLetterTone(raw?: string): CoverLetterTone {
   return "Técnico & Direto";
 }
 
-export type CoverLetterEngine = "gemini" | "ollama" | "local";
+export type CoverLetterEngine =
+  | "gemini"
+  | "ollama"
+  | "openrouter"
+  | "claude"
+  | "local";
 
 export interface CoverLetterJobContext {
   title: string;
@@ -86,6 +93,44 @@ export async function generateCoverLetter(
     } catch (err) {
       console.warn(
         "[Cover Letter] Falha no Ollama, recorrendo ao motor local:",
+        err,
+      );
+    }
+  }
+
+  if (preferredEngine === "openrouter") {
+    try {
+      const text = await callOpenRouterCoverLetter(
+        profile,
+        options.job,
+        tone,
+        isEn,
+      );
+      if (text && text.trim().length > 120) {
+        return { content: text.trim(), engineUsed: "openrouter" };
+      }
+    } catch (err) {
+      console.warn(
+        "[Cover Letter] Falha no OpenRouter, recorrendo ao motor local:",
+        err,
+      );
+    }
+  }
+
+  if (preferredEngine === "claude") {
+    try {
+      const text = await callClaudeCoverLetter(
+        profile,
+        options.job,
+        tone,
+        isEn,
+      );
+      if (text && text.trim().length > 120) {
+        return { content: text.trim(), engineUsed: "claude" };
+      }
+    } catch (err) {
+      console.warn(
+        "[Cover Letter] Falha no Claude, recorrendo ao motor local:",
         err,
       );
     }
@@ -316,6 +361,42 @@ async function callOllamaCoverLetter(
 ): Promise<string> {
   const prompt = buildCoverLetterAiPrompt(profile, job, tone, isEn);
   const rawText = await callOllamaGenerate({
+    prompt,
+    system: isEn
+      ? "You are an expert executive resume writer. Output ONLY the raw cover letter text. Do not add conversational remarks, introductory prefixes, or markdown headers."
+      : "Você é um especialista sênior em cartas de apresentação profissionais. Escreva EXCLUSIVAMENTE o texto final da carta de apresentação, sem introduções ou comentários.",
+    timeoutMs: 30000,
+  });
+
+  return sanitizeAiLetterText(rawText);
+}
+
+async function callOpenRouterCoverLetter(
+  profile: ResumeData,
+  job: CoverLetterJobContext,
+  tone: CoverLetterTone,
+  isEn: boolean,
+): Promise<string> {
+  const prompt = buildCoverLetterAiPrompt(profile, job, tone, isEn);
+  const rawText = await callOpenRouterGenerate({
+    prompt,
+    system: isEn
+      ? "You are an expert executive resume writer. Output ONLY the raw cover letter text. Do not add conversational remarks, introductory prefixes, or markdown headers."
+      : "Você é um especialista sênior em cartas de apresentação profissionais. Escreva EXCLUSIVAMENTE o texto final da carta de apresentação, sem introduções ou comentários.",
+    timeoutMs: 30000,
+  });
+
+  return sanitizeAiLetterText(rawText);
+}
+
+async function callClaudeCoverLetter(
+  profile: ResumeData,
+  job: CoverLetterJobContext,
+  tone: CoverLetterTone,
+  isEn: boolean,
+): Promise<string> {
+  const prompt = buildCoverLetterAiPrompt(profile, job, tone, isEn);
+  const rawText = await callClaudeGenerate({
     prompt,
     system: isEn
       ? "You are an expert executive resume writer. Output ONLY the raw cover letter text. Do not add conversational remarks, introductory prefixes, or markdown headers."

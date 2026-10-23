@@ -1,6 +1,8 @@
 import type { ResumeData } from "../types/resume.ts";
 import { getEnvKey } from "../utils/env.ts";
+import { callClaudeGenerate } from "./claudeService.ts";
 import { callOllamaGenerate } from "./ollamaService.ts";
+import { callOpenRouterGenerate } from "./openRouterService.ts";
 
 export interface KnockoutJobContext {
   title: string;
@@ -14,12 +16,24 @@ export interface KnockoutGenerationContext {
   questionText: string;
   job: KnockoutJobContext;
   profile: ResumeData;
-  preferredEngine?: "gemini" | "ollama" | "openai" | "heuristic";
+  preferredEngine?:
+    | "gemini"
+    | "ollama"
+    | "openrouter"
+    | "claude"
+    | "openai"
+    | "heuristic";
 }
 
 export interface KnockoutGenerationResult {
   answer: string;
-  source: "gemini" | "ollama" | "openai" | "heuristic";
+  source:
+    | "gemini"
+    | "ollama"
+    | "openrouter"
+    | "claude"
+    | "openai"
+    | "heuristic";
 }
 
 export function validateAndCleanAnswer(
@@ -71,6 +85,38 @@ export async function generateKnockoutAnswerWithMeta(
       return {
         answer: validated,
         source: "ollama",
+      };
+    }
+  }
+
+  if (preferredEngine === "openrouter") {
+    const llmAnswer = await callOpenRouterKnockout(
+      questionText,
+      job,
+      profile,
+      isEn,
+    );
+    const validated = validateAndCleanAnswer(llmAnswer);
+    if (validated) {
+      return {
+        answer: validated,
+        source: "openrouter",
+      };
+    }
+  }
+
+  if (preferredEngine === "claude") {
+    const llmAnswer = await callClaudeKnockout(
+      questionText,
+      job,
+      profile,
+      isEn,
+    );
+    const validated = validateAndCleanAnswer(llmAnswer);
+    if (validated) {
+      return {
+        answer: validated,
+        source: "claude",
       };
     }
   }
@@ -267,6 +313,50 @@ async function callOllamaKnockout(
     return raw;
   } catch (err) {
     console.warn("Ollama knockout generation fallback:", err);
+    return null;
+  }
+}
+
+async function callOpenRouterKnockout(
+  question: string,
+  job: KnockoutJobContext,
+  profile: ResumeData,
+  isEn: boolean,
+): Promise<string | null> {
+  try {
+    const prompt = buildKnockoutPrompt(question, job, profile, isEn);
+    const raw = await callOpenRouterGenerate({
+      prompt,
+      system: isEn
+        ? "You are an expert interview coach. Output ONLY the final concise response ready to paste into the job application. No markdown headers, no introductory remarks."
+        : "Você é um mentor especialista em aprovação de candidatos. Escreva EXCLUSIVAMENTE o texto final da resposta, pronto para colar no formulário da vaga. Sem cabeçalhos ou comentários.",
+      timeoutMs: 25000,
+    });
+    return raw;
+  } catch (err) {
+    console.warn("OpenRouter knockout generation fallback:", err);
+    return null;
+  }
+}
+
+async function callClaudeKnockout(
+  question: string,
+  job: KnockoutJobContext,
+  profile: ResumeData,
+  isEn: boolean,
+): Promise<string | null> {
+  try {
+    const prompt = buildKnockoutPrompt(question, job, profile, isEn);
+    const raw = await callClaudeGenerate({
+      prompt,
+      system: isEn
+        ? "You are an expert interview coach. Output ONLY the final concise response ready to paste into the job application. No markdown headers, no introductory remarks."
+        : "Você é um mentor especialista em aprovação de candidatos. Escreva EXCLUSIVAMENTE o texto final da resposta, pronto para colar no formulário da vaga. Sem cabeçalhos ou comentários.",
+      timeoutMs: 25000,
+    });
+    return raw;
+  } catch (err) {
+    console.warn("Claude knockout generation fallback:", err);
     return null;
   }
 }

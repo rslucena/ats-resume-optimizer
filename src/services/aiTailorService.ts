@@ -13,10 +13,17 @@ import {
 import type { ResumeData } from "../types/resume.ts";
 import { sanitizeResumeUtf8 } from "../utils/encoding.ts";
 import { getEnvKey } from "../utils/env.ts";
+import { callClaudeGenerate } from "./claudeService.ts";
 import { sanitizeLocation } from "./cvExtractor.ts";
 import { callOllamaGenerate } from "./ollamaService.ts";
+import { callOpenRouterGenerate } from "./openRouterService.ts";
 
-export type TailorEngine = "gemini" | "ollama" | "local";
+export type TailorEngine =
+  | "gemini"
+  | "ollama"
+  | "openrouter"
+  | "claude"
+  | "local";
 
 export interface AiTailoredResumeResult extends TailoredResumeResult {
   engine: TailorEngine;
@@ -67,6 +74,38 @@ export async function tailorResumeWithAiOption(
     return { ...fallback, engine: "local" };
   }
 
+  if (engineChoice === "openrouter") {
+    try {
+      const openRouterResult = await callOpenRouterTailor(masterResume, job);
+      if (openRouterResult) {
+        return { ...openRouterResult, engine: "openrouter" };
+      }
+    } catch (err) {
+      console.warn(
+        "[AI Tailor] Falha no OpenRouter. Recorrendo ao motor determinístico local:",
+        err,
+      );
+    }
+    const fallback = await tailorResume(masterResume, job);
+    return { ...fallback, engine: "local" };
+  }
+
+  if (engineChoice === "claude") {
+    try {
+      const claudeResult = await callClaudeTailor(masterResume, job);
+      if (claudeResult) {
+        return { ...claudeResult, engine: "claude" };
+      }
+    } catch (err) {
+      console.warn(
+        "[AI Tailor] Falha no Claude. Recorrendo ao motor determinístico local:",
+        err,
+      );
+    }
+    const fallback = await tailorResume(masterResume, job);
+    return { ...fallback, engine: "local" };
+  }
+
   // Default AI: Gemini 1.5 Flash
   const apiKey = getEnvKey("GEMINI_API_KEY");
   if (!apiKey) {
@@ -91,6 +130,73 @@ export async function tailorResumeWithAiOption(
 
   const fallback = await tailorResume(masterResume, job);
   return { ...fallback, engine: "local" };
+}
+
+/**
+ * Invokes OpenRouter API for multi-model resume tailoring.
+ */
+export async function callOpenRouterTailor(
+  master: ResumeData,
+  job: JobInput,
+): Promise<TailoredResumeResult | null> {
+  try {
+    const lang = job.language || "pt";
+    const prompt = buildGeminiTailorPrompt(master, job, lang);
+    const rawText = await callOpenRouterGenerate({
+      prompt,
+      formatJson: true,
+      system:
+        "Você é um especialista em ATS. Retorne EXCLUSIVAMENTE um objeto JSON válido, sem comentários ou blocos adicionais.",
+      timeoutMs: 30000,
+    });
+
+    const parsedJson = extractJsonFromText(rawText) as GeminiTailorResponse;
+    if (!parsedJson?.summary || !Array.isArray(parsedJson.experiences)) {
+      console.warn(
+        "[AI Tailor] Estrutura JSON retornada pelo OpenRouter é inválida:",
+        rawText,
+      );
+      return null;
+    }
+
+    return mergeGeminiOutputWithMaster(master, job, parsedJson, lang);
+  } catch (e) {
+    console.warn("[AI Tailor] Erro na execução de callOpenRouterTailor:", e);
+    return null;
+  }
+}
+
+/**
+ * Invokes Anthropic Claude API for advanced resume tailoring.
+ */
+export async function callClaudeTailor(
+  master: ResumeData,
+  job: JobInput,
+): Promise<TailoredResumeResult | null> {
+  try {
+    const lang = job.language || "pt";
+    const prompt = buildGeminiTailorPrompt(master, job, lang);
+    const rawText = await callClaudeGenerate({
+      prompt,
+      system:
+        "Você é um especialista em ATS. Retorne EXCLUSIVAMENTE um objeto JSON válido, sem comentários ou blocos adicionais.",
+      timeoutMs: 30000,
+    });
+
+    const parsedJson = extractJsonFromText(rawText) as GeminiTailorResponse;
+    if (!parsedJson?.summary || !Array.isArray(parsedJson.experiences)) {
+      console.warn(
+        "[AI Tailor] Estrutura JSON retornada pelo Claude é inválida:",
+        rawText,
+      );
+      return null;
+    }
+
+    return mergeGeminiOutputWithMaster(master, job, parsedJson, lang);
+  } catch (e) {
+    console.warn("[AI Tailor] Erro na execução de callClaudeTailor:", e);
+    return null;
+  }
 }
 
 /**

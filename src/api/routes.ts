@@ -26,6 +26,10 @@ import {
   tailorResumeWithAiOption,
 } from "../services/aiTailorService.ts";
 import {
+  checkClaudeAvailable,
+  isClaudeConfigured,
+} from "../services/claudeService.ts";
+import {
   type CoverLetterEngine,
   type CoverLetterTone,
   generateCoverLetter,
@@ -38,6 +42,10 @@ import {
 import { scrapeJobUrl } from "../services/jobScraper.ts";
 import { generateKnockoutAnswerWithMeta } from "../services/knockoutAnswerService.ts";
 import { checkOllamaAvailable } from "../services/ollamaService.ts";
+import {
+  checkOpenRouterAvailable,
+  isOpenRouterConfigured,
+} from "../services/openRouterService.ts";
 import type { ExperienceItem, ResumeData } from "../types/resume.ts";
 import {
   sanitizeResumeUtf8,
@@ -53,19 +61,35 @@ export function createApp() {
 
   // Healthcheck & System Config
   app.get("/api/health", async (c) => {
-    const ollama = await checkOllamaAvailable();
+    const [ollama, openrouter, claude] = await Promise.all([
+      checkOllamaAvailable(),
+      checkOpenRouterAvailable(),
+      checkClaudeAvailable(),
+    ]);
     return c.json({
       status: "ok",
       hasGeminiKey: !!getEnvKey("GEMINI_API_KEY"),
+      hasOpenRouterKey: isOpenRouterConfigured(),
+      openrouter,
+      hasClaudeKey: isClaudeConfigured(),
+      claude,
       ollama,
       timestamp: Date.now(),
     });
   });
 
   app.get("/api/config", async (c) => {
-    const ollama = await checkOllamaAvailable();
+    const [ollama, openrouter, claude] = await Promise.all([
+      checkOllamaAvailable(),
+      checkOpenRouterAvailable(),
+      checkClaudeAvailable(),
+    ]);
     return c.json({
       hasGeminiKey: !!getEnvKey("GEMINI_API_KEY"),
+      hasOpenRouterKey: isOpenRouterConfigured(),
+      openrouter,
+      hasClaudeKey: isClaudeConfigured(),
+      claude,
       ollama,
     });
   });
