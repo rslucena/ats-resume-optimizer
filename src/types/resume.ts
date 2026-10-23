@@ -4,6 +4,7 @@ export interface ExperienceItem {
   startDate: string;
   endDate: string;
   description: string;
+  location?: string;
 }
 
 export interface EducationItem {

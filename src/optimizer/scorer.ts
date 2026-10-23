@@ -1,5 +1,5 @@
 import type { SupportedLanguage } from "../nlp/language.ts";
-import type { ExtractedKeyword } from "../nlp/tfidf.ts";
+import { type ExtractedKeyword, getTechSynonyms } from "../nlp/tfidf.ts";
 import type { AtsAuditResult, ResumeData } from "../types/resume.ts";
 
 export function auditAtsScore(
@@ -73,14 +73,29 @@ export function auditAtsScore(
     // Direct match or stem match
     const stemRegex = new RegExp(`\\b${stem}`, "gi");
     const hasStemMatch = stemRegex.test(fullDocumentText);
+    let hasSynonymMatch = false;
     if (count === 0 && hasStemMatch) {
       count = 1;
+    } else if (count === 0) {
+      const synonyms = getTechSynonyms(term);
+      for (const syn of synonyms) {
+        const escSyn = syn.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&");
+        const synRegex = new RegExp(
+          `(?<=\\b|\\s|^)${escSyn}(?=\\b|\\s|$)`,
+          "gi",
+        );
+        if (synRegex.test(fullDocumentText)) {
+          hasSynonymMatch = true;
+          count = 1;
+          break;
+        }
+      }
     }
 
     keywordDensity[term] = count;
     keywordDensity[kw.term] = count;
 
-    if (count > 0 || hasStemMatch) {
+    if (count > 0 || hasStemMatch || hasSynonymMatch) {
       matchedKeywords.push(kw.term);
     } else {
       missingKeywords.push(kw.term);
@@ -104,9 +119,12 @@ export function auditAtsScore(
   // Weight 3 (Summary): Check if at least 2 top keywords appear in summary
   const summaryMatches = jobKeywords.filter((kw) => {
     const term = kw.term.toLowerCase();
-    return (
-      summaryLower.includes(term) || (kw.stem && summaryLower.includes(kw.stem))
-    );
+    const hasDirect =
+      summaryLower.includes(term) ||
+      (kw.stem && summaryLower.includes(kw.stem));
+    if (hasDirect) return true;
+    const synonyms = getTechSynonyms(term);
+    return synonyms.some((syn) => summaryLower.includes(syn));
   });
   if (summaryMatches.length >= 3) {
     densityScore += 7;

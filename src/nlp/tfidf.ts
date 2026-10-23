@@ -824,7 +824,85 @@ export const CANONICAL_TECH_ENTITIES: Record<string, string> = {
   tls: "SSL/TLS",
   ssl: "SSL/TLS",
   https: "HTTPS",
+
+  // 13. Modern Frontend, Bundlers & State Management (2024-2026)
+  vite: "Vite",
+  astro: "Astro",
+  zustand: "Zustand",
+  redux: "Redux",
+  "tanstack query": "TanStack Query",
+  "react query": "TanStack Query",
+  webpack: "Webpack",
+  turbopack: "Turbopack",
+
+  // 14. Modern Data, AI, LLMs & Vector Search
+  ollama: "Ollama",
+  langchain: "LangChain",
+  llamaindex: "LlamaIndex",
+  huggingface: "Hugging Face",
+  "hugging face": "Hugging Face",
+  pinecone: "Pinecone",
+  qdrant: "Qdrant",
+  chromadb: "ChromaDB",
+  milvus: "Milvus",
+  pgvector: "pgvector",
+  duckdb: "DuckDB",
+  dbt: "dbt",
+  spark: "Apache Spark",
+  "apache spark": "Apache Spark",
+  airflow: "Apache Airflow",
+  "apache airflow": "Apache Airflow",
+  snowflake: "Snowflake",
+  databricks: "Databricks",
+  rag: "RAG",
+  embeddings: "Embeddings",
+
+  // 15. Cloud Serverless, Edge & Infra-as-Code
+  "cloudflare workers": "Cloudflare Workers",
+  fargate: "AWS Fargate",
+  "aws fargate": "AWS Fargate",
+  opentofu: "OpenTofu",
 };
+
+// Groups of interchangeable technical synonyms/aliases
+export const TECH_SYNONYM_GROUPS: string[][] = [
+  ["postgresql", "postgres"],
+  ["react", "react.js", "reactjs"],
+  ["node.js", "nodejs", "node"],
+  ["typescript", "ts"],
+  ["javascript", "js"],
+  ["golang", "go"],
+  ["kubernetes", "k8s"],
+  ["next.js", "nextjs"],
+  ["vue.js", "vuejs", "vue"],
+  ["nuxt.js", "nuxt"],
+  ["ci/cd", "cicd"],
+  ["aws", "amazon web services"],
+  ["google cloud (gcp)", "google cloud", "gcp"],
+  ["kafka", "apache kafka"],
+  ["spark", "apache spark"],
+  ["airflow", "apache airflow"],
+  ["restful apis", "rest apis", "rest api", "rest", "restful"],
+  ["spring boot", "springboot", "spring"],
+  ["docker", "containers"],
+  ["tanstack query", "react query"],
+];
+
+const SYNONYM_LOOKUP = new Map<string, string[]>();
+for (const group of TECH_SYNONYM_GROUPS) {
+  for (const item of group) {
+    const others = group.filter((g) => g !== item);
+    SYNONYM_LOOKUP.set(item.toLowerCase(), others);
+  }
+}
+
+/**
+ * Returns alternative names/aliases for a technical term (e.g. "postgres" -> ["postgresql"]).
+ */
+export function getTechSynonyms(term: string): string[] {
+  if (!term) return [];
+  return SYNONYM_LOOKUP.get(term.toLowerCase().trim()) || [];
+}
 
 // Known technical acronyms (2 to 5 characters) that are explicitly allowed
 export const KNOWN_TECH_ACRONYMS = new Set([
@@ -1078,8 +1156,8 @@ export function extractKeywords(
   const canonicalMap = new Map<string, ExtractedKeyword>();
   for (const item of results) {
     const key = item.term.toLowerCase();
-    if (canonicalMap.has(key)) {
-      const existing = canonicalMap.get(key)!;
+    const existing = canonicalMap.get(key);
+    if (existing) {
       existing.count += item.count;
       existing.tfidf = Number(Math.max(existing.tfidf, item.tfidf).toFixed(3));
     } else {

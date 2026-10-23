@@ -233,9 +233,9 @@ export async function generateAtsDocx(
   const doc = new Document({
     creator: metadata.author,
     title: metadata.title,
-    description: metadata.subject,
+    subject: metadata.subject,
+    description: metadata.category || "Currículo",
     keywords: metadata.keywords.join(", "),
-    category: metadata.category || "Currículo",
     sections: [
       {
         properties: {

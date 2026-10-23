@@ -6,7 +6,11 @@ import {
   isExcludedSkillTerm,
 } from "../nlp/tfidf.ts";
 import { sanitizeLocation } from "../services/cvExtractor.ts";
-import type { AtsAuditResult, ResumeData } from "../types/resume.ts";
+import type {
+  AtsAuditResult,
+  EducationItem,
+  ResumeData,
+} from "../types/resume.ts";
 import { formatDate } from "../utils/dateFormat.ts";
 import { sanitizeResumeUtf8, sanitizeUtf8 } from "../utils/encoding.ts";
 import { auditAtsScore } from "./scorer.ts";
