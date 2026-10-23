@@ -92,7 +92,18 @@ export function initDb(dbPath = DEFAULT_DB_PATH) {
       updated_at INTEGER NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS cover_letters (
+      id TEXT PRIMARY KEY,
+      job_id TEXT NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
+      content TEXT NOT NULL,
+      tone TEXT NOT NULL DEFAULT 'Técnico & Direto',
+      engine TEXT NOT NULL DEFAULT 'local',
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
     CREATE INDEX IF NOT EXISTS idx_knockout_job_id ON knockout_questions(job_id);
+    CREATE INDEX IF NOT EXISTS idx_cover_letters_job_id ON cover_letters(job_id);
   `);
 
   return db;

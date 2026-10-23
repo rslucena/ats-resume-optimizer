@@ -13,7 +13,8 @@
     "lint:fix": "biome lint --write .",
     "format": "biome format --write .",
     "check": "biome check .",
-    "check:fix": "biome check --write ."
+    "check:fix": "biome check --write .",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@hono/bun": "^1.0.1",
@@ -33,6 +34,7 @@
     "@types/bun": "latest",
     "@types/natural": "^5.1.5",
     "@types/pdf-parse": "^1.1.4",
-    "@types/pdfkit": "^0.13.9"
+    "@types/pdfkit": "^0.13.9",
+    "typescript": "^7.0.2"
   }
 }

@@ -65,6 +65,18 @@ export const knockoutQuestionsTable = sqliteTable("knockout_questions", {
   updatedAt: integer("updated_at").notNull(),
 });
 
+export const coverLettersTable = sqliteTable("cover_letters", {
+  id: text("id").primaryKey(),
+  jobId: text("job_id")
+    .notNull()
+    .references(() => jobsTable.id, { onDelete: "cascade" }),
+  content: text("content").notNull(),
+  tone: text("tone").notNull().default("Técnico & Direto"), // 'Técnico & Direto' | 'Executivo' | 'Entusiasta'
+  engine: text("engine").notNull().default("local"), // 'gemini' | 'ollama' | 'local'
+  createdAt: integer("created_at").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+});
+
 export type MasterProfile = typeof masterProfilesTable.$inferSelect;
 export type InsertMasterProfile = typeof masterProfilesTable.$inferInsert;
 export type Job = typeof jobsTable.$inferSelect;
@@ -73,3 +85,5 @@ export type TailoredResume = typeof tailoredResumesTable.$inferSelect;
 export type InsertTailoredResume = typeof tailoredResumesTable.$inferInsert;
 export type KnockoutQuestion = typeof knockoutQuestionsTable.$inferSelect;
 export type InsertKnockoutQuestion = typeof knockoutQuestionsTable.$inferInsert;
+export type CoverLetter = typeof coverLettersTable.$inferSelect;
+export type InsertCoverLetter = typeof coverLettersTable.$inferInsert;
