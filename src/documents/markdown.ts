@@ -1,5 +1,5 @@
-import type { ResumeData } from "../types/resume.ts";
 import { sanitizeLocation } from "../services/cvExtractor.ts";
+import type { ResumeData } from "../types/resume.ts";
 import { formatDateRange } from "../utils/dateFormat.ts";
 import { sanitizeResumeUtf8 } from "../utils/encoding.ts";
 
@@ -42,15 +42,17 @@ export function generateAtsMarkdown(rawResume: ResumeData): string {
     lines.push("");
     for (const exp of resume.experiences) {
       const dates = formatDateRange(exp.startDate, exp.endDate);
-      const title = dates ? `### ${exp.role} — ${exp.company} *(${dates})*` : `### ${exp.role} — ${exp.company}`;
+      const title = dates
+        ? `### ${exp.role} — ${exp.company} *(${dates})*`
+        : `### ${exp.role} — ${exp.company}`;
       lines.push(title);
       lines.push("");
       const bullets = (exp.description || "")
         .split("\n")
-        .map(l => l.trim())
-        .filter(l => l.length > 0);
+        .map((l) => l.trim())
+        .filter((l) => l.length > 0);
       for (const bullet of bullets) {
-        const text = bullet.replace(/^[•\-\*]\s*/, "");
+        const text = bullet.replace(/^[•\-*]\s*/, "");
         lines.push(`- ${text}`);
       }
       lines.push("");
@@ -63,7 +65,9 @@ export function generateAtsMarkdown(rawResume: ResumeData): string {
     lines.push("");
     for (const edu of resume.education) {
       const dates = formatDateRange(edu.startDate, edu.endDate);
-      const line = dates ? `- **${edu.degree}** — ${edu.institution} *(${dates})*` : `- **${edu.degree}** — ${edu.institution}`;
+      const line = dates
+        ? `- **${edu.degree}** — ${edu.institution} *(${dates})*`
+        : `- **${edu.degree}** — ${edu.institution}`;
       lines.push(line);
     }
     lines.push("");
@@ -73,7 +77,7 @@ export function generateAtsMarkdown(rawResume: ResumeData): string {
   if (resume.skills && resume.skills.length > 0) {
     lines.push("## Habilidades Técnicas");
     lines.push("");
-    lines.push(resume.skills.map(s => `\`${s}\``).join(" • "));
+    lines.push(resume.skills.map((s) => `\`${s}\``).join(" • "));
     lines.push("");
   }
 

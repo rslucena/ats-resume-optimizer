@@ -1,43 +1,86 @@
 const PT_MONTHS: Record<string, string> = {
-  "janeiro": "01", "jan": "01",
-  "fevereiro": "02", "fev": "02",
-  "marco": "03", "mar": "03", "março": "03",
-  "abril": "04", "abr": "04",
-  "maio": "05", "mai": "05",
-  "junho": "06", "jun": "06",
-  "julho": "07", "jul": "07",
-  "agosto": "08", "ago": "08",
-  "setembro": "09", "set": "09",
-  "outubro": "10", "out": "10",
-  "novembro": "11", "nov": "11",
-  "dezembro": "12", "dez": "12"
+  janeiro: "01",
+  jan: "01",
+  fevereiro: "02",
+  fev: "02",
+  marco: "03",
+  mar: "03",
+  março: "03",
+  abril: "04",
+  abr: "04",
+  maio: "05",
+  mai: "05",
+  junho: "06",
+  jun: "06",
+  julho: "07",
+  jul: "07",
+  agosto: "08",
+  ago: "08",
+  setembro: "09",
+  set: "09",
+  outubro: "10",
+  out: "10",
+  novembro: "11",
+  nov: "11",
+  dezembro: "12",
+  dez: "12",
 };
 
 const EN_MONTHS: Record<string, string> = {
-  "january": "01", "jan": "01",
-  "february": "02", "feb": "02",
-  "march": "03", "mar": "03",
-  "april": "04", "apr": "04",
-  "may": "05",
-  "june": "06", "jun": "06",
-  "july": "07", "jul": "07",
-  "august": "08", "aug": "08",
-  "september": "09", "sep": "09", "sept": "09",
-  "october": "10", "oct": "10",
-  "november": "11", "nov": "11",
-  "december": "12", "dec": "12"
+  january: "01",
+  jan: "01",
+  february: "02",
+  feb: "02",
+  march: "03",
+  mar: "03",
+  april: "04",
+  apr: "04",
+  may: "05",
+  june: "06",
+  jun: "06",
+  july: "07",
+  jul: "07",
+  august: "08",
+  aug: "08",
+  september: "09",
+  sep: "09",
+  sept: "09",
+  october: "10",
+  oct: "10",
+  november: "11",
+  nov: "11",
+  december: "12",
+  dec: "12",
 };
 
 const PT_MONTH_ABBR: Record<string, string> = {
-  "01": "Jan", "02": "Fev", "03": "Mar", "04": "Abr",
-  "05": "Mai", "06": "Jun", "07": "Jul", "08": "Ago",
-  "09": "Set", "10": "Out", "11": "Nov", "12": "Dez"
+  "01": "Jan",
+  "02": "Fev",
+  "03": "Mar",
+  "04": "Abr",
+  "05": "Mai",
+  "06": "Jun",
+  "07": "Jul",
+  "08": "Ago",
+  "09": "Set",
+  "10": "Out",
+  "11": "Nov",
+  "12": "Dez",
 };
 
 const EN_MONTH_ABBR: Record<string, string> = {
-  "01": "Jan", "02": "Feb", "03": "Mar", "04": "Apr",
-  "05": "May", "06": "Jun", "07": "Jul", "08": "Aug",
-  "09": "Sep", "10": "Oct", "11": "Nov", "12": "Dec"
+  "01": "Jan",
+  "02": "Feb",
+  "03": "Mar",
+  "04": "Apr",
+  "05": "May",
+  "06": "Jun",
+  "07": "Jul",
+  "08": "Aug",
+  "09": "Sep",
+  "10": "Oct",
+  "11": "Nov",
+  "12": "Dec",
 };
 
 /**
@@ -48,7 +91,9 @@ export function formatDate(dateStr?: string, lang: "pt" | "en" = "pt"): string {
   const trimmed = dateStr.trim();
   const lower = trimmed.toLowerCase();
 
-  if (["atual", "present", "presente", "current", "hoje", "now"].includes(lower)) {
+  if (
+    ["atual", "present", "presente", "current", "hoje", "now"].includes(lower)
+  ) {
     return lang === "pt" ? "Atual" : "Present";
   }
 
@@ -76,7 +121,8 @@ export function formatDate(dateStr?: string, lang: "pt" | "en" = "pt"): string {
     const year = textMatch[2];
     const monthNum = PT_MONTHS[monthWord] || EN_MONTHS[monthWord];
     if (monthNum) {
-      const mName = lang === "pt" ? PT_MONTH_ABBR[monthNum] : EN_MONTH_ABBR[monthNum];
+      const mName =
+        lang === "pt" ? PT_MONTH_ABBR[monthNum] : EN_MONTH_ABBR[monthNum];
       return `${mName} ${year}`;
     }
   }
@@ -94,12 +140,18 @@ export function formatDate(dateStr?: string, lang: "pt" | "en" = "pt"): string {
  * Standardizes a date range with clean, consistent en-dash spacing: "Set 2019 – Out 2024" or "2010 – 2012"
  * Handles unseparated cases like "setembro de 2019 outubro de 2024" safely.
  */
-export function formatDateRange(startDate?: string, endDate?: string, lang: "pt" | "en" = "pt"): string {
+export function formatDateRange(
+  startDate?: string,
+  endDate?: string,
+  lang: "pt" | "en" = "pt",
+): string {
   if (!startDate && !endDate) return "";
 
   // Check if startDate contains an unseparated range like "setembro de 2019 outubro de 2024"
   if (startDate && (!endDate || endDate === "Atual" || endDate === "")) {
-    const twoDatesMatch = startDate.match(/^(.+?\b(?:19\d\d|20\d\d))\s+(.+?\b(?:19\d\d|20\d\d|\batual\b|\bpresente?\b))$/i);
+    const twoDatesMatch = startDate.match(
+      /^(.+?\b(?:19\d\d|20\d\d))\s+(.+?\b(?:19\d\d|20\d\d|\batual\b|\bpresente?\b))$/i,
+    );
     if (twoDatesMatch) {
       startDate = twoDatesMatch[1];
       endDate = twoDatesMatch[2];

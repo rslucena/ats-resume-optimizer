@@ -10,35 +10,49 @@ describe("ATS Word (.docx) Generator with OpenXML coreProperties", () => {
     phone: "+55 11 99999-9999",
     location: "São Paulo, SP",
     linkedin: "linkedin.com/in/carlossilva",
-    summary: "Senior Backend Engineer com 5 anos de experiência (60+ meses de atuação sólida).",
-    skills: ["Node.js (NodeJS)", "TypeScript (TS)", "Docker", "PostgreSQL", "Bun"],
+    summary:
+      "Senior Backend Engineer com 5 anos de experiência (60+ meses de atuação sólida).",
+    skills: [
+      "Node.js (NodeJS)",
+      "TypeScript (TS)",
+      "Docker",
+      "PostgreSQL",
+      "Bun",
+    ],
     experiences: [
       {
         company: "Tech Corp",
         role: "Senior Backend Engineer",
         startDate: "2021-01",
         endDate: "Atual",
-        description: "• Atuação executiva como Senior Backend Engineer entregando microsserviços."
-      }
+        description:
+          "• Atuação executiva como Senior Backend Engineer entregando microsserviços.",
+      },
     ],
     education: [
       {
         institution: "Universidade de São Paulo",
         degree: "Graduação completa / Bacharelado em Ciência da Computação",
         startDate: "2016",
-        endDate: "2020"
-      }
+        endDate: "2020",
+      },
     ],
-    certifications: ["AWS Certified Solutions Architect"]
+    certifications: ["AWS Certified Solutions Architect"],
   };
 
   const metadata = {
     title: "Senior Backend Engineer (Node.js & TypeScript)",
     author: "Carlos Silva",
-    keywords: ["node.js", "typescript", "microsserviços", "docker", "postgresql"],
+    keywords: [
+      "node.js",
+      "typescript",
+      "microsserviços",
+      "docker",
+      "postgresql",
+    ],
     subject: "Currículo otimizado para a vaga de Senior Backend Engineer.",
     creator: "Currículo",
-    category: "Currículo"
+    category: "Currículo",
   };
 
   it("should generate a valid DOCX buffer with openXML coreProperties", async () => {
@@ -57,7 +71,7 @@ describe("ATS Word (.docx) Generator with OpenXML coreProperties", () => {
   it("should sanitize street address and CEP from contact header for privacy", async () => {
     const dirtyResume: ResumeData = {
       ...resume,
-      location: "Av. Paulista, 1000, apto 12, CEP 01310-100, São Paulo, SP"
+      location: "Av. Paulista, 1000, apto 12, CEP 01310-100, São Paulo, SP",
     };
     const docxBuffer = await generateAtsDocx(dirtyResume, metadata);
     expect(docxBuffer).toBeDefined();

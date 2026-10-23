@@ -74,7 +74,10 @@ describe("CV Extraction & Job HTML Parser", () => {
       </html>
     `;
 
-    const extracted = extractJobFromHtml(sampleHtml, "https://nubank.careers/job/123");
+    const extracted = extractJobFromHtml(
+      sampleHtml,
+      "https://nubank.careers/job/123",
+    );
 
     expect(extracted.title).toContain("Senior Backend Engineer");
     expect(extracted.company).toContain("Nubank");
@@ -162,23 +165,34 @@ describe("CV Extraction & Job HTML Parser", () => {
     expect(profile.experiences[2].location).toBe("Jundiaí - SP");
 
     // "Jundiaí - SP" must NEVER be treated as a company
-    const hasFakeJundiaiCompany = profile.experiences.some(e => e.company === "SP" || e.role === "Jundiaí");
+    const hasFakeJundiaiCompany = profile.experiences.some(
+      (e) => e.company === "SP" || e.role === "Jundiaí",
+    );
     expect(hasFakeJundiaiCompany).toBe(false);
 
     // Summary lines must NOT be treated as a company
-    const hasFakeSummaryExp = profile.experiences.some(e => e.role.includes("sem enrolação") || e.company.includes("sem enrolação"));
+    const hasFakeSummaryExp = profile.experiences.some(
+      (e) =>
+        e.role.includes("sem enrolação") || e.company.includes("sem enrolação"),
+    );
     expect(hasFakeSummaryExp).toBe(false);
 
     // 4. Verify education grouping
     expect(profile.education.length).toBe(3);
 
-    expect(profile.education[0].institution).toBe("Universidad Europea del Atlántico");
-    expect(profile.education[0].degree).toContain("Máster en Dirección Estratégica en Ingeniería de Software");
+    expect(profile.education[0].institution).toBe(
+      "Universidad Europea del Atlántico",
+    );
+    expect(profile.education[0].degree).toContain(
+      "Máster en Dirección Estratégica en Ingeniería de Software",
+    );
     expect(profile.education[0].startDate).toBe("2023");
     expect(profile.education[0].endDate).toBe("2025");
 
     expect(profile.education[1].institution).toBe("Anhanguera Educacional");
-    expect(profile.education[1].degree).toContain("Bachelor's degree, Computer Science");
+    expect(profile.education[1].degree).toContain(
+      "Bachelor's degree, Computer Science",
+    );
     expect(profile.education[1].startDate).toBe("2011");
     expect(profile.education[1].endDate).toBe("2014");
 
@@ -186,7 +200,11 @@ describe("CV Extraction & Job HTML Parser", () => {
     expect(profile.education[2].degree).toContain("Computer Technician");
 
     // No fake "Instituição de Ensino" default
-    const hasFakeInstitution = profile.education.some(ed => ed.institution === "Instituição de Ensino" && ed.degree.includes("Page"));
+    const hasFakeInstitution = profile.education.some(
+      (ed) =>
+        ed.institution === "Instituição de Ensino" &&
+        ed.degree.includes("Page"),
+    );
     expect(hasFakeInstitution).toBe(false);
   });
 

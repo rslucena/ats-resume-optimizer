@@ -52,4 +52,3 @@ export interface AtsAuditResult {
   keywordDensity: Record<string, number>;
   recommendations: string[];
 }
-

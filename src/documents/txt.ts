@@ -1,5 +1,5 @@
-import type { ResumeData } from "../types/resume.ts";
 import { sanitizeLocation } from "../services/cvExtractor.ts";
+import type { ResumeData } from "../types/resume.ts";
 import { formatDateRange } from "../utils/dateFormat.ts";
 import { sanitizeResumeUtf8 } from "../utils/encoding.ts";
 
@@ -22,7 +22,7 @@ export function generateAtsPlainText(rawResume: ResumeData): string {
     cleanLocation,
     resume.linkedin,
     resume.github,
-    resume.portfolio
+    resume.portfolio,
   ].filter(Boolean);
 
   if (contactParts.length > 0) {
@@ -44,14 +44,16 @@ export function generateAtsPlainText(rawResume: ResumeData): string {
     lines.push("------------------------");
     for (const exp of resume.experiences) {
       const dates = formatDateRange(exp.startDate, exp.endDate);
-      const header = dates ? `${exp.role} — ${exp.company} (${dates})` : `${exp.role} — ${exp.company}`;
+      const header = dates
+        ? `${exp.role} — ${exp.company} (${dates})`
+        : `${exp.role} — ${exp.company}`;
       lines.push(header);
       const bullets = (exp.description || "")
         .split("\n")
-        .map(l => l.trim())
-        .filter(l => l.length > 0);
+        .map((l) => l.trim())
+        .filter((l) => l.length > 0);
       for (const bullet of bullets) {
-        const text = bullet.replace(/^[•\-\*]\s*/, "");
+        const text = bullet.replace(/^[•\-*]\s*/, "");
         lines.push(`• ${text}`);
       }
       lines.push("");
@@ -64,7 +66,9 @@ export function generateAtsPlainText(rawResume: ResumeData): string {
     lines.push("------------------");
     for (const edu of resume.education) {
       const dates = formatDateRange(edu.startDate, edu.endDate);
-      const line = dates ? `${edu.degree} — ${edu.institution} (${dates})` : `${edu.degree} — ${edu.institution}`;
+      const line = dates
+        ? `${edu.degree} — ${edu.institution} (${dates})`
+        : `${edu.degree} — ${edu.institution}`;
       lines.push(line);
     }
     lines.push("");

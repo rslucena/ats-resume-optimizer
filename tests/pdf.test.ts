@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { generateAtsPdf } from "../src/documents/pdf.ts";
 import { PDFDocument } from "pdf-lib";
+import { generateAtsPdf } from "../src/documents/pdf.ts";
 import type { ResumeData } from "../src/types/resume.ts";
 
 describe("ATS-Linear PDF Generator with Binary Metadata", () => {
@@ -11,7 +11,8 @@ describe("ATS-Linear PDF Generator with Binary Metadata", () => {
     phone: "+55 11 99999-9999",
     location: "São Paulo, SP",
     linkedin: "linkedin.com/in/carlossilva",
-    summary: "Senior Backend Engineer com 5 anos de experiência em Node.js e microsserviços.",
+    summary:
+      "Senior Backend Engineer com 5 anos de experiência em Node.js e microsserviços.",
     skills: ["Node.js", "TypeScript", "Docker", "PostgreSQL", "Bun"],
     experiences: [
       {
@@ -19,27 +20,35 @@ describe("ATS-Linear PDF Generator with Binary Metadata", () => {
         role: "Senior Backend Engineer",
         startDate: "2021-01",
         endDate: "Atual",
-        description: "Liderança de projetos de microsserviços de alto throughput com TypeScript e Node.js."
-      }
+        description:
+          "Liderança de projetos de microsserviços de alto throughput com TypeScript e Node.js.",
+      },
     ],
     education: [
       {
         institution: "USP",
         degree: "Graduação completa / Bacharelado em Ciência da Computação",
         startDate: "2016",
-        endDate: "2020"
-      }
+        endDate: "2020",
+      },
     ],
-    certifications: ["AWS Certified Solutions Architect"]
+    certifications: ["AWS Certified Solutions Architect"],
   };
 
   const metadata = {
     title: "Senior Backend Engineer (Node.js & TypeScript)",
     author: "Carlos Silva",
-    keywords: ["node.js", "typescript", "microsserviços", "docker", "postgresql"],
-    subject: "Currículo otimizado para a vaga de Senior Backend Engineer. Foco em Node.js e TypeScript.",
+    keywords: [
+      "node.js",
+      "typescript",
+      "microsserviços",
+      "docker",
+      "postgresql",
+    ],
+    subject:
+      "Currículo otimizado para a vaga de Senior Backend Engineer. Foco em Node.js e TypeScript.",
     creator: "Currículo",
-    category: "Currículo"
+    category: "Currículo",
   };
 
   it("should generate a valid PDF buffer and inject Info Dict and XMP metadata", async () => {
@@ -68,7 +77,7 @@ describe("ATS-Linear PDF Generator with Binary Metadata", () => {
   it("should sanitize street address and CEP from contact header for privacy", async () => {
     const dirtyResume: ResumeData = {
       ...resume,
-      location: "Rua Augusta, 1500, apto 42, CEP 01305-100, São Paulo, SP"
+      location: "Rua Augusta, 1500, apto 42, CEP 01305-100, São Paulo, SP",
     };
     const pdfBuffer = await generateAtsPdf(dirtyResume, metadata);
     expect(pdfBuffer).toBeDefined();

@@ -6,8 +6,10 @@ export function detectLanguage(text: string): SupportedLanguage {
   if (!text || text.trim().length === 0) return "pt";
 
   // Quick check for very clear Portuguese markers
-  const ptMarkers = /\b(vaga|requisitos|experiência|benefícios|desenvolvedor|atuação|conhecimento|ensino|formação)\b/i;
-  const enMarkers = /\b(responsibilities|requirements|experience|benefits|developer|engineer|skills|degree)\b/i;
+  const ptMarkers =
+    /\b(vaga|requisitos|experiência|benefícios|desenvolvedor|atuação|conhecimento|ensino|formação)\b/i;
+  const enMarkers =
+    /\b(responsibilities|requirements|experience|benefits|developer|engineer|skills|degree)\b/i;
 
   const ptMatches = (text.match(ptMarkers) || []).length;
   const enMatches = (text.match(enMarkers) || []).length;

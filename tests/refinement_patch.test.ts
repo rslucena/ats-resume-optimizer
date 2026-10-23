@@ -1,9 +1,13 @@
 import { describe, expect, it } from "bun:test";
-import { sanitizeUtf8, sanitizeResumeUtf8 } from "../src/utils/encoding.ts";
-import { deduplicateSummary, tailorResume } from "../src/optimizer/tailor.ts";
-import { extractKeywords, isExcludedSkillTerm, isGenericCorporateTerm } from "../src/nlp/tfidf.ts";
 import { createApp } from "../src/api/routes.ts";
+import {
+  extractKeywords,
+  isExcludedSkillTerm,
+  isGenericCorporateTerm,
+} from "../src/nlp/tfidf.ts";
+import { deduplicateSummary, tailorResume } from "../src/optimizer/tailor.ts";
 import type { ResumeData } from "../src/types/resume.ts";
+import { sanitizeResumeUtf8, sanitizeUtf8 } from "../src/utils/encoding.ts";
 
 describe("Deep Bugfix & Refinement Patch: UTF-8, TF-IDF Blacklist, Summary Deduplication & UX", () => {
   // 1. UTF-8 & Accents Handling
@@ -19,7 +23,8 @@ describe("Deep Bugfix & Refinement Patch: UTF-8, TF-IDF Blacklist, Summary Dedup
 
     it("should strip soft hyphens (\\u00AD), zero-width spaces, and control characters", () => {
       // Soft hyphens from web scrapers or PDF extractors: REST\u00ADful, micro\u00ADservi\u00ADços
-      const dirty = "REST\u00ADful\u200B APIs com micro\u00ADservi\u00ADços e CI/CD";
+      const dirty =
+        "REST\u00ADful\u200B APIs com micro\u00ADservi\u00ADços e CI/CD";
       const cleaned = sanitizeUtf8(dirty);
 
       expect(cleaned).toBe("RESTful APIs com microserviços e CI/CD");
@@ -28,7 +33,8 @@ describe("Deep Bugfix & Refinement Patch: UTF-8, TF-IDF Blacklist, Summary Dedup
     });
 
     it("should preserve compound technical acronyms like RESTful, CI/CD, TCP/IP, and Node.js", () => {
-      const text = "Especialista em arquitetura RESTful, pipelines de CI/CD, protocolos TCP/IP e runtime Node.js";
+      const text =
+        "Especialista em arquitetura RESTful, pipelines de CI/CD, protocolos TCP/IP e runtime Node.js";
       const cleaned = sanitizeUtf8(text);
 
       expect(cleaned).toContain("RESTful");
@@ -42,7 +48,8 @@ describe("Deep Bugfix & Refinement Patch: UTF-8, TF-IDF Blacklist, Summary Dedup
         fullName: "Joa\u0303o da Silva\u00AD",
         headline: "Engenheiro de Soluc\u0327o\u0303es REST\u00ADful",
         email: "joao@example.com",
-        summary: "Profissional com atuac\u0327a\u0303o em microsservic\u0327os.\u200B",
+        summary:
+          "Profissional com atuac\u0327a\u0303o em microsservic\u0327os.\u200B",
         skills: ["Node.js\u00AD", "CI\u00AD/CD", "Integrac\u0327a\u0303o"],
         experiences: [
           {
@@ -50,29 +57,34 @@ describe("Deep Bugfix & Refinement Patch: UTF-8, TF-IDF Blacklist, Summary Dedup
             role: "Li\u0301der Te\u0301cnico",
             startDate: "2020",
             endDate: "Atual",
-            description: "Criac\u0327a\u0303o de APIs REST\u00ADful escalaveis com hifeni\u00ADzac\u0327a\u0303o."
-          }
+            description:
+              "Criac\u0327a\u0303o de APIs REST\u00ADful escalaveis com hifeni\u00ADzac\u0327a\u0303o.",
+          },
         ],
         education: [
           {
             institution: "Faculdade de Cie\u0302ncias",
             degree: "Graduac\u0327a\u0303o",
             startDate: "2015",
-            endDate: "2019"
-          }
+            endDate: "2019",
+          },
         ],
-        certifications: ["Certificac\u0327a\u0303o Cloud"]
+        certifications: ["Certificac\u0327a\u0303o Cloud"],
       };
 
       const sanitized = sanitizeResumeUtf8(dirtyResume);
 
       expect(sanitized.fullName).toBe("João da Silva");
       expect(sanitized.headline).toBe("Engenheiro de Soluções RESTful");
-      expect(sanitized.summary).toBe("Profissional com atuação em microsserviços.");
+      expect(sanitized.summary).toBe(
+        "Profissional com atuação em microsserviços.",
+      );
       expect(sanitized.skills).toEqual(["Node.js", "CI/CD", "Integração"]);
       expect(sanitized.experiences[0].company).toBe("Empresa Inovação");
       expect(sanitized.experiences[0].role).toBe("Líder Técnico");
-      expect(sanitized.experiences[0].description).toBe("Criação de APIs RESTful escalaveis com hifenização.");
+      expect(sanitized.experiences[0].description).toBe(
+        "Criação de APIs RESTful escalaveis com hifenização.",
+      );
       expect(sanitized.education[0].institution).toBe("Faculdade de Ciências");
       expect(sanitized.education[0].degree).toBe("Graduação");
       expect(sanitized.certifications?.[0]).toBe("Certificação Cloud");
@@ -82,7 +94,8 @@ describe("Deep Bugfix & Refinement Patch: UTF-8, TF-IDF Blacklist, Summary Dedup
   // 2. Summary Deduplication
   describe("2. Summary Deduplication (deduplicateSummary & tailorResume)", () => {
     it("should remove identical duplicate paragraphs concatenated back-to-back", () => {
-      const paragraph = "Engenheiro de Software com mais de 7 anos de experiência em microsserviços, mensageria e PHP.";
+      const paragraph =
+        "Engenheiro de Software com mais de 7 anos de experiência em microsserviços, mensageria e PHP.";
       const duplicated = `${paragraph}\n\n${paragraph}`;
 
       const deduplicated = deduplicateSummary(duplicated);
@@ -92,7 +105,8 @@ describe("Deep Bugfix & Refinement Patch: UTF-8, TF-IDF Blacklist, Summary Dedup
     });
 
     it("should detect and eliminate identical halves concatenated together", () => {
-      const half = "Desenvolvedor Backend sênior especializado em Node.js, TypeScript e arquitetura limpa.";
+      const half =
+        "Desenvolvedor Backend sênior especializado em Node.js, TypeScript e arquitetura limpa.";
       const concatenated = `${half} ${half}`;
 
       const deduplicated = deduplicateSummary(concatenated);
@@ -101,10 +115,13 @@ describe("Deep Bugfix & Refinement Patch: UTF-8, TF-IDF Blacklist, Summary Dedup
     });
 
     it("should remove repeated sentences inside mixed paragraph summaries", () => {
-      const text = "Engenheiro sênior com foco em alta performance. Atuação com Docker e Kubernetes. Engenheiro sênior com foco em alta performance. Liderança de times ágeis.";
+      const text =
+        "Engenheiro sênior com foco em alta performance. Atuação com Docker e Kubernetes. Engenheiro sênior com foco em alta performance. Liderança de times ágeis.";
       const result = deduplicateSummary(text);
 
-      expect(result).toBe("Engenheiro sênior com foco em alta performance. Atuação com Docker e Kubernetes. Liderança de times ágeis.");
+      expect(result).toBe(
+        "Engenheiro sênior com foco em alta performance. Atuação com Docker e Kubernetes. Liderança de times ágeis.",
+      );
     });
 
     it("should guarantee that tailorResume produces a unique, fluid summary without repeated blocks", async () => {
@@ -112,7 +129,8 @@ describe("Deep Bugfix & Refinement Patch: UTF-8, TF-IDF Blacklist, Summary Dedup
         fullName: "Maria Oliveira",
         headline: "Tech Lead Backend",
         email: "maria@example.com",
-        summary: "Engenheira de software especialista em PHP e microsserviços escaláveis.",
+        summary:
+          "Engenheira de software especialista em PHP e microsserviços escaláveis.",
         skills: ["PHP", "Microsserviços", "MySQL"],
         experiences: [
           {
@@ -120,37 +138,46 @@ describe("Deep Bugfix & Refinement Patch: UTF-8, TF-IDF Blacklist, Summary Dedup
             role: "Tech Lead",
             startDate: "2020",
             endDate: "Atual",
-            description: "Liderança técnica e arquitetura de pagamentos."
-          }
+            description: "Liderança técnica e arquitetura de pagamentos.",
+          },
         ],
         education: [
           {
             institution: "USP",
             degree: "Ciência da Computação",
             startDate: "2015",
-            endDate: "2019"
-          }
+            endDate: "2019",
+          },
         ],
-        certifications: []
+        certifications: [],
       };
 
       const jobInfo = {
         title: "Pessoa Desenvolvedora Backend Especialista (PHP)",
         company: "Vortx Tech",
-        rawDescription: "Vaga para especialista PHP, CakePHP, Microsserviços e mensageria.",
+        rawDescription:
+          "Vaga para especialista PHP, CakePHP, Microsserviços e mensageria.",
         keywords: [
           { term: "php", tfidf: 4.5, count: 6, stem: "php" },
           { term: "cakephp", tfidf: 4.0, count: 4, stem: "cakephp" },
-          { term: "microsserviços", tfidf: 3.5, count: 3, stem: "microsserviç" }
+          {
+            term: "microsserviços",
+            tfidf: 3.5,
+            count: 3,
+            stem: "microsserviç",
+          },
         ],
-        language: "pt" as const
+        language: "pt" as const,
       };
 
       const tailored = await tailorResume(baseResume, jobInfo);
       const summary = tailored.tailoredResume.summary;
 
       // Verify no paragraph or block repetition
-      const sentences = summary.split(/[.!?]+/).map(s => s.trim().toLowerCase()).filter(s => s.length > 10);
+      const sentences = summary
+        .split(/[.!?]+/)
+        .map((s) => s.trim().toLowerCase())
+        .filter((s) => s.length > 10);
       const uniqueSentences = new Set(sentences);
       expect(uniqueSentences.size).toBe(sentences.length);
       expect(summary).not.toContain("Core Stack & Especialidades:");
@@ -175,7 +202,7 @@ describe("Deep Bugfix & Refinement Patch: UTF-8, TF-IDF Blacklist, Summary Dedup
         "experiência",
         "atividades",
         "oportunidade",
-        "candidato"
+        "candidato",
       ];
 
       for (const term of corporateTerms) {
@@ -200,7 +227,7 @@ describe("Deep Bugfix & Refinement Patch: UTF-8, TF-IDF Blacklist, Summary Dedup
         "typescript",
         "redis",
         "webhooks",
-        "idempotência"
+        "idempotência",
       ];
 
       for (const tech of techSkills) {
@@ -226,7 +253,7 @@ describe("Deep Bugfix & Refinement Patch: UTF-8, TF-IDF Blacklist, Summary Dedup
       `;
 
       const keywords = extractKeywords(rawJobDescription, "pt", 20);
-      const extractedTerms = keywords.map(k => k.term.toLowerCase());
+      const extractedTerms = keywords.map((k) => k.term.toLowerCase());
 
       // MUST NOT contain generic corporate/HR noise
       expect(extractedTerms).not.toContain("saúde");
@@ -240,12 +267,14 @@ describe("Deep Bugfix & Refinement Patch: UTF-8, TF-IDF Blacklist, Summary Dedup
       expect(extractedTerms).not.toContain("demandas");
 
       // MUST contain genuine hard skills
-      expect(extractedTerms.some(t => t.includes("php"))).toBe(true);
-      expect(extractedTerms.some(t => t.includes("microsserviços"))).toBe(true);
-      expect(extractedTerms.some(t => t.includes("restful"))).toBe(true);
-      expect(extractedTerms.some(t => t.includes("docker"))).toBe(true);
-      expect(extractedTerms.some(t => t.includes("postgresql"))).toBe(true);
-      expect(extractedTerms.some(t => t.includes("ci/cd"))).toBe(true);
+      expect(extractedTerms.some((t) => t.includes("php"))).toBe(true);
+      expect(extractedTerms.some((t) => t.includes("microsserviços"))).toBe(
+        true,
+      );
+      expect(extractedTerms.some((t) => t.includes("restful"))).toBe(true);
+      expect(extractedTerms.some((t) => t.includes("docker"))).toBe(true);
+      expect(extractedTerms.some((t) => t.includes("postgresql"))).toBe(true);
+      expect(extractedTerms.some((t) => t.includes("ci/cd"))).toBe(true);
     });
   });
 
@@ -265,8 +294,8 @@ describe("Deep Bugfix & Refinement Patch: UTF-8, TF-IDF Blacklist, Summary Dedup
           summary: "Especialista em PHP e microsserviços.",
           skills: ["PHP", "Docker"],
           experiences: [],
-          education: []
-        })
+          education: [],
+        }),
       });
 
       // Create a job
@@ -276,8 +305,9 @@ describe("Deep Bugfix & Refinement Patch: UTF-8, TF-IDF Blacklist, Summary Dedup
         body: JSON.stringify({
           title: "Senior PHP Specialist",
           company: "Tech Solutions",
-          rawDescription: "Vaga para desenvolvedor PHP e Docker com APIs RESTful."
-        })
+          rawDescription:
+            "Vaga para desenvolvedor PHP e Docker com APIs RESTful.",
+        }),
       });
       const jobData = await jobRes.json();
       const jobId = jobData.job.id;
