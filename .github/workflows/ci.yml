@@ -23,3 +23,6 @@ jobs:
 
       - name: Run automated test suite
         run: bun test
+
+      - name: Run Biome code quality check
+        run: bun run check
