@@ -13,4 +13,5 @@ output_*
 *.log
 docs/
 scratch/
+!data/.gitkeep
 

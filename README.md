@@ -110,6 +110,7 @@ Acesse no navegador: `http://localhost:3000`
 ## Estrutura de Arquivos
 
 ```
+├── data/                   # Banco de dados SQLite persistente (ats_tracker.sqlite)
 ├── public/                 # Interface SPA Dark Mode (HTML, CSS e JS modular)
 ├── screenshot_demo.png     # Screenshot da bancada de trabalho
 ├── src/

@@ -1,12 +1,22 @@
 import { Database } from "bun:sqlite";
+import { existsSync, mkdirSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { drizzle } from "drizzle-orm/bun-sqlite";
 import * as schema from "./schema.ts";
+
+export const DEFAULT_DB_PATH = process.env.DB_PATH || "data/ats_tracker.sqlite";
 
 let sqliteDb: Database | null = null;
 let drizzleDb: ReturnType<typeof drizzle<typeof schema>> | null = null;
 
-export function getDb(dbPath = "ats_tracker.sqlite") {
+export function getDb(dbPath = DEFAULT_DB_PATH) {
   if (!sqliteDb || !drizzleDb) {
+    if (dbPath !== ":memory:") {
+      const dir = dirname(resolve(dbPath));
+      if (!existsSync(dir)) {
+        mkdirSync(dir, { recursive: true });
+      }
+    }
     sqliteDb = new Database(dbPath);
     sqliteDb.exec("PRAGMA journal_mode = WAL;");
     sqliteDb.exec("PRAGMA foreign_keys = ON;");
@@ -15,7 +25,7 @@ export function getDb(dbPath = "ats_tracker.sqlite") {
   return drizzleDb;
 }
 
-export function initDb(dbPath = "ats_tracker.sqlite") {
+export function initDb(dbPath = DEFAULT_DB_PATH) {
   const db = getDb(dbPath);
   if (!sqliteDb) return db;
 
@@ -95,5 +105,5 @@ export function resetDbForTesting() {
   sqliteDb = new Database(":memory:");
   sqliteDb.exec("PRAGMA foreign_keys = ON;");
   drizzleDb = drizzle(sqliteDb, { schema });
-  initDb();
+  initDb(":memory:");
 }

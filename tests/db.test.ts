@@ -1,7 +1,7 @@
-import { describe, expect, it, beforeEach } from "bun:test";
-import { getDb, initDb, resetDbForTesting } from "../src/db/index.ts";
-import { masterProfilesTable, jobsTable, tailoredResumesTable } from "../src/db/schema.ts";
+import { beforeEach, describe, expect, it } from "bun:test";
 import { eq } from "drizzle-orm";
+import { getDb, initDb, resetDbForTesting } from "../src/db/index.ts";
+import { jobsTable, masterProfilesTable } from "../src/db/schema.ts";
 
 describe("Database Schema & Persistence", () => {
   beforeEach(() => {
@@ -22,34 +22,44 @@ describe("Database Schema & Persistence", () => {
       linkedin: "linkedin.com/in/carlossilva",
       github: "github.com/carlossilva",
       portfolio: "carlossilva.dev",
-      summary: "Engenheiro de software experiente com foco em Bun, Node.js e arquiteturas de alta escala.",
-      skills: JSON.stringify(["TypeScript", "Bun", "Node.js", "Docker", "PostgreSQL"]),
+      summary:
+        "Engenheiro de software experiente com foco em Bun, Node.js e arquiteturas de alta escala.",
+      skills: JSON.stringify([
+        "TypeScript",
+        "Bun",
+        "Node.js",
+        "Docker",
+        "PostgreSQL",
+      ]),
       experiences: JSON.stringify([
         {
           company: "Tech Corp",
           role: "Senior Backend Developer",
           startDate: "2021-01",
           endDate: "Atual",
-          description: "Liderança técnica e desenvolvimento de microsserviços."
-        }
+          description: "Liderança técnica e desenvolvimento de microsserviços.",
+        },
       ]),
       education: JSON.stringify([
         {
           institution: "Universidade de São Paulo",
           degree: "Bacharelado em Ciência da Computação",
           startDate: "2016",
-          endDate: "2020"
-        }
+          endDate: "2020",
+        },
       ]),
       certifications: JSON.stringify(["AWS Certified Solutions Architect"]),
       rawText: "Texto bruto do currículo...",
       createdAt: Date.now(),
-      updatedAt: Date.now()
+      updatedAt: Date.now(),
     };
 
     await db.insert(masterProfilesTable).values(testProfile);
 
-    const profiles = await db.select().from(masterProfilesTable).where(eq(masterProfilesTable.id, "profile-1"));
+    const profiles = await db
+      .select()
+      .from(masterProfilesTable)
+      .where(eq(masterProfilesTable.id, "profile-1"));
     expect(profiles.length).toBe(1);
     expect(profiles[0].fullName).toBe("Carlos Silva");
     expect(JSON.parse(profiles[0].skills)).toContain("TypeScript");
@@ -66,25 +76,35 @@ describe("Database Schema & Persistence", () => {
       jobUrl: "https://acme.com/jobs/123",
       status: "SAVED" as const,
       language: "pt",
-      rawDescription: "Buscamos desenvolvedor backend com sólida experiência em Node.js, TypeScript e microsserviços.",
+      rawDescription:
+        "Buscamos desenvolvedor backend com sólida experiência em Node.js, TypeScript e microsserviços.",
       topKeywords: JSON.stringify([
         { term: "node.js", tfidf: 3.5, count: 5, stem: "node.js" },
-        { term: "typescript", tfidf: 2.8, count: 4, stem: "typescript" }
+        { term: "typescript", tfidf: 2.8, count: 4, stem: "typescript" },
       ]),
       notes: "Candidatura prioritária",
       createdAt: Date.now(),
-      updatedAt: Date.now()
+      updatedAt: Date.now(),
     };
 
     await db.insert(jobsTable).values(testJob);
 
-    const jobs = await db.select().from(jobsTable).where(eq(jobsTable.id, "job-1"));
+    const jobs = await db
+      .select()
+      .from(jobsTable)
+      .where(eq(jobsTable.id, "job-1"));
     expect(jobs.length).toBe(1);
     expect(jobs[0].company).toBe("Acme Fintech");
     expect(jobs[0].status).toBe("SAVED");
 
-    await db.update(jobsTable).set({ status: "APPLIED" }).where(eq(jobsTable.id, "job-1"));
-    const updated = await db.select().from(jobsTable).where(eq(jobsTable.id, "job-1"));
+    await db
+      .update(jobsTable)
+      .set({ status: "APPLIED" })
+      .where(eq(jobsTable.id, "job-1"));
+    const updated = await db
+      .select()
+      .from(jobsTable)
+      .where(eq(jobsTable.id, "job-1"));
     expect(updated[0].status).toBe("APPLIED");
   });
 });

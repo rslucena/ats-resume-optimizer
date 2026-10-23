@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
+import { integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 export const masterProfilesTable = sqliteTable("master_profiles", {
   id: text("id").primaryKey(),
@@ -17,7 +17,7 @@ export const masterProfilesTable = sqliteTable("master_profiles", {
   certifications: text("certifications").notNull(), // JSON string array
   rawText: text("raw_text"),
   createdAt: integer("created_at").notNull(),
-  updatedAt: integer("updated_at").notNull()
+  updatedAt: integer("updated_at").notNull(),
 });
 
 export const jobsTable = sqliteTable("jobs", {
@@ -31,12 +31,14 @@ export const jobsTable = sqliteTable("jobs", {
   topKeywords: text("top_keywords").notNull(), // JSON array of keyword objects
   notes: text("notes"),
   createdAt: integer("created_at").notNull(),
-  updatedAt: integer("updated_at").notNull()
+  updatedAt: integer("updated_at").notNull(),
 });
 
 export const tailoredResumesTable = sqliteTable("tailored_resumes", {
   id: text("id").primaryKey(),
-  jobId: text("job_id").notNull().references(() => jobsTable.id, { onDelete: "cascade" }),
+  jobId: text("job_id")
+    .notNull()
+    .references(() => jobsTable.id, { onDelete: "cascade" }),
   tailoredTitle: text("tailored_title").notNull(),
   tailoredSummary: text("tailored_summary").notNull(),
   tailoredSkills: text("tailored_skills").notNull(), // JSON string array
@@ -47,18 +49,20 @@ export const tailoredResumesTable = sqliteTable("tailored_resumes", {
   keywordsAchieved: text("keywords_achieved").notNull(), // JSON array
   keywordsMissing: text("keywords_missing").notNull(), // JSON array
   createdAt: integer("created_at").notNull(),
-  updatedAt: integer("updated_at").notNull()
+  updatedAt: integer("updated_at").notNull(),
 });
 
 export const knockoutQuestionsTable = sqliteTable("knockout_questions", {
   id: text("id").primaryKey(),
-  jobId: text("job_id").notNull().references(() => jobsTable.id, { onDelete: "cascade" }),
+  jobId: text("job_id")
+    .notNull()
+    .references(() => jobsTable.id, { onDelete: "cascade" }),
   questionText: text("question_text").notNull(),
   candidateAnswer: text("candidate_answer"),
   aiSuggestedAnswer: text("ai_suggested_answer"),
   status: text("status").notNull().default("Pendente"), // 'Pendente' | 'Aprovada'
   createdAt: integer("created_at").notNull(),
-  updatedAt: integer("updated_at").notNull()
+  updatedAt: integer("updated_at").notNull(),
 });
 
 export type MasterProfile = typeof masterProfilesTable.$inferSelect;
