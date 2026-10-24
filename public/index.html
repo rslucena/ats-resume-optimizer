@@ -6,7 +6,7 @@
   <title>ATS Optimizer — Studio</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -14,7 +14,7 @@
       theme: {
         extend: {
           fontFamily: {
-            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+            sans: ['Plus Jakarta Sans', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
             mono: ['JetBrains Mono', 'monospace'],
           }
         }
@@ -196,7 +196,7 @@
                   <div class="flex items-center justify-between">
                     <div class="flex items-center gap-1.5 flex-wrap">
                       <span class="text-xs font-semibold" style="color: var(--text-primary);">Gemini 1.5 Flash (IA)</span>
-                      <span id="badge-engine-gemini" class="hidden text-[9px] px-1 py-0.2 rounded bg-zinc-800 text-rose-300 border border-rose-500/30 font-medium">Indisponível</span>
+                      <span id="badge-engine-gemini" class="hidden text-[11px] px-1.5 py-0.5 rounded bg-zinc-800 text-rose-300 border border-rose-500/30 font-medium">Indisponível</span>
                     </div>
                     <i data-lucide="check" id="check-engine-gemini" class="w-3.5 h-3.5 text-emerald-500 font-bold"></i>
                   </div>
@@ -213,7 +213,7 @@
                   <div class="flex items-center justify-between">
                     <div class="flex items-center gap-1.5 flex-wrap">
                       <span class="text-xs font-semibold" style="color: var(--text-primary);">Claude 3.5 Sonnet (IA)</span>
-                      <span id="badge-engine-claude" class="hidden text-[9px] px-1 py-0.2 rounded bg-zinc-800 text-rose-300 border border-rose-500/30 font-medium">Indisponível</span>
+                      <span id="badge-engine-claude" class="hidden text-[11px] px-1.5 py-0.5 rounded bg-zinc-800 text-rose-300 border border-rose-500/30 font-medium">Indisponível</span>
                     </div>
                     <i data-lucide="check" id="check-engine-claude" class="w-3.5 h-3.5 text-emerald-500 font-bold hidden"></i>
                   </div>
@@ -230,7 +230,7 @@
                   <div class="flex items-center justify-between">
                     <div class="flex items-center gap-1.5 flex-wrap">
                       <span class="text-xs font-semibold" style="color: var(--text-primary);">OpenRouter (Multi-LLM)</span>
-                      <span id="badge-engine-openrouter" class="hidden text-[9px] px-1 py-0.2 rounded bg-zinc-800 text-rose-300 border border-rose-500/30 font-medium">Indisponível</span>
+                      <span id="badge-engine-openrouter" class="hidden text-[11px] px-1.5 py-0.5 rounded bg-zinc-800 text-rose-300 border border-rose-500/30 font-medium">Indisponível</span>
                     </div>
                     <i data-lucide="check" id="check-engine-openrouter" class="w-3.5 h-3.5 text-emerald-500 font-bold hidden"></i>
                   </div>
@@ -247,7 +247,7 @@
                   <div class="flex items-center justify-between">
                     <div class="flex items-center gap-1.5 flex-wrap">
                       <span class="text-xs font-semibold" style="color: var(--text-primary);">Ollama (Offline Local)</span>
-                      <span id="badge-engine-ollama" class="text-[9px] px-1 py-0.2 rounded bg-zinc-800 text-zinc-400 border border-zinc-700/50 font-medium">Indisponível</span>
+                      <span id="badge-engine-ollama" class="text-[11px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700/50 font-medium">Indisponível</span>
                     </div>
                     <i data-lucide="check" id="check-engine-ollama" class="w-3.5 h-3.5 text-emerald-500 font-bold hidden"></i>
                   </div>
@@ -294,7 +294,7 @@
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center justify-between">
                     <span id="copy-quick-label" class="text-xs font-semibold text-emerald-400">Copiar (Clipboard)</span>
-                    <span id="copy-quick-badge" class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-medium border border-emerald-500/30">
+                    <span id="copy-quick-badge" class="text-[11px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-medium border border-emerald-500/30">
                       Rápido
                     </span>
                   </div>
@@ -426,39 +426,33 @@
     <div id="workbench-active" class="flex-1 flex flex-col overflow-hidden hidden">
       
       <!-- Sub-header de Abas (h-12, 48px) -->
-      <div class="h-12 px-6 border-b flex items-center justify-between shrink-0" style="border-color: var(--border-color); background-color: var(--bg-panel);">
-        <div class="flex items-center gap-8 h-full">
-          <button class="nav-tab-btn nav-tab-active h-full flex items-center text-sm font-medium transition-colors" data-tab="tab-jd">
-            Descrição da Vaga
+      <div class="h-12 px-4 sm:px-6 border-b flex items-center justify-between shrink-0 overflow-x-auto no-scrollbar" style="border-color: var(--border-color); background-color: var(--bg-panel);">
+        <div class="flex items-center gap-1.5 sm:gap-2 h-full py-1">
+          <button class="nav-tab-btn nav-tab-active" data-tab="tab-jd">
+            <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+            <span>Descrição da Vaga</span>
           </button>
-          <button class="nav-tab-btn h-full flex items-center text-sm font-medium text-zinc-400 hover:text-zinc-200 transition-colors" data-tab="tab-diff">
-            Editor Comparativo
+          <button class="nav-tab-btn" data-tab="tab-diff">
+            <i data-lucide="columns" class="w-3.5 h-3.5"></i>
+            <span>Editor Comparativo</span>
           </button>
-          <button class="nav-tab-btn h-full flex items-center text-sm font-medium text-zinc-400 hover:text-zinc-200 transition-colors" data-tab="tab-preview">
-            Folha A4 (Preview)
+          <button class="nav-tab-btn" data-tab="tab-preview">
+            <i data-lucide="printer" class="w-3.5 h-3.5 text-emerald-400"></i>
+            <span>Folha A4 (Preview)</span>
           </button>
-          <button class="nav-tab-btn h-full flex items-center text-sm font-medium text-zinc-400 hover:text-zinc-200 transition-colors" data-tab="tab-cover-letter">
-            Carta de Apresentação
+          <button class="nav-tab-btn" data-tab="tab-cover-letter">
+            <i data-lucide="mail" class="w-3.5 h-3.5"></i>
+            <span>Carta de Apresentação</span>
           </button>
-          <button class="nav-tab-btn h-full flex items-center text-sm font-medium text-zinc-400 hover:text-zinc-200 transition-colors" data-tab="tab-knockout">
-            Perguntas Eliminatórias
-          </button>
-        </div>
-
-        <div id="tab-diff-actions" class="flex items-center gap-2.5 hidden">
-          <div id="auto-save-status-indicator" class="text-[11px] font-mono text-zinc-400 hidden flex items-center gap-1.5 mr-1 select-none">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-            <span id="auto-save-status-text">Salvo</span>
-          </div>
-          <button id="btn-recalculate" class="btn-spring px-3 py-1.5 rounded-md border text-xs font-mono font-medium flex items-center gap-1.5 transition-colors" style="border-color: var(--border-color); background-color: var(--bg-subtle); color: var(--text-primary);" title="Salvar alterações e recalcular scores de escaneabilidade e TF-IDF">
-            <i data-lucide="save" class="w-3.5 h-3.5 text-emerald-500"></i>
-            <span>Salvar & Recalcular</span>
+          <button class="nav-tab-btn" data-tab="tab-knockout">
+            <i data-lucide="help-circle" class="w-3.5 h-3.5"></i>
+            <span>Perguntas Eliminatórias</span>
           </button>
         </div>
       </div>
 
       <!-- Corpo Central: Abas de Trabalho -->
-      <div class="flex-1 overflow-y-auto p-6" id="center-workbench-scroll">
+      <div class="flex-1 overflow-y-auto p-5 sm:p-6" id="center-workbench-scroll">
         
         <!-- Aba 2: Editor Comparativo (Duas folhas com divisória flexível) -->
         <div id="tab-diff" class="tab-pane-content fade-slide-up hidden flex flex-col lg:flex-row h-full gap-0 relative">
@@ -481,11 +475,20 @@
           <!-- Folha Direita: Tailored CV Otimizado (Live Editable) -->
           <div id="diff-pane-right" class="space-y-5 select-text flex-1 min-w-[320px] lg:pl-5 overflow-y-auto" style="flex: 1 1 50%;">
             <div class="flex items-center justify-between border-b pb-2.5" style="border-color: var(--border-color);">
-              <span class="text-xs font-semibold text-emerald-500 flex items-center gap-2">
+              <div class="flex items-center gap-2">
                 <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                Currículo Otimizado (7 Camadas ATS)
-              </span>
-              <span class="text-xs font-mono text-zinc-500">Edição direta ativa</span>
+                <span class="text-xs font-semibold text-emerald-400">Currículo Otimizado (7 Camadas ATS)</span>
+              </div>
+              <div class="flex items-center gap-2.5">
+                <div id="diff-auto-save-indicator" class="text-[11px] font-mono text-zinc-400 hidden flex items-center gap-1.5 select-none">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                  <span id="diff-auto-save-text">Salvo</span>
+                </div>
+                <button id="btn-recalculate-diff" class="btn-spring px-2.5 py-1 rounded-md border text-xs font-mono font-medium flex items-center gap-1.5 transition-colors" style="border-color: var(--border-color); background-color: var(--bg-subtle); color: var(--text-primary);" title="Salvar alterações e recalcular score">
+                  <i data-lucide="save" class="w-3.5 h-3.5 text-emerald-400"></i>
+                  <span>Salvar & Recalcular</span>
+                </button>
+              </div>
             </div>
 
             <div class="space-y-5 text-sm">
@@ -507,7 +510,7 @@
               </div>
 
               <div>
-                <label class="block text-xs font-mono uppercase text-zinc-400 font-semibold mb-1.5">Experiências (Regra da 1ª Linha)</label>
+                <label class="block text-xs font-semibold mb-1.5" style="color: var(--text-secondary);">Experiências Profissionais (Regra da 1ª Linha)</label>
                 <div id="edit-tailored-experiences" class="space-y-3.5">
                   <!-- Dynamic experiences inputs -->
                 </div>
@@ -519,16 +522,32 @@
 
         <!-- Aba 2: Folha A4 (Preview & Edição Direta) -->
         <div id="tab-preview" class="tab-pane-content fade-slide-up hidden space-y-4">
-          <div class="max-w-[760px] mx-auto flex items-center justify-between text-xs px-2 select-none text-zinc-400 font-mono">
+          <div class="max-w-[820px] mx-auto flex flex-wrap items-center justify-between gap-3 px-3 py-2 rounded-xl border select-none transition-colors" style="background-color: var(--bg-panel); border-color: var(--border-color);">
             <div class="flex items-center gap-2">
-              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span class="text-zinc-300 font-medium text-xs">Currículo Otimizado (Folha A4)</span>
-              <span class="text-zinc-600">•</span>
-              <span class="text-emerald-400 text-[11px] font-medium">Edição Direta Ativa</span>
+              <span class="flex h-2 w-2 relative">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <span class="text-xs font-semibold" style="color: var(--text-primary);">Folha A4 Linear (7 Camadas ATS)</span>
+              <span class="text-xs text-zinc-500">•</span>
+              <span class="text-xs text-emerald-400 font-medium flex items-center gap-1">
+                <i data-lucide="edit-3" class="w-3 h-3"></i>
+                Edição Direta Ativa
+              </span>
             </div>
-            <div class="text-[11px] text-zinc-400 hidden sm:flex items-center gap-1.5">
-              <i data-lucide="edit-3" class="w-3.5 h-3.5 text-emerald-400"></i>
-              <span>Clique no texto para editar • Salva e recalcula ao clicar fora</span>
+            <div class="flex items-center gap-2.5">
+              <div id="a4-auto-save-indicator" class="text-[11px] font-mono text-zinc-400 hidden flex items-center gap-1.5 select-none">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                <span id="a4-auto-save-text">Salvo</span>
+              </div>
+              <button id="btn-recalculate-a4" class="btn-spring px-2.5 py-1 rounded-md border text-xs font-mono font-medium flex items-center gap-1.5 transition-colors" style="border-color: var(--border-color); background-color: var(--bg-subtle); color: var(--text-primary);" title="Salvar alterações e recalcular score">
+                <i data-lucide="save" class="w-3.5 h-3.5 text-emerald-400"></i>
+                <span>Salvar & Recalcular</span>
+              </button>
+              <button id="btn-a4-print" class="btn-spring px-2.5 py-1 rounded-md border text-xs font-medium flex items-center gap-1.5 transition-colors hover:bg-zinc-800/40" style="border-color: var(--border-color); color: var(--text-primary);" title="Imprimir currículo ou salvar em PDF">
+                <i data-lucide="printer" class="w-3.5 h-3.5 text-zinc-400"></i>
+                <span>Imprimir / PDF</span>
+              </button>
             </div>
           </div>
           <div class="a4-document" id="a4-preview-content">
@@ -539,7 +558,7 @@
         <!-- Aba 1: Descrição da Vaga -->
         <div id="tab-jd" class="tab-pane-content fade-slide-up max-w-4xl space-y-5">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-mono uppercase text-zinc-400 font-semibold">Requisitos Originais da Vaga</span>
+            <h2 class="text-sm font-semibold" style="color: var(--text-primary);">Requisitos Originais da Vaga</h2>
             <span id="jd-word-count" class="text-xs font-mono text-zinc-500">0 palavras</span>
           </div>
 
@@ -674,7 +693,7 @@
                       <div class="flex items-center justify-between">
                         <div class="flex items-center gap-1.5 flex-wrap">
                           <span class="text-xs font-semibold" style="color: var(--text-primary);">Gemini 1.5 Flash (IA)</span>
-                          <span id="badge-cl-engine-gemini" class="hidden text-[9px] px-1 py-0.2 rounded bg-zinc-800 text-rose-300 border border-rose-500/30 font-medium">Indisponível</span>
+                          <span id="badge-cl-engine-gemini" class="hidden text-[11px] px-1.5 py-0.5 rounded bg-zinc-800 text-rose-300 border border-rose-500/30 font-medium">Indisponível</span>
                         </div>
                         <i data-lucide="check" id="check-cl-engine-gemini" class="w-3.5 h-3.5 text-emerald-500 font-bold hidden"></i>
                       </div>
@@ -691,7 +710,7 @@
                       <div class="flex items-center justify-between">
                         <div class="flex items-center gap-1.5 flex-wrap">
                           <span class="text-xs font-semibold" style="color: var(--text-primary);">Claude 3.5 Sonnet (IA)</span>
-                          <span id="badge-cl-engine-claude" class="hidden text-[9px] px-1 py-0.2 rounded bg-zinc-800 text-rose-300 border border-rose-500/30 font-medium">Indisponível</span>
+                          <span id="badge-cl-engine-claude" class="hidden text-[11px] px-1.5 py-0.5 rounded bg-zinc-800 text-rose-300 border border-rose-500/30 font-medium">Indisponível</span>
                         </div>
                         <i data-lucide="check" id="check-cl-engine-claude" class="w-3.5 h-3.5 text-emerald-500 font-bold hidden"></i>
                       </div>
@@ -708,7 +727,7 @@
                       <div class="flex items-center justify-between">
                         <div class="flex items-center gap-1.5 flex-wrap">
                           <span class="text-xs font-semibold" style="color: var(--text-primary);">OpenRouter (Multi-LLM)</span>
-                          <span id="badge-cl-engine-openrouter" class="hidden text-[9px] px-1 py-0.2 rounded bg-zinc-800 text-rose-300 border border-rose-500/30 font-medium">Indisponível</span>
+                          <span id="badge-cl-engine-openrouter" class="hidden text-[11px] px-1.5 py-0.5 rounded bg-zinc-800 text-rose-300 border border-rose-500/30 font-medium">Indisponível</span>
                         </div>
                         <i data-lucide="check" id="check-cl-engine-openrouter" class="w-3.5 h-3.5 text-emerald-500 font-bold hidden"></i>
                       </div>
@@ -725,7 +744,7 @@
                       <div class="flex items-center justify-between">
                         <div class="flex items-center gap-1.5 flex-wrap">
                           <span class="text-xs font-semibold" style="color: var(--text-primary);">Ollama (Offline Local)</span>
-                          <span id="badge-cl-engine-ollama" class="text-[9px] px-1 py-0.2 rounded bg-zinc-800 text-zinc-400 border border-zinc-700/50 font-medium">Indisponível</span>
+                          <span id="badge-cl-engine-ollama" class="text-[11px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700/50 font-medium">Indisponível</span>
                         </div>
                         <i data-lucide="check" id="check-cl-engine-ollama" class="w-3.5 h-3.5 text-emerald-500 font-bold hidden"></i>
                       </div>

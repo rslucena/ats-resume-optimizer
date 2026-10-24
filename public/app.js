@@ -1451,27 +1451,37 @@ function renderMasterCvDiff() {
 
   const p = currentMasterProfile;
   container.innerHTML = `
-    <div class="border-b pb-3" style="border-color: var(--border-color);">
-      <div class="text-sm font-semibold" style="color: var(--text-primary);">${escapeHtml(p.fullName)}</div>
-      <div class="text-xs text-zinc-400 mt-0.5">${escapeHtml(p.headline)}</div>
-      <div class="text-xs text-zinc-500 mt-1">${escapeHtml(p.email)} | ${escapeHtml(p.phone || "")} | ${escapeHtml(p.location || "")}</div>
+    <div class="border-b pb-3.5" style="border-color: var(--border-color);">
+      <div class="text-sm font-bold font-display" style="color: var(--text-primary);">${escapeHtml(p.fullName)}</div>
+      <div class="text-xs text-emerald-500 font-medium mt-0.5">${escapeHtml(p.headline)}</div>
+      <div class="flex flex-wrap items-center gap-2 text-xs text-zinc-500 mt-2">
+        <span>${escapeHtml(p.email)}</span>
+        <span class="text-zinc-600 select-none">•</span>
+        <span>${escapeHtml(p.phone || "")}</span>
+        <span class="text-zinc-600 select-none">•</span>
+        <span>${escapeHtml(p.location || "")}</span>
+      </div>
     </div>
 
     <div>
-      <div class="text-xs font-mono uppercase text-zinc-500 font-semibold mb-1">Resumo Original</div>
-      <p class="text-sm leading-relaxed" style="color: var(--text-secondary);">${escapeHtml(p.summary)}</p>
+      <div class="text-xs font-semibold mb-1.5" style="color: var(--text-primary);">Resumo Original</div>
+      <div class="p-3.5 rounded-lg border text-[13px] leading-relaxed" style="border-color: var(--border-color); background-color: var(--bg-subtle); color: var(--text-secondary);">
+        ${escapeHtml(p.summary)}
+      </div>
     </div>
 
     <div>
-      <div class="text-xs font-mono uppercase text-zinc-500 font-semibold mb-2">Experiências Originais</div>
-      <div class="space-y-3.5">
+      <div class="text-xs font-semibold mb-2" style="color: var(--text-primary);">Experiências Originais</div>
+      <div class="space-y-3">
         ${(p.experiences || [])
           .map(
             (exp) => `
-          <div>
-            <div class="text-sm font-medium" style="color: var(--text-primary);">${escapeHtml(exp.role)} — <span class="text-zinc-400">${escapeHtml(exp.company)}</span></div>
-            <div class="text-xs font-mono tabular-nums" style="color: var(--text-secondary);">${escapeHtml(formatClientDateRange(exp.startDate, exp.endDate))}</div>
-            <div class="text-xs mt-1 whitespace-pre-line leading-relaxed" style="color: var(--text-secondary);">${escapeHtml(exp.description)}</div>
+          <div class="p-3.5 rounded-lg border space-y-1" style="border-color: var(--border-color); background-color: var(--bg-subtle);">
+            <div class="flex items-center justify-between text-xs">
+              <span class="font-semibold" style="color: var(--text-primary);">${escapeHtml(exp.role)} — <span class="text-zinc-400 font-normal">${escapeHtml(exp.company)}</span></span>
+              <span class="font-mono tabular-nums text-zinc-500 text-[11px]">(${escapeHtml(formatClientDateRange(exp.startDate, exp.endDate))})</span>
+            </div>
+            <div class="text-[12.5px] whitespace-pre-line leading-relaxed" style="color: var(--text-secondary);">${escapeHtml(exp.description)}</div>
           </div>
         `,
           )
@@ -1480,8 +1490,8 @@ function renderMasterCvDiff() {
     </div>
 
     <div>
-      <div class="text-xs font-mono uppercase text-zinc-500 font-semibold mb-1">Habilidades Base</div>
-      <div class="font-mono text-xs leading-relaxed" style="color: var(--text-secondary);">${(p.skills || []).join(" • ")}</div>
+      <div class="text-xs font-semibold mb-1.5" style="color: var(--text-primary);">Habilidades Base</div>
+      <div class="p-3 rounded-lg border font-mono text-xs leading-relaxed" style="border-color: var(--border-color); background-color: var(--bg-subtle); color: var(--text-secondary);">${(p.skills || []).join("  •  ")}</div>
     </div>
   `;
 }
@@ -1618,39 +1628,46 @@ function renderA4Preview(resume) {
   if (!container) return;
 
   container.innerHTML = `
-    <div class="border-b pb-4 mb-5" style="border-color: var(--border-color);">
-      <h1 class="text-lg font-bold tracking-tight uppercase" style="color: var(--text-primary);">${escapeHtml(resume.fullName || "")}</h1>
-      <div contenteditable="true" spellcheck="false" class="a4-editable-field text-xs mt-1 transition-colors" data-a4-field="headline" data-placeholder="Título do Cargo..." style="color: var(--text-secondary);" title="Clique para editar o título">${escapeHtml(resume.headline || "")}</div>
-      <div class="text-xs text-zinc-500 mt-1">${escapeHtml(resume.email || "")}  |  ${escapeHtml(resume.phone || "")}  |  ${escapeHtml(resume.location || "")}</div>
+    <!-- A4 Header: Executive Identity -->
+    <div class="border-b pb-5 mb-6" style="border-color: var(--border-color);">
+      <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight font-display uppercase" style="color: var(--text-primary);">${escapeHtml(resume.fullName || "")}</h1>
+      <div contenteditable="true" spellcheck="false" class="a4-editable-field text-sm font-semibold tracking-wide transition-colors mt-1.5" data-a4-field="headline" data-placeholder="Título / Cargo Desejado..." style="color: var(--kw-highlight-text);" title="Clique para editar o título">${escapeHtml(resume.headline || "")}</div>
+      <div class="flex flex-wrap items-center gap-2.5 text-xs text-zinc-500 mt-2.5">
+        <span>${escapeHtml(resume.email || "")}</span>
+        <span class="text-zinc-600 select-none">•</span>
+        <span>${escapeHtml(resume.phone || "")}</span>
+        <span class="text-zinc-600 select-none">•</span>
+        <span>${escapeHtml(resume.location || "")}</span>
+      </div>
     </div>
 
-    <div class="mb-5">
-      <div class="text-xs font-bold uppercase pb-1 mb-1.5 font-mono border-b flex items-center justify-between" style="color: var(--text-primary); border-color: var(--border-color);">
-        <span>Resumo Profissional</span>
-        <span class="text-[10px] font-normal text-zinc-500 lowercase font-sans">editável</span>
+    <!-- 1. Resumo Profissional -->
+    <div class="mb-6">
+      <div class="a4-section-header">
+        <span class="a4-section-title">Resumo Profissional</span>
       </div>
-      <div contenteditable="true" spellcheck="false" class="a4-editable-field text-xs leading-relaxed whitespace-pre-line transition-colors" data-a4-field="summary" data-placeholder="Resumo Profissional com palavras-chave..." style="color: var(--text-secondary);" title="Clique para editar o resumo">${escapeHtml(resume.summary || "")}</div>
+      <div contenteditable="true" spellcheck="false" class="a4-editable-field text-[13.5px] leading-relaxed whitespace-pre-line transition-colors" data-a4-field="summary" data-placeholder="Resumo executivo otimizado com palavras-chave TF-IDF..." style="color: var(--text-secondary);" title="Clique para editar o resumo">${escapeHtml(resume.summary || "")}</div>
     </div>
 
-    <div class="mb-5">
-      <div class="text-xs font-bold uppercase pb-1 mb-2 font-mono border-b flex items-center justify-between" style="color: var(--text-primary); border-color: var(--border-color);">
-        <span>Experiência Profissional</span>
-        <span class="text-[10px] font-normal text-zinc-500 lowercase font-sans">editável</span>
+    <!-- 2. Experiência Profissional -->
+    <div class="mb-6">
+      <div class="a4-section-header">
+        <span class="a4-section-title">Experiência Profissional</span>
       </div>
-      <div class="space-y-3.5">
+      <div class="space-y-4">
         ${(resume.experiences || [])
           .map(
             (exp, idx) => `
-          <div class="a4-exp-item" data-exp-idx="${idx}">
-            <div class="font-bold text-xs flex items-center justify-between" style="color: var(--text-primary);">
-              <div>
-                <span contenteditable="true" spellcheck="false" class="a4-editable-field inline-block" data-a4-exp-field="role" data-exp-idx="${idx}" data-placeholder="Cargo" title="Clique para editar o cargo">${escapeHtml(exp.role || "")}</span>
+          <div class="a4-exp-item space-y-1.5" data-exp-idx="${idx}">
+            <div class="flex items-baseline justify-between gap-4">
+              <div class="text-[13.5px]">
+                <span contenteditable="true" spellcheck="false" class="a4-editable-field font-bold text-zinc-100" data-a4-exp-field="role" data-exp-idx="${idx}" data-placeholder="Cargo" title="Clique para editar o cargo">${escapeHtml(exp.role || "")}</span>
                 <span class="font-normal text-zinc-500"> — </span>
-                <span contenteditable="true" spellcheck="false" class="a4-editable-field font-normal inline-block" style="color: var(--text-secondary);" data-a4-exp-field="company" data-exp-idx="${idx}" data-placeholder="Empresa" title="Clique para editar a empresa">${escapeHtml(exp.company || "")}</span>
+                <span contenteditable="true" spellcheck="false" class="a4-editable-field font-medium text-emerald-400" data-a4-exp-field="company" data-exp-idx="${idx}" data-placeholder="Empresa" title="Clique para editar a empresa">${escapeHtml(exp.company || "")}</span>
               </div>
-              <span class="text-[11px] float-right font-mono tabular-nums text-zinc-500 shrink-0">(${escapeHtml(formatClientDateRange(exp.startDate, exp.endDate))})</span>
+              <span class="text-xs font-mono tabular-nums text-zinc-500 shrink-0 font-medium">(${escapeHtml(formatClientDateRange(exp.startDate, exp.endDate))})</span>
             </div>
-            <div contenteditable="true" spellcheck="false" class="a4-editable-field text-xs mt-1 whitespace-pre-line leading-relaxed transition-colors" style="color: var(--text-secondary);" data-a4-exp-field="description" data-exp-idx="${idx}" data-placeholder="Descrição das realizações e métricas..." title="Clique para editar">${escapeHtml(exp.description || "")}</div>
+            <div contenteditable="true" spellcheck="false" class="a4-editable-field text-[13px] leading-relaxed whitespace-pre-line transition-colors" style="color: var(--text-secondary);" data-a4-exp-field="description" data-exp-idx="${idx}" data-placeholder="Descrição das realizações e métricas..." title="Clique para editar">${escapeHtml(exp.description || "")}</div>
           </div>
         `,
           )
@@ -1658,25 +1675,35 @@ function renderA4Preview(resume) {
       </div>
     </div>
 
-    <div class="mb-5">
-      <div class="text-xs font-bold uppercase pb-1 mb-1.5 font-mono border-b" style="color: var(--text-primary); border-color: var(--border-color);">Formação Acadêmica</div>
-      <div class="space-y-1.5">
+    <!-- 3. Formação Acadêmica -->
+    <div class="mb-6">
+      <div class="a4-section-header">
+        <span class="a4-section-title">Formação Acadêmica</span>
+      </div>
+      <div class="space-y-2">
         ${(resume.education || [])
           .map(
             (edu) => `
-          <div class="text-xs" style="color: var(--text-secondary);"><span class="font-medium" style="color: var(--text-primary);">${escapeHtml(edu.degree || "")}</span> — <span class="text-zinc-500">${escapeHtml(edu.institution || "")}</span> <span class="text-[11px] text-zinc-500 float-right font-mono">(${escapeHtml(formatClientDateRange(edu.startDate, edu.endDate))})</span></div>
+          <div class="flex items-baseline justify-between gap-4 text-[13px]">
+            <div style="color: var(--text-secondary);">
+              <span class="font-semibold" style="color: var(--text-primary);">${escapeHtml(edu.degree || "")}</span>
+              <span class="text-zinc-500 font-normal"> — </span>
+              <span class="text-zinc-400">${escapeHtml(edu.institution || "")}</span>
+            </div>
+            <span class="text-xs text-zinc-500 font-mono tabular-nums shrink-0">(${escapeHtml(formatClientDateRange(edu.startDate, edu.endDate))})</span>
+          </div>
         `,
           )
           .join("")}
       </div>
     </div>
 
+    <!-- 4. Competências Técnicas & Palavras-chave ATS -->
     <div>
-      <div class="text-xs font-bold uppercase pb-1 mb-1.5 font-mono border-b flex items-center justify-between" style="color: var(--text-primary); border-color: var(--border-color);">
-        <span>Habilidades Técnicas</span>
-        <span class="text-[10px] font-normal text-zinc-500 lowercase font-sans">editável</span>
+      <div class="a4-section-header">
+        <span class="a4-section-title">Competências Técnicas & Palavras-chave</span>
       </div>
-      <div contenteditable="true" spellcheck="false" class="a4-editable-field text-xs font-mono leading-relaxed transition-colors whitespace-pre-line" data-a4-field="skills" data-placeholder="Habilidades (separadas por • ou vírgula)..." style="color: var(--text-secondary);" title="Clique para editar habilidades">${escapeHtml((resume.skills || []).join("   •   "))}</div>
+      <div contenteditable="true" spellcheck="false" class="a4-editable-field text-[13px] font-mono leading-relaxed transition-colors whitespace-pre-line" data-a4-field="skills" data-placeholder="Habilidades (separadas por • ou vírgula)..." style="color: var(--text-secondary);" title="Clique para editar habilidades">${escapeHtml((resume.skills || []).join("   •   "))}</div>
     </div>
   `;
 
@@ -1861,20 +1888,36 @@ async function saveAndRecalculateTailoredResume(options = {}) {
     return;
   }
 
-  const btnRecalculate = document.getElementById("btn-recalculate");
-  const autoSaveText = document.getElementById("auto-save-status-text");
-  const autoSaveIndicator = document.getElementById(
-    "auto-save-status-indicator",
-  );
+  const recalculateBtns = [
+    document.getElementById("btn-recalculate"),
+    document.getElementById("btn-recalculate-diff"),
+    document.getElementById("btn-recalculate-a4"),
+  ].filter(Boolean);
 
-  if (autoSaveIndicator) {
-    autoSaveIndicator.classList.remove("hidden");
-    if (autoSaveText) autoSaveText.textContent = "Salvando...";
-  }
+  const autoSaveIndicators = [
+    document.getElementById("auto-save-status-indicator"),
+    document.getElementById("diff-auto-save-indicator"),
+    document.getElementById("a4-auto-save-indicator"),
+  ].filter(Boolean);
 
-  if (!silent && btnRecalculate) {
-    btnRecalculate.innerHTML = `<i data-lucide="refresh-cw" class="w-3.5 h-3.5 animate-spin text-emerald-400"></i><span>Salvando...</span>`;
-    btnRecalculate.disabled = true;
+  const autoSaveTexts = [
+    document.getElementById("auto-save-status-text"),
+    document.getElementById("diff-auto-save-text"),
+    document.getElementById("a4-auto-save-text"),
+  ].filter(Boolean);
+
+  autoSaveIndicators.forEach((ind) => {
+    ind.classList.remove("hidden");
+  });
+  autoSaveTexts.forEach((txt) => {
+    txt.textContent = "Salvando...";
+  });
+
+  if (!silent) {
+    recalculateBtns.forEach((btn) => {
+      btn.innerHTML = `<i data-lucide="refresh-cw" class="w-3.5 h-3.5 animate-spin text-emerald-400"></i><span>Salvando...</span>`;
+      btn.disabled = true;
+    });
   }
 
   try {
@@ -1901,16 +1944,14 @@ async function saveAndRecalculateTailoredResume(options = {}) {
       animateDualScores(sScore, tScore);
       updateInspectorBreakdown(data.auditAfter);
 
-      if (autoSaveIndicator) {
-        const timeStr = new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-        });
-        if (autoSaveText) {
-          autoSaveText.textContent = `Salvo às ${timeStr} • ${data.scoreAfter}/100`;
-        }
-      }
+      const timeStr = new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      });
+      autoSaveTexts.forEach((txt) => {
+        txt.textContent = `Salvo às ${timeStr} • ${data.scoreAfter}/100`;
+      });
 
       if (notify || !silent) {
         showToast(
@@ -1921,18 +1962,22 @@ async function saveAndRecalculateTailoredResume(options = {}) {
 
       await refreshSidebarJobsScores();
     } else {
-      if (autoSaveText) autoSaveText.textContent = "Erro ao salvar";
+      autoSaveTexts.forEach((txt) => {
+        txt.textContent = "Erro ao salvar";
+      });
       showToast(data.error || "Erro ao salvar currículo", "error");
     }
   } catch (err) {
     console.error("Erro ao salvar e recalcular:", err);
-    if (autoSaveText) autoSaveText.textContent = "Erro de conexão";
+    autoSaveTexts.forEach((txt) => {
+      txt.textContent = "Erro de conexão";
+    });
     showToast("Erro de rede ao salvar", "error");
   } finally {
-    if (btnRecalculate) {
-      btnRecalculate.innerHTML = `<i data-lucide="save" class="w-3.5 h-3.5 text-emerald-400"></i><span>Salvar & Recalcular</span>`;
-      btnRecalculate.disabled = false;
-    }
+    recalculateBtns.forEach((btn) => {
+      btn.innerHTML = `<i data-lucide="save" class="w-3.5 h-3.5 text-emerald-400"></i><span>Salvar & Recalcular</span>`;
+      btn.disabled = false;
+    });
     if (window.lucide) window.lucide.createIcons();
   }
 }
@@ -1957,11 +2002,9 @@ function setupWorkbenchTabs() {
     btn.addEventListener("click", () => {
       const target = btn.dataset.tab;
       document.querySelectorAll(".nav-tab-btn").forEach((b) => {
-        b.className =
-          "nav-tab-btn h-full flex items-center text-sm font-medium text-zinc-400 hover:text-zinc-200 transition-colors";
+        b.classList.remove("nav-tab-active");
       });
-      btn.className =
-        "nav-tab-btn nav-tab-active h-full flex items-center text-sm font-medium transition-colors";
+      btn.classList.add("nav-tab-active");
 
       document.querySelectorAll(".tab-pane-content").forEach((p) => {
         p.classList.add("hidden");
@@ -2281,7 +2324,7 @@ function applyEngineAvailability() {
       if (b) {
         b.textContent = badgeText;
         b.className =
-          "text-[9px] px-1 py-0.2 rounded bg-zinc-800 text-zinc-400 border border-zinc-700/50 font-medium";
+          "text-[11px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700/50 font-medium";
       }
     });
 
@@ -2310,7 +2353,7 @@ function applyEngineAvailability() {
       if (b) {
         b.textContent = ollamaInfo?.model || "Online";
         b.className =
-          "text-[9px] px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-medium font-mono";
+          "text-[11px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-medium font-mono";
       }
     });
 
@@ -2664,11 +2707,26 @@ function setupWorkbenchActions() {
     });
   }
 
-  // Salvar & Recalcular Score inline
-  const btnRecalculate = document.getElementById("btn-recalculate");
-  if (btnRecalculate) {
-    btnRecalculate.addEventListener("click", async () => {
-      await saveAndRecalculateTailoredResume({ silent: false, notify: true });
+  // Salvar & Recalcular Score inline (Multi-view)
+  ["btn-recalculate", "btn-recalculate-diff", "btn-recalculate-a4"].forEach(
+    (id) => {
+      const btn = document.getElementById(id);
+      if (btn) {
+        btn.addEventListener("click", async () => {
+          await saveAndRecalculateTailoredResume({
+            silent: false,
+            notify: true,
+          });
+        });
+      }
+    },
+  );
+
+  // Imprimir ou Salvar PDF da Folha A4
+  const btnA4Print = document.getElementById("btn-a4-print");
+  if (btnA4Print) {
+    btnA4Print.addEventListener("click", () => {
+      window.print();
     });
   }
 
@@ -2774,7 +2832,7 @@ function setupWorkbenchActions() {
           if (copyBadge) {
             copyBadge.textContent = "Copiado!";
             copyBadge.className =
-              "text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500 text-zinc-950 font-bold border border-emerald-400";
+              "text-[11px] font-mono px-1.5 py-0.5 rounded bg-emerald-500 text-zinc-950 font-bold border border-emerald-400";
           }
           if (copyDesc)
             copyDesc.textContent = "Pronto para colar em formulários da Gupy!";
@@ -2793,7 +2851,7 @@ function setupWorkbenchActions() {
             if (copyBadge) {
               copyBadge.textContent = "Rápido";
               copyBadge.className =
-                "text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-medium border border-emerald-500/30";
+                "text-[11px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-medium border border-emerald-500/30";
             }
             if (copyDesc)
               copyDesc.textContent = "Texto limpo para colar em formulários";
