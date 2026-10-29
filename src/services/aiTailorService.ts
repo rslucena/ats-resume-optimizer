@@ -242,57 +242,75 @@ export async function callGeminiTailor(
   job: JobInput,
   apiKey: string,
 ): Promise<TailoredResumeResult | null> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 18000); // 18s abort timeout
+  const geminiModels = [
+    process.env.GEMINI_MODEL,
+    "gemini-2.0-flash",
+    "gemini-2.0-flash-exp",
+    "gemini-1.5-flash-latest",
+    "gemini-1.5-flash",
+    "gemini-1.5-pro",
+    "gemini-pro",
+  ].filter(Boolean) as string[];
 
-  try {
-    const lang = job.language || "pt";
-    const prompt = buildGeminiTailorPrompt(master, job, lang);
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+  const lang = job.language || "pt";
+  const prompt = buildGeminiTailorPrompt(master, job, lang);
 
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      signal: controller.signal,
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.2,
-          maxOutputTokens: 2500,
-          responseMimeType: "application/json",
-        },
-      }),
-    });
+  for (const model of geminiModels) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 18000); // 18s abort timeout
 
-    if (!res.ok) {
-      const errText = await res.text();
-      console.warn(
-        `[AI Tailor] Gemini retornou status ${res.status}:`,
-        errText,
-      );
-      return null;
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.2,
+            maxOutputTokens: 2500,
+            responseMimeType: "application/json",
+          },
+        }),
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        console.warn(
+          `[AI Tailor] Gemini modelo '${model}' retornou status ${res.status}:`,
+          errText,
+        );
+        // Se for 404 (modelo não suportado/encontrado nesta versão), tenta o próximo modelo da lista
+        if (res.status === 404) {
+          continue;
+        }
+        return null;
+      }
+
+      const data = await res.json();
+      const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!rawText) return null;
+
+      const parsedJson = extractJsonFromText(rawText) as GeminiTailorResponse;
+      if (!parsedJson?.summary || !Array.isArray(parsedJson.experiences)) {
+        console.warn(
+          "[AI Tailor] Estrutura JSON retornada pelo Gemini é inválida:",
+          rawText,
+        );
+        return null;
+      }
+
+      return mergeGeminiOutputWithMaster(master, job, parsedJson, lang);
+    } catch (e) {
+      console.warn(`[AI Tailor] Erro na execução de callGeminiTailor com modelo '${model}':`, e);
+    } finally {
+      clearTimeout(timeout);
     }
-
-    const data = await res.json();
-    const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!rawText) return null;
-
-    const parsedJson = extractJsonFromText(rawText) as GeminiTailorResponse;
-    if (!parsedJson?.summary || !Array.isArray(parsedJson.experiences)) {
-      console.warn(
-        "[AI Tailor] Estrutura JSON retornada pelo Gemini é inválida:",
-        rawText,
-      );
-      return null;
-    }
-
-    return mergeGeminiOutputWithMaster(master, job, parsedJson, lang);
-  } catch (e) {
-    console.warn("[AI Tailor] Erro na execução de callGeminiTailor:", e);
-    return null;
-  } finally {
-    clearTimeout(timeout);
   }
+
+  return null;
 }
 
 /**

@@ -241,39 +241,56 @@ async function callGeminiKnockout(
   profile: ResumeData,
   isEn: boolean,
 ): Promise<string | null> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10000);
+  const geminiModels = [
+    process.env.GEMINI_MODEL,
+    "gemini-2.0-flash",
+    "gemini-2.0-flash-exp",
+    "gemini-1.5-flash-latest",
+    "gemini-1.5-flash",
+    "gemini-1.5-pro",
+    "gemini-pro",
+  ].filter(Boolean) as string[];
 
-  try {
-    const prompt = buildKnockoutPrompt(question, job, profile, isEn);
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+  const prompt = buildKnockoutPrompt(question, job, profile, isEn);
 
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      signal: controller.signal,
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.25,
-          maxOutputTokens: 600,
-        },
-      }),
-    });
+  for (const model of geminiModels) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
 
-    if (!res.ok) {
-      const errText = await res.text();
-      console.warn(`Gemini API returned error ${res.status}:`, errText);
-      return null;
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.25,
+            maxOutputTokens: 600,
+          },
+        }),
+      });
+
+      if (!res.ok) {
+        if (res.status === 404) {
+          continue;
+        }
+        const errText = await res.text();
+        console.warn(`Gemini API returned error ${res.status} for model ${model}:`, errText);
+        return null;
+      }
+      const data = await res.json();
+      return data?.candidates?.[0]?.content?.parts?.[0]?.text || null;
+    } catch (err) {
+      console.warn(`Gemini call failed or timed out for model ${model}:`, err);
+    } finally {
+      clearTimeout(timeout);
     }
-    const data = await res.json();
-    return data?.candidates?.[0]?.content?.parts?.[0]?.text || null;
-  } catch (err) {
-    console.warn("Gemini call failed or timed out:", err);
-    return null;
-  } finally {
-    clearTimeout(timeout);
   }
+
+  return null;
 }
 
 async function callOpenAiKnockout(

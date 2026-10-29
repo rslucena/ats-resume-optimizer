@@ -320,34 +320,55 @@ async function callGeminiCoverLetter(
   isEn: boolean,
 ): Promise<string> {
   const prompt = buildCoverLetterAiPrompt(profile, job, tone, isEn);
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 20000);
+  const geminiModels = [
+    process.env.GEMINI_MODEL,
+    "gemini-2.0-flash",
+    "gemini-2.0-flash-exp",
+    "gemini-1.5-flash-latest",
+    "gemini-1.5-flash",
+    "gemini-1.5-pro",
+    "gemini-pro",
+  ].filter(Boolean) as string[];
 
-  try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      signal: controller.signal,
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.3,
-          maxOutputTokens: 1200,
-        },
-      }),
-    });
+  for (const model of geminiModels) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000);
 
-    if (!res.ok) {
-      throw new Error(`Gemini HTTP ${res.status}`);
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.3,
+            maxOutputTokens: 1200,
+          },
+        }),
+      });
+
+      if (!res.ok) {
+        if (res.status === 404) {
+          continue;
+        }
+        throw new Error(`Gemini HTTP ${res.status}`);
+      }
+
+      const data = await res.json();
+      const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      return sanitizeAiLetterText(rawText);
+    } catch (err) {
+      if (model === geminiModels[geminiModels.length - 1]) {
+        throw err;
+      }
+    } finally {
+      clearTimeout(timeout);
     }
-
-    const data = await res.json();
-    const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-    return sanitizeAiLetterText(rawText);
-  } finally {
-    clearTimeout(timeout);
   }
+
+  throw new Error("Gemini generation failed on all candidate models");
 }
 
 /**

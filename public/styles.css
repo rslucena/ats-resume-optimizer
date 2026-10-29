@@ -820,12 +820,27 @@ body.is-resizing .collapsible-sidebar {
    A4 PRINT & PDF EXPORT STYLES
    ============================================================================ */
 @media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm 15mm;
+  }
+
+  html,
   body {
     background: #ffffff !important;
     color: #0f172a !important;
+    height: auto !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
+
+  /* Ocultar tudo que pertence à interface de navegação, sidebars, abas e utilitários */
   aside,
   header,
+  #main-header,
+  #workbench-tabs-nav,
+  .a4-print-hide,
   .resizer-divider,
   #tab-diff-actions,
   #top-progress-bar,
@@ -835,34 +850,53 @@ body.is-resizing .collapsible-sidebar {
   #tab-cover-letter,
   #tab-knockout,
   .a4-toolbar,
+  #a4-preview-toolbar,
   #btn-a4-print,
-  .max-w-\[820px\] > div:first-child {
+  #btn-recalculate-a4,
+  #a4-auto-save-indicator,
+  .sidebar-collapsed-strip,
+  .modal-backdrop,
+  [role="dialog"] {
     display: none !important;
+    visibility: hidden !important;
   }
+
+  /* Liberar containeres pais para fluxo natural de impressão */
   main,
   #workbench-active,
   #center-workbench-scroll,
   #tab-preview {
+    display: block !important;
     overflow: visible !important;
     height: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
     padding: 0 !important;
     margin: 0 !important;
     border: none !important;
     box-shadow: none !important;
+    background: transparent !important;
   }
+
+  /* Folha A4 limpa e alinhada */
   .a4-document {
     border: none !important;
     box-shadow: none !important;
-    padding: 20mm !important;
+    padding: 0 !important;
+    margin: 0 auto !important;
     max-width: 100% !important;
     min-height: auto !important;
     color: #0f172a !important;
     background: #ffffff !important;
+    line-height: 1.5 !important;
   }
+
   .a4-editable-field {
     box-shadow: none !important;
     background: transparent !important;
     padding: 0 !important;
     margin: 0 !important;
+    border: none !important;
+    outline: none !important;
   }
 }

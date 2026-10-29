@@ -426,7 +426,7 @@
     <div id="workbench-active" class="flex-1 flex flex-col overflow-hidden hidden">
       
       <!-- Sub-header de Abas (h-12, 48px) -->
-      <div class="h-12 px-4 sm:px-6 border-b flex items-center justify-between shrink-0 overflow-x-auto no-scrollbar" style="border-color: var(--border-color); background-color: var(--bg-panel);">
+      <div id="workbench-tabs-nav" class="h-12 px-4 sm:px-6 border-b flex items-center justify-between shrink-0 overflow-x-auto no-scrollbar a4-print-hide" style="border-color: var(--border-color); background-color: var(--bg-panel);">
         <div class="flex items-center gap-1.5 sm:gap-2 h-full py-1">
           <button class="nav-tab-btn nav-tab-active" data-tab="tab-jd">
             <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
@@ -522,7 +522,7 @@
 
         <!-- Aba 2: Folha A4 (Preview & Edição Direta) -->
         <div id="tab-preview" class="tab-pane-content fade-slide-up hidden space-y-4">
-          <div class="max-w-[820px] mx-auto flex flex-wrap items-center justify-between gap-3 px-3 py-2 rounded-xl border select-none transition-colors" style="background-color: var(--bg-panel); border-color: var(--border-color);">
+          <div id="a4-preview-toolbar" class="a4-toolbar a4-print-hide max-w-[820px] mx-auto flex flex-wrap items-center justify-between gap-3 px-3 py-2 rounded-xl border select-none transition-colors" style="background-color: var(--bg-panel); border-color: var(--border-color);">
             <div class="flex items-center gap-2">
               <span class="flex h-2 w-2 relative">
                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
